@@ -1,0 +1,1 @@
+export { CourseTypesPage } from './CourseTypesPage';

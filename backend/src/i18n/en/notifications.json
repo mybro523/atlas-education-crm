@@ -1,0 +1,7 @@
+{
+  "absence_3_lessons": "Hello! Your son/daughter {{studentName}} has been absent for 3 lessons in a row. Please contact the «Atlas» educational center.",
+  "birthday_greeting": "Happy birthday, {{name}}! The «Atlas» educational center team wishes you success in your studies and all the best!",
+  "new_course_announcement": "A new course is now open at the «Atlas» educational center: {{courseName}}. Enroll now!",
+  "grade_added": "New grade in {{subject}}: {{value}} (student {{studentName}}).",
+  "schedule_changed": "Notice: a schedule change for group {{groupName}}. Please check the updated schedule."
+}

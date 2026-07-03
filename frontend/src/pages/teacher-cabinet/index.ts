@@ -1,0 +1,1 @@
+export { TeacherCabinetPage } from './TeacherCabinetPage';

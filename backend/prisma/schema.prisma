@@ -1,0 +1,622 @@
+// ==========================================================================
+// Atlas CRM (Education) — Prisma schema
+// Network of 3 branches. PostgreSQL datasource.
+// ==========================================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ==========================================================================
+// Enums
+// ==========================================================================
+
+enum Role {
+  FOUNDER
+  ADMIN
+  SALES_MANAGER
+  TEACHER
+  STUDENT
+}
+
+enum AttendanceStatus {
+  PRESENT
+  ABSENT
+  LATE
+}
+
+enum PaymentStatus {
+  PAID
+  UNPAID
+}
+
+enum FinanceType {
+  INCOME
+  EXPENSE
+}
+
+enum MessageChannel {
+  WHATSAPP
+  INSTAGRAM
+}
+
+enum MessageDirection {
+  INBOUND
+  OUTBOUND
+}
+
+enum ConversationStatus {
+  OPEN
+  PENDING
+  CLOSED
+}
+
+enum NotificationChannel {
+  TELEGRAM
+  SMS
+}
+
+enum NotificationStatus {
+  PENDING
+  SENT
+  FAILED
+}
+
+enum BroadcastAudience {
+  ALL_STUDENTS
+  ALL_TEACHERS
+  BOTH
+}
+
+enum BroadcastStatus {
+  DRAFT
+  QUEUED
+  SENDING
+  SENT
+  FAILED
+}
+
+enum SalaryStatus {
+  PENDING
+  PAID
+}
+
+enum SalaryBasis {
+  PER_LESSON
+  FIXED
+}
+
+// ==========================================================================
+// Core / org
+// ==========================================================================
+
+model Branch {
+  id        String   @id @default(cuid())
+  name      String
+  address   String?
+  phone     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users          User[]
+  students       Student[]
+  teachers       Teacher[]
+  employees      Employee[]
+  courses        Course[]
+  groups         Group[]
+  payments       Payment[]
+  financeRecords FinanceRecord[]
+
+  @@map("branches")
+}
+
+model User {
+  id             String   @id @default(cuid())
+  email          String?  @unique
+  phone          String?  @unique
+  passwordHash   String
+  role           Role     @default(STUDENT)
+  language       String   @default("ru")
+  isActive       Boolean  @default(true)
+  telegramChatId String?  @unique
+  branchId       String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  branch        Branch?        @relation(fields: [branchId], references: [id], onDelete: SetNull)
+  refreshTokens RefreshToken[]
+
+  // 1:1 optional profile links depending on role
+  studentProfile Student?
+  teacherProfile Teacher?
+  employee       Employee?
+
+  // audit authorship
+  gradesGiven       Grade[]        @relation("GradeAuthor")
+  remarksGiven      Remark[]       @relation("RemarkAuthor")
+  broadcastsCreated Broadcast[]    @relation("BroadcastAuthor")
+  messagesSent      Message[]      @relation("MessageSender")
+  notifications     Notification[]
+
+  @@index([role])
+  @@index([branchId])
+  @@map("users")
+}
+
+model RefreshToken {
+  id        String   @id @default(cuid())
+  userId    String
+  tokenHash String
+  userAgent String?
+  ip        String?
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([tokenHash])
+  @@map("refresh_tokens")
+}
+
+// ==========================================================================
+// People
+// ==========================================================================
+
+model Student {
+  id             String    @id @default(cuid())
+  userId         String?   @unique
+  branchId       String
+  firstName      String
+  lastName       String
+  middleName     String?
+  birthDate      DateTime?
+  phone          String?
+  // Date the student joined — anchors the billing month (e.g. 15th to 15th).
+  enrollmentDate DateTime  @default(now())
+  isActive       Boolean   @default(true)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  user     User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+  branch   Branch    @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  parents  Parent[]
+
+  groupLinks  GroupStudent[]
+  grades      Grade[]
+  attendances Attendance[]
+  remarks     Remark[]
+  payments    Payment[]
+
+  @@index([branchId])
+  @@index([lastName, firstName])
+  @@map("students")
+}
+
+model Parent {
+  id        String   @id @default(cuid())
+  studentId String
+  firstName String
+  lastName  String
+  phone     String
+  // Place of work — participates in student search.
+  workplace String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@index([studentId])
+  @@index([workplace])
+  @@map("parents")
+}
+
+model Teacher {
+  id        String   @id @default(cuid())
+  userId    String?  @unique
+  branchId  String
+  firstName String
+  lastName  String
+  middleName String?
+  phone     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user     User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+  branch   Branch    @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  subjects TeacherSubject[]
+  groups   Group[]
+  lessons  Lesson[]
+  salaries Salary[]
+
+  @@index([branchId])
+  @@index([lastName, firstName])
+  @@map("teachers")
+}
+
+model Employee {
+  id        String   @id @default(cuid())
+  userId    String?  @unique
+  branchId  String
+  firstName String
+  lastName  String
+  position  String?
+  // Optional fixed monthly salary for admin staff (TJS).
+  baseSalary Decimal? @db.Decimal(10, 2)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user     User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  branch   Branch   @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  salaries Salary[]
+
+  @@index([branchId])
+  @@map("employees")
+}
+
+// ==========================================================================
+// Academic dictionaries & structure
+// ==========================================================================
+
+model Subject {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  courses  Course[]
+  groups   Group[]
+  teachers TeacherSubject[]
+
+  @@map("subjects")
+}
+
+model TeacherSubject {
+  teacherId String
+  subjectId String
+
+  teacher Teacher @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  subject Subject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+
+  @@id([teacherId, subjectId])
+  @@map("teacher_subjects")
+}
+
+// Flexible configurable dictionary (Standard, VIP, Intensive, Kids, For workers, ...)
+model CourseType {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  courses Course[]
+
+  @@map("course_types")
+}
+
+model Course {
+  id            String   @id @default(cuid())
+  name          String
+  courseTypeId  String
+  subjectId     String
+  branchId      String
+  pricePerMonth Decimal  @db.Decimal(10, 2)
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  courseType CourseType @relation(fields: [courseTypeId], references: [id])
+  subject    Subject    @relation(fields: [subjectId], references: [id])
+  branch     Branch     @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  groups     Group[]
+
+  @@index([branchId])
+  @@index([courseTypeId])
+  @@index([subjectId])
+  @@map("courses")
+}
+
+model Group {
+  id        String   @id @default(cuid())
+  name      String
+  courseId  String
+  subjectId String
+  teacherId String?
+  branchId  String
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  course   Course  @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  subject  Subject @relation(fields: [subjectId], references: [id])
+  teacher  Teacher? @relation(fields: [teacherId], references: [id], onDelete: SetNull)
+  branch   Branch  @relation(fields: [branchId], references: [id], onDelete: Cascade)
+
+  students    GroupStudent[]
+  lessons     Lesson[]
+  lessonRates LessonRate[]
+  payments    Payment[]
+
+  @@index([branchId])
+  @@index([courseId])
+  @@index([teacherId])
+  @@map("groups")
+}
+
+model GroupStudent {
+  groupId   String
+  studentId String
+  joinedAt  DateTime  @default(now())
+  leftAt    DateTime?
+
+  group   Group   @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@id([groupId, studentId])
+  @@index([studentId])
+  @@map("group_students")
+}
+
+// ==========================================================================
+// Schedule & journal
+// ==========================================================================
+
+model Lesson {
+  id        String   @id @default(cuid())
+  groupId   String
+  teacherId String?
+  startsAt  DateTime
+  endsAt    DateTime?
+  topic     String?
+  room      String?
+  // Flat pay rate for the teacher for this specific lesson (TJS), if overridden.
+  teacherPayRate Decimal? @db.Decimal(10, 2)
+  lessonRateId   String?
+  isConducted    Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  group      Group       @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  teacher    Teacher?    @relation(fields: [teacherId], references: [id], onDelete: SetNull)
+  lessonRate LessonRate? @relation(fields: [lessonRateId], references: [id], onDelete: SetNull)
+
+  grades      Grade[]
+  attendances Attendance[]
+  remarks     Remark[]
+
+  @@index([groupId])
+  @@index([teacherId])
+  @@index([startsAt])
+  @@map("lessons")
+}
+
+// Flexible per-lesson/per-group pay rate (e.g. 35 / 40 TJS). Basis for salary.
+model LessonRate {
+  id        String   @id @default(cuid())
+  groupId   String?
+  name      String?
+  amount    Decimal  @db.Decimal(10, 2)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  group   Group?   @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  lessons Lesson[]
+
+  @@index([groupId])
+  @@map("lesson_rates")
+}
+
+model Grade {
+  id        String   @id @default(cuid())
+  studentId String
+  lessonId  String
+  authorId  String?
+  // 5-point scale: 2..5
+  value     Int
+  comment   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  lesson  Lesson  @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  author  User?   @relation("GradeAuthor", fields: [authorId], references: [id], onDelete: SetNull)
+
+  @@unique([studentId, lessonId])
+  @@index([studentId])
+  @@index([lessonId])
+  @@map("grades")
+}
+
+model Attendance {
+  id        String           @id @default(cuid())
+  studentId String
+  lessonId  String
+  status    AttendanceStatus @default(PRESENT)
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  lesson  Lesson  @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, lessonId])
+  @@index([studentId])
+  @@index([lessonId])
+  @@map("attendances")
+}
+
+model Remark {
+  id        String   @id @default(cuid())
+  studentId String
+  lessonId  String?
+  authorId  String?
+  text      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  lesson  Lesson? @relation(fields: [lessonId], references: [id], onDelete: SetNull)
+  author  User?   @relation("RemarkAuthor", fields: [authorId], references: [id], onDelete: SetNull)
+
+  @@index([studentId])
+  @@index([lessonId])
+  @@map("remarks")
+}
+
+// ==========================================================================
+// Finance
+// ==========================================================================
+
+model Payment {
+  id        String        @id @default(cuid())
+  studentId String
+  groupId   String?
+  branchId  String
+  amount    Decimal       @db.Decimal(10, 2)
+  // Billing month anchored to the student's enrollment date (start of the period).
+  billingMonthStart DateTime
+  billingMonthEnd   DateTime
+  status    PaymentStatus @default(UNPAID)
+  paidAt    DateTime?
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  group   Group?  @relation(fields: [groupId], references: [id], onDelete: SetNull)
+  branch  Branch  @relation(fields: [branchId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, groupId, billingMonthStart])
+  @@index([studentId])
+  @@index([branchId])
+  @@index([status])
+  @@map("payments")
+}
+
+model FinanceRecord {
+  id          String      @id @default(cuid())
+  branchId    String
+  type        FinanceType
+  amount      Decimal     @db.Decimal(10, 2)
+  category    String?
+  description String?
+  occurredAt  DateTime    @default(now())
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  branch Branch @relation(fields: [branchId], references: [id], onDelete: Cascade)
+
+  @@index([branchId])
+  @@index([type])
+  @@index([occurredAt])
+  @@map("finance_records")
+}
+
+model Salary {
+  id          String       @id @default(cuid())
+  teacherId   String?
+  employeeId  String?
+  basis       SalaryBasis  @default(PER_LESSON)
+  periodStart DateTime
+  periodEnd   DateTime
+  amount      Decimal      @db.Decimal(10, 2)
+  status      SalaryStatus @default(PENDING)
+  paidAt      DateTime?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  teacher  Teacher?  @relation(fields: [teacherId], references: [id], onDelete: SetNull)
+  employee Employee? @relation(fields: [employeeId], references: [id], onDelete: SetNull)
+
+  @@index([teacherId])
+  @@index([employeeId])
+  @@index([periodStart, periodEnd])
+  @@map("salaries")
+}
+
+// ==========================================================================
+// Omnichannel chats (WhatsApp / Instagram)
+// ==========================================================================
+
+model Conversation {
+  id          String             @id @default(cuid())
+  channel     MessageChannel
+  // External participant id (phone / IG account id)
+  externalId  String
+  contactName String?
+  status      ConversationStatus @default(OPEN)
+  lastMessageAt DateTime?
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+
+  messages Message[]
+
+  @@unique([channel, externalId])
+  @@index([status])
+  @@map("conversations")
+}
+
+model Message {
+  id             String           @id @default(cuid())
+  conversationId String
+  senderUserId   String?
+  direction      MessageDirection
+  channel        MessageChannel
+  text           String?
+  externalId     String?
+  createdAt      DateTime         @default(now())
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender       User?        @relation("MessageSender", fields: [senderUserId], references: [id], onDelete: SetNull)
+
+  @@index([conversationId])
+  @@map("messages")
+}
+
+// ==========================================================================
+// Broadcasts & notifications
+// ==========================================================================
+
+model Broadcast {
+  id        String            @id @default(cuid())
+  title     String?
+  text      String
+  audience  BroadcastAudience
+  status    BroadcastStatus   @default(DRAFT)
+  authorId  String?
+  sentAt    DateTime?
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
+
+  author User? @relation("BroadcastAuthor", fields: [authorId], references: [id], onDelete: SetNull)
+
+  @@index([status])
+  @@map("broadcasts")
+}
+
+model Notification {
+  id        String              @id @default(cuid())
+  userId    String?
+  channel   NotificationChannel
+  status    NotificationStatus  @default(PENDING)
+  // e.g. absence_3_lessons, birthday_greeting
+  template  String?
+  recipient String?
+  payload   String?
+  sentAt    DateTime?
+  error     String?
+  createdAt DateTime            @default(now())
+  updatedAt DateTime            @updatedAt
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([channel])
+  @@index([status])
+  @@map("notifications")
+}

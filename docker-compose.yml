@@ -1,0 +1,46 @@
+# ─────────────────────────────────────────────────────────────
+# Atlas CRM — local infrastructure (PostgreSQL + Redis)
+# Usage:
+#   1. cp .env.example .env   (edit values if desired)
+#   2. docker compose up -d   (or: npm run db:up)
+#   3. docker compose down     (or: npm run db:down)
+# ─────────────────────────────────────────────────────────────
+
+services:
+  postgres:
+    image: postgres:16
+    container_name: atlas-crm-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-atlas}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-atlas_dev_password}
+      POSTGRES_DB: ${POSTGRES_DB:-atlas_crm}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - atlas_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-atlas} -d ${POSTGRES_DB:-atlas_crm}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: atlas-crm-redis
+    restart: unless-stopped
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - atlas_redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  atlas_pgdata:
+    name: atlas-crm-pgdata
+  atlas_redisdata:
+    name: atlas-crm-redisdata

@@ -1,0 +1,81 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+ * Semantic color tokens as space-separated RGB channels so Tailwind's
+ * <alpha-value> modifier works (e.g. bg-primary/10). Brand = WHITE + PURPLE.
+ */
+@layer base {
+  :root {
+    --color-background: 249 250 251; /* near-white slate-50 */
+    --color-surface: 255 255 255; /* white */
+    --color-surface-muted: 244 244 246; /* light gray */
+    --color-border: 229 229 235;
+    --color-foreground: 24 24 27; /* zinc-900 */
+    --color-foreground-muted: 113 113 122; /* zinc-500 */
+
+    --color-primary: 124 58 237; /* violet #7C3AED */
+    --color-primary-foreground: 255 255 255;
+    --color-primary-hover: 109 40 217; /* violet-700 */
+    --color-ring: 124 58 237;
+
+    --color-danger: 220 38 38; /* red-600 */
+    --color-success: 22 163 74; /* green-600 */
+
+    color-scheme: light;
+  }
+
+  .dark {
+    --color-background: 15 15 18; /* deep neutral */
+    --color-surface: 24 24 28;
+    --color-surface-muted: 33 33 39;
+    --color-border: 45 45 54;
+    --color-foreground: 244 244 245; /* zinc-100 */
+    --color-foreground-muted: 161 161 170; /* zinc-400 */
+
+    --color-primary: 139 92 246; /* violet-500 stays vivid on dark */
+    --color-primary-foreground: 255 255 255;
+    --color-primary-hover: 124 58 237;
+    --color-ring: 167 139 250;
+
+    --color-danger: 248 113 113; /* red-400 */
+    --color-success: 74 222 128; /* green-400 */
+
+    color-scheme: dark;
+  }
+
+  * {
+    border-color: rgb(var(--color-border));
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background-color: rgb(var(--color-background));
+    color: rgb(var(--color-foreground));
+    font-family: theme('fontFamily.sans');
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  /* Prevent horizontal overflow across the mobile 320–425px range. */
+  html,
+  body,
+  #root {
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+}
+
+@layer utilities {
+  /* Thin, theme-aware scrollbars for scroll containers. */
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: rgb(var(--color-border)) transparent;
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "name": "atlas-crm",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Atlas CRM — CRM system for an educational center (network of 3 branches). Stage-1 foundation monorepo (backend + frontend).",
+  "license": "UNLICENSED",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "install:all": "npm --prefix backend install && npm --prefix frontend install",
+    "dev:backend": "npm --prefix backend run start:dev",
+    "dev:frontend": "npm --prefix frontend run dev",
+    "dev": "concurrently -n backend,frontend -c magenta,cyan \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "db:up": "docker compose up -d",
+    "db:down": "docker compose down"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.0"
+  }
+}
