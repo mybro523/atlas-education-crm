@@ -1,4 +1,4 @@
-import { PrismaClient, Role } from '@prisma/client';
+import { PrismaClient, Role, type Branch } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 
 const prisma = new PrismaClient();
@@ -11,7 +11,7 @@ async function main() {
     { name: 'Atlas — Южный', address: 'г. Бохтар, ул. Айни, 10' },
   ];
 
-  const branches = [];
+  const branches: Branch[] = [];
   for (const b of branchData) {
     const branch = await prisma.branch.upsert({
       where: { id: `seed-branch-${b.name}` },
