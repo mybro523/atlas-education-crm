@@ -353,7 +353,16 @@ export function StudentFormModal({
         <Select
           label={`${t('fields.course')} (${t('form.optional')})`}
           value={courseId}
-          onChange={(e) => setCourseId(e.target.value)}
+          onChange={(e) => {
+            const id = e.target.value;
+            setCourseId(id);
+            // Auto-fill the course fee with the selected course's monthly price
+            // (the field stays editable — the user can override it afterwards).
+            const picked = coursesData?.items.find((c) => c.id === id);
+            if (picked?.pricePerMonth != null) {
+              setCourseFee(String(picked.pricePerMonth));
+            }
+          }}
           disabled={submitting}
           options={[
             { value: '', label: t('form.notSelected') },
