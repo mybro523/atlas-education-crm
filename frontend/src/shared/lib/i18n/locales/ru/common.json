@@ -145,7 +145,13 @@
     "deleteError": "Не удалось удалить. Попробуйте ещё раз.",
     "duplicateError": "Такая запись уже существует.",
     "optional": "необязательно",
-    "saveError": "Не удалось сохранить. Попробуйте ещё раз."
+    "saveError": "Не удалось сохранить. Попробуйте ещё раз.",
+    "birthDateFuture": "Дата рождения не может быть в будущем",
+    "hireBeforeBirth": "Дата приёма не может быть раньше даты рождения",
+    "invalidAmount": "Введите корректную сумму",
+    "invalidPhone": "Введите корректный номер телефона",
+    "invalidTelegram": "Введите корректный Telegram-логин",
+    "notSelected": "Не выбрано"
   },
   "fields": {
     "firstName": "Имя",
@@ -158,7 +164,15 @@
     "birthDate": "Дата рождения",
     "enrollmentDate": "Дата вступления",
     "status": "Статус",
-    "position": "Должность"
+    "position": "Должность",
+    "course": "Курс",
+    "courseFee": "Стоимость курса",
+    "level": "Уровень",
+    "referralSource": "Источник обращения",
+    "specialty": "Специальность",
+    "educationLevel": "Уровень образования",
+    "hireDate": "Дата приёма на работу",
+    "telegram": "Telegram"
   },
   "teachers": {
     "title": "Учителя",
@@ -221,7 +235,21 @@
       "count_many": "{{count}} родителей",
       "count_other": "{{count}} родителей",
       "father": "Отец",
-      "mother": "Мать"
+      "mother": "Мать",
+      "notAdded": "Не добавлено"
+    },
+    "mainInfo": "Основная информация",
+    "level": {
+      "BEGINNER": "Начальный",
+      "STANDARD": "Средний",
+      "ADVANCED": "Продвинутый"
+    },
+    "referral": {
+      "INSTAGRAM": "Instagram",
+      "FRIENDS": "Друзья",
+      "ADS": "Реклама",
+      "SELF": "Обратился сам",
+      "OTHER": "Другое"
     }
   },
   "pages": {
@@ -408,7 +436,8 @@
       "searchPlaceholder": "Поиск по имени…",
       "empty": "Студенты не найдены",
       "add": "Добавить",
-      "alreadyIn": "Уже в группе"
+      "alreadyIn": "Уже в группе",
+      "refineHint": "Уточните поиск, чтобы увидеть больше учеников"
     }
   },
   "schedule": {
@@ -485,6 +514,11 @@
       "fri": "Пт",
       "sat": "Сб",
       "sun": "Вс"
+    },
+    "views": {
+      "month": "Месяц",
+      "week": "Неделя",
+      "day": "День"
     }
   },
   "finance": {
@@ -646,6 +680,13 @@
       "deleted": "Ставка удалена",
       "empty": "Ставок пока нет",
       "emptyHint": "Добавьте первую ставку за занятие."
+    },
+    "tabs": {
+      "overview": "Обзор",
+      "payments": "Платежи",
+      "debts": "Долги",
+      "records": "Записи",
+      "salaries": "Зарплаты"
     }
   },
   "journal": {
@@ -870,8 +911,12 @@
     "audience": {
       "ALL_STUDENTS": "Все студенты",
       "ALL_TEACHERS": "Все учителя",
-      "BOTH": "Студенты и учителя"
-    }
+      "BOTH": "Студенты и учителя",
+      "GROUP": "Ученики группы"
+    },
+    "group": "Группа",
+    "selectGroup": "Выберите группу",
+    "groupRequired": "Выберите группу"
   },
   "telegram": {
     "title": "Подключение Telegram",

@@ -3,7 +3,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useTranslation } from 'react-i18next';
-import { Send, Users, GraduationCap, UsersRound } from 'lucide-react';
+import { Send, Users, GraduationCap, UsersRound, Target } from 'lucide-react';
 
 import {
   Card,
@@ -12,11 +12,13 @@ import {
   CardDescription,
   Input,
   Textarea,
+  Select,
   Button,
   useToast,
 } from '@/shared/ui';
 import { cn } from '@/shared/lib/cn';
 import { extractErrorMessage } from '@/shared/api';
+import { useGroups } from '@/entities/group';
 import {
   useCreateBroadcast,
   type BroadcastAudience,
@@ -33,17 +35,25 @@ const AUDIENCES: readonly BroadcastAudience[] = [
   'ALL_STUDENTS',
   'ALL_TEACHERS',
   'BOTH',
+  'GROUP',
 ];
 
-const schema = z.object({
-  title: z.string().max(120, { message: 'max' }).optional(),
-  text: z
-    .string()
-    .trim()
-    .min(1, { message: 'required' })
-    .max(MAX_LEN, { message: 'max' }),
-  audience: z.enum(['ALL_STUDENTS', 'ALL_TEACHERS', 'BOTH']),
-});
+const schema = z
+  .object({
+    title: z.string().max(120, { message: 'max' }).optional(),
+    text: z
+      .string()
+      .trim()
+      .min(1, { message: 'required' })
+      .max(MAX_LEN, { message: 'max' }),
+    audience: z.enum(['ALL_STUDENTS', 'ALL_TEACHERS', 'BOTH', 'GROUP']),
+    groupId: z.string().optional(),
+  })
+  // A GROUP broadcast must target a concrete group.
+  .refine((v) => v.audience !== 'GROUP' || Boolean(v.groupId), {
+    path: ['groupId'],
+    message: 'required',
+  });
 
 type FormValues = z.infer<typeof schema>;
 
@@ -51,18 +61,28 @@ const audienceIcon: Record<BroadcastAudience, typeof Users> = {
   ALL_STUDENTS: GraduationCap,
   ALL_TEACHERS: Users,
   BOTH: UsersRound,
+  GROUP: Target,
 };
 
 /**
  * Compose + send an SMS broadcast (INTEGRATION API: POST /broadcasts).
  * Title is optional; the body has a live character/segment counter; the
- * audience is picked from ALL_STUDENTS / ALL_TEACHERS / BOTH. Sending is
- * optimistic via the broadcast entity hook, so history updates instantly.
+ * audience is one of ALL_STUDENTS / ALL_TEACHERS / BOTH / GROUP. Choosing GROUP
+ * reveals a group picker and sends `audience=GROUP` + `groupId` to target that
+ * group's active students. Sending is optimistic via the broadcast entity hook,
+ * so history updates instantly.
  */
 export function BroadcastComposer() {
   const { t } = useTranslation();
   const toast = useToast();
   const createBroadcast = useCreateBroadcast();
+
+  // Pool of groups for the GROUP audience picker.
+  const { data: groupsData } = useGroups({ pageSize: 100 });
+  const groupOptions = useMemo(
+    () => (groupsData?.items ?? []).map((g) => ({ value: g.id, label: g.name })),
+    [groupsData],
+  );
 
   const {
     register,
@@ -71,14 +91,21 @@ export function BroadcastComposer() {
     watch,
     setValue,
     setError,
+    clearErrors,
     formState: { errors },
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
-    defaultValues: { title: '', text: '', audience: 'ALL_STUDENTS' },
+    defaultValues: {
+      title: '',
+      text: '',
+      audience: 'ALL_STUDENTS',
+      groupId: '',
+    },
   });
 
   const text = watch('text') ?? '';
   const audience = watch('audience');
+  const groupId = watch('groupId') ?? '';
 
   const segments = useMemo(
     () => Math.max(1, Math.ceil(text.length / SMS_SEGMENT_LEN)),
@@ -88,17 +115,30 @@ export function BroadcastComposer() {
   const audienceLabel = (value: BroadcastAudience) =>
     t(`broadcast.audience.${value}`);
 
+  const selectAudience = (value: BroadcastAudience) => {
+    setValue('audience', value);
+    // Leaving GROUP clears any stale "pick a group" error.
+    if (value !== 'GROUP') clearErrors('groupId');
+  };
+
   const onValid = (values: FormValues) => {
     const dto = {
       title: values.title?.trim() || undefined,
       text: values.text.trim(),
       audience: values.audience,
+      groupId: values.audience === 'GROUP' ? values.groupId : undefined,
     };
 
+    // INSTANT feedback: the entity hook prepends an optimistic QUEUED row.
     createBroadcast.mutate(dto, {
       onSuccess: () => {
         toast.success(t('broadcast.sent'));
-        reset({ title: '', text: '', audience: values.audience });
+        reset({
+          title: '',
+          text: '',
+          audience: values.audience,
+          groupId: values.groupId,
+        });
       },
       onError: (err) =>
         setError('root', {
@@ -160,7 +200,7 @@ export function BroadcastComposer() {
           <legend className="mb-1.5 block text-sm font-medium text-foreground">
             {t('broadcast.audienceLabel')}
           </legend>
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
             {AUDIENCES.map((value) => {
               const Icon = audienceIcon[value];
               const selected = audience === value;
@@ -168,7 +208,7 @@ export function BroadcastComposer() {
                 <button
                   key={value}
                   type="button"
-                  onClick={() => setValue('audience', value)}
+                  onClick={() => selectAudience(value)}
                   aria-pressed={selected}
                   className={cn(
                     'flex items-center gap-2.5 rounded-xl border px-3.5 py-3 text-left text-sm transition-colors',
@@ -190,6 +230,23 @@ export function BroadcastComposer() {
               );
             })}
           </div>
+
+          {/* Group picker — only relevant to the GROUP audience. */}
+          {audience === 'GROUP' && (
+            <div className="mt-3">
+              <Select
+                label={t('broadcast.group')}
+                placeholder={t('broadcast.selectGroup')}
+                options={groupOptions}
+                value={groupId}
+                onChange={(e) => {
+                  setValue('groupId', e.target.value);
+                  if (e.target.value) clearErrors('groupId');
+                }}
+                error={errors.groupId ? t('broadcast.groupRequired') : undefined}
+              />
+            </div>
+          )}
         </fieldset>
 
         {errors.root && (

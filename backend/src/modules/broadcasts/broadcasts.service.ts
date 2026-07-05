@@ -1,4 +1,9 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
 import { Broadcast, BroadcastAudience, BroadcastStatus, NotificationChannel } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
@@ -57,11 +62,33 @@ export class BroadcastsService {
    * Create + enqueue a broadcast. Persists it as QUEUED, returns immediately,
    * and kicks off the fan-out in the background (status transitions observable
    * via GET /broadcasts/:id).
+   *
+   * For a GROUP broadcast, `groupId` is required and must reference an existing
+   * group; it is validated up-front so the caller gets a clear error instead of
+   * a background FAILED. The `groupId` is only persisted for GROUP audiences.
    */
   async create(
     dto: CreateBroadcastDto,
     authorId?: string | null,
   ): Promise<Broadcast> {
+    const isGroup = dto.audience === BroadcastAudience.GROUP;
+    const groupId = isGroup ? (dto.groupId ?? null) : null;
+
+    if (isGroup) {
+      if (!groupId) {
+        throw new BadRequestException(
+          'groupId is required when audience is GROUP',
+        );
+      }
+      const group = await this.prisma.group.findUnique({
+        where: { id: groupId },
+        select: { id: true },
+      });
+      if (!group) {
+        throw new NotFoundException(`Group ${groupId} not found`);
+      }
+    }
+
     const broadcast = await this.prisma.broadcast.create({
       data: {
         title: dto.title ?? null,
@@ -69,12 +96,13 @@ export class BroadcastsService {
         audience: dto.audience,
         status: BroadcastStatus.QUEUED,
         authorId: authorId ?? null,
+        groupId,
       },
     });
 
     // Fire-and-forget: don't block the request on the whole fan-out. Errors are
     // captured onto the broadcast row (status FAILED) inside the runner.
-    void this.run(broadcast.id, dto.text, dto.audience);
+    void this.run(broadcast.id, dto.text, dto.audience, groupId);
 
     return broadcast;
   }
@@ -87,6 +115,7 @@ export class BroadcastsService {
     broadcastId: string,
     text: string,
     audience: BroadcastAudience,
+    groupId?: string | null,
   ): Promise<void> {
     try {
       await this.prisma.broadcast.update({
@@ -94,7 +123,7 @@ export class BroadcastsService {
         data: { status: BroadcastStatus.SENDING },
       });
 
-      const phones = await this.resolveRecipients(audience);
+      const phones = await this.resolveRecipients(audience, groupId);
 
       for (const phone of phones) {
         try {
@@ -137,11 +166,36 @@ export class BroadcastsService {
   /**
    * Resolve the deduplicated set of recipient phone numbers for an audience.
    * ALL_STUDENTS → active students' phones; ALL_TEACHERS → teachers' phones;
-   * BOTH → the union. Empty / null phones are dropped.
+   * BOTH → the union; GROUP → phones of the active students of `groupId`.
+   * Empty / null phones are dropped.
    */
   private async resolveRecipients(
     audience: BroadcastAudience,
+    groupId?: string | null,
   ): Promise<string[]> {
+    if (audience === BroadcastAudience.GROUP) {
+      const phones = new Set<string>();
+      if (!groupId) {
+        return [];
+      }
+      // Active students still enrolled in the group (membership not left).
+      const students = await this.prisma.student.findMany({
+        where: {
+          isActive: true,
+          phone: { not: null },
+          groupLinks: { some: { groupId, leftAt: null } },
+        },
+        select: { phone: true },
+      });
+      for (const s of students) {
+        const p = (s.phone ?? '').trim();
+        if (p) {
+          phones.add(p);
+        }
+      }
+      return Array.from(phones);
+    }
+
     const wantStudents =
       audience === BroadcastAudience.ALL_STUDENTS ||
       audience === BroadcastAudience.BOTH;

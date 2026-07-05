@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { keepPreviousData, useQuery } from '@tanstack/react-query';
 
 import {
   createQueryKeys,
@@ -21,6 +21,7 @@ export function useTeachers(params?: TeacherListParams) {
   return useQuery({
     queryKey: teacherKeys.list(params),
     queryFn: () => teacherApi.list(params),
+    placeholderData: keepPreviousData,
   });
 }
 
@@ -44,6 +45,11 @@ export function useCreateTeacher() {
         lastName: dto.lastName,
         middleName: dto.middleName ?? null,
         phone: dto.phone ?? null,
+        specialty: dto.specialty ?? null,
+        educationLevel: dto.educationLevel ?? null,
+        telegramUsername: dto.telegramUsername ?? null,
+        birthDate: dto.birthDate ?? null,
+        hireDate: dto.hireDate ?? null,
         branchId: dto.branchId,
         userId: dto.userId ?? null,
         createdAt: new Date().toISOString(),

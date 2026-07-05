@@ -8,6 +8,7 @@ import {
   useUpdateTeacher,
   type Teacher,
   type CreateTeacherDto,
+  type UpdateTeacherDto,
 } from '@/entities/teacher';
 
 export interface TeacherFormModalProps {
@@ -21,6 +22,9 @@ interface FieldErrors {
   firstName?: string;
   lastName?: string;
   phone?: string;
+  telegramUsername?: string;
+  birthDate?: string;
+  hireDate?: string;
   branchId?: string;
 }
 
@@ -36,10 +40,35 @@ function isValidPhone(value: string): boolean {
 }
 
 /**
- * Create/edit a teacher. Subjects were removed from the model — what a teacher
- * teaches is now expressed through the groups they lead (each group carries a
- * course), so the form only captures the teacher's identity + branch. Both
- * mutations are optimistic.
+ * Telegram handle: an optional leading "@" followed by 5–32 letters, digits or
+ * underscores (Telegram's own rule; mirrors the backend `@Matches`).
+ */
+function isValidTelegram(value: string): boolean {
+  return /^@?[A-Za-z0-9_]{5,32}$/.test(value.trim());
+}
+
+/** Trim an ISO datetime down to the `YYYY-MM-DD` a date input expects. */
+function toDateInput(value?: string | null): string {
+  if (!value) return '';
+  return value.slice(0, 10);
+}
+
+/** Today as `YYYY-MM-DD` (local) — the latest sensible birth date. */
+function todayInput(): string {
+  const now = new Date();
+  const offsetMs = now.getTimezoneOffset() * 60_000;
+  return new Date(now.getTime() - offsetMs).toISOString().slice(0, 10);
+}
+
+/**
+ * Create/edit a teacher. What a teacher teaches is expressed through the groups
+ * they lead (each group carries a course) — there is no subjects assignment.
+ * Beyond the core identity + branch, the form captures optional profile fields:
+ * specialty, education level, Telegram handle, birth date and hire date.
+ *
+ * Both mutations are optimistic and the modal closes INSTANTLY on submit — the
+ * optimistic cache update shows the change immediately; a failed round-trip
+ * rolls the cache back and surfaces a toast.
  */
 export function TeacherFormModal({
   open,
@@ -58,9 +87,13 @@ export function TeacherFormModal({
   const [lastName, setLastName] = useState('');
   const [middleName, setMiddleName] = useState('');
   const [phone, setPhone] = useState('');
+  const [specialty, setSpecialty] = useState('');
+  const [educationLevel, setEducationLevel] = useState('');
+  const [telegramUsername, setTelegramUsername] = useState('');
+  const [birthDate, setBirthDate] = useState('');
+  const [hireDate, setHireDate] = useState('');
   const [branchId, setBranchId] = useState('');
   const [errors, setErrors] = useState<FieldErrors>({});
-  const [formError, setFormError] = useState<string | null>(null);
 
   // Reset the form whenever it opens (or the target teacher changes).
   useEffect(() => {
@@ -69,58 +102,86 @@ export function TeacherFormModal({
     setLastName(teacher?.lastName ?? '');
     setMiddleName(teacher?.middleName ?? '');
     setPhone(teacher?.phone ?? '');
+    setSpecialty(teacher?.specialty ?? '');
+    setEducationLevel(teacher?.educationLevel ?? '');
+    setTelegramUsername(teacher?.telegramUsername ?? '');
+    setBirthDate(toDateInput(teacher?.birthDate));
+    setHireDate(toDateInput(teacher?.hireDate));
     setBranchId(teacher?.branchId ?? '');
     setErrors({});
-    setFormError(null);
   }, [open, teacher]);
+
+  const today = todayInput();
 
   const validate = (): boolean => {
     const next: FieldErrors = {};
     if (!firstName.trim()) next.firstName = t('form.requiredField');
     if (!lastName.trim()) next.lastName = t('form.requiredField');
     if (!branchId) next.branchId = t('form.requiredField');
-    // Phone is optional; validate its format only when the user filled it in.
-    if (phone.trim() && !isValidPhone(phone)) next.phone = t('form.requiredField');
+    // Optional fields: validate their format only when the user filled them in.
+    if (phone.trim() && !isValidPhone(phone)) next.phone = t('form.invalidPhone');
+    if (telegramUsername.trim() && !isValidTelegram(telegramUsername))
+      next.telegramUsername = t('form.invalidTelegram');
+    // A birth date cannot be in the future.
+    if (birthDate && birthDate > today)
+      next.birthDate = t('form.birthDateFuture');
+    // Hiring cannot predate birth.
+    if (birthDate && hireDate && hireDate < birthDate)
+      next.hireDate = t('form.hireBeforeBirth');
     setErrors(next);
     return Object.keys(next).length === 0;
   };
 
   const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setFormError(null);
     if (!validate()) return;
+
+    const trimmedTelegram = telegramUsername.trim();
+
+    if (isEdit && teacher) {
+      // On edit, blanked clearable fields are sent as null / '' to clear them.
+      const dto: UpdateTeacherDto = {
+        firstName: firstName.trim(),
+        lastName: lastName.trim(),
+        middleName: middleName.trim() || undefined,
+        phone: phone.trim() || undefined,
+        specialty: specialty.trim() || undefined,
+        educationLevel: educationLevel.trim() || undefined,
+        telegramUsername: trimmedTelegram || null,
+        birthDate: birthDate || null,
+        hireDate: hireDate || null,
+        branchId,
+      };
+      updateTeacher.mutate(
+        { id: teacher.id, dto },
+        {
+          onSuccess: () => toast.success(t('teachers.updated')),
+          onError: (err) =>
+            toast.error(extractErrorMessage(err) ?? t('form.updateError')),
+        },
+      );
+      onClose();
+      return;
+    }
 
     const dto: CreateTeacherDto = {
       firstName: firstName.trim(),
       lastName: lastName.trim(),
       middleName: middleName.trim() || undefined,
       phone: phone.trim() || undefined,
+      specialty: specialty.trim() || undefined,
+      educationLevel: educationLevel.trim() || undefined,
+      telegramUsername: trimmedTelegram || undefined,
+      birthDate: birthDate || undefined,
+      hireDate: hireDate || undefined,
       branchId,
     };
-
-    if (isEdit && teacher) {
-      updateTeacher.mutate(
-        { id: teacher.id, dto },
-        {
-          onSuccess: () => {
-            toast.success(t('teachers.updated'));
-            onClose();
-          },
-          onError: (err) =>
-            setFormError(extractErrorMessage(err) ?? t('form.updateError')),
-        },
-      );
-      return;
-    }
-
     createTeacher.mutate(dto, {
-      onSuccess: () => {
-        toast.success(t('teachers.created'));
-        onClose();
-      },
+      onSuccess: () => toast.success(t('teachers.created')),
       onError: (err) =>
-        setFormError(extractErrorMessage(err) ?? t('form.createError')),
+        toast.error(extractErrorMessage(err) ?? t('form.createError')),
     });
+    onClose();
   };
 
   const submitting = createTeacher.isPending || updateTeacher.isPending;
@@ -132,7 +193,7 @@ export function TeacherFormModal({
       title={isEdit ? t('teachers.editTitle') : t('teachers.createTitle')}
       onSubmit={handleSubmit}
       submitting={submitting}
-      error={formError ?? undefined}
+      className="max-w-2xl"
     >
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <Input
@@ -141,7 +202,6 @@ export function TeacherFormModal({
           onChange={(e) => setFirstName(e.target.value)}
           error={errors.firstName}
           maxLength={100}
-          disabled={submitting}
           autoFocus
         />
         <Input
@@ -150,14 +210,12 @@ export function TeacherFormModal({
           onChange={(e) => setLastName(e.target.value)}
           error={errors.lastName}
           maxLength={100}
-          disabled={submitting}
         />
         <Input
           label={`${t('fields.middleName')} (${t('form.optional')})`}
           value={middleName}
           onChange={(e) => setMiddleName(e.target.value)}
           maxLength={100}
-          disabled={submitting}
         />
         <Input
           label={`${t('fields.phone')} (${t('form.optional')})`}
@@ -167,19 +225,55 @@ export function TeacherFormModal({
           onChange={(e) => setPhone(e.target.value)}
           error={errors.phone}
           maxLength={25}
-          disabled={submitting}
+        />
+        <Input
+          label={`${t('fields.specialty')} (${t('form.optional')})`}
+          value={specialty}
+          onChange={(e) => setSpecialty(e.target.value)}
+          maxLength={120}
+        />
+        <Input
+          label={`${t('fields.educationLevel')} (${t('form.optional')})`}
+          value={educationLevel}
+          onChange={(e) => setEducationLevel(e.target.value)}
+          maxLength={120}
+        />
+        <Input
+          label={`${t('fields.telegram')} (${t('form.optional')})`}
+          value={telegramUsername}
+          onChange={(e) => setTelegramUsername(e.target.value)}
+          error={errors.telegramUsername}
+          placeholder="@username"
+          maxLength={33}
+          autoCapitalize="none"
+          autoCorrect="off"
+          spellCheck={false}
+        />
+        <Input
+          label={`${t('fields.birthDate')} (${t('form.optional')})`}
+          type="date"
+          value={birthDate}
+          onChange={(e) => setBirthDate(e.target.value)}
+          error={errors.birthDate}
+          max={today}
+        />
+        <Input
+          label={`${t('fields.hireDate')} (${t('form.optional')})`}
+          type="date"
+          value={hireDate}
+          onChange={(e) => setHireDate(e.target.value)}
+          error={errors.hireDate}
+          min={birthDate || undefined}
+        />
+        <Select
+          label={t('fields.branch')}
+          value={branchId}
+          onChange={(e) => setBranchId(e.target.value)}
+          placeholder={t('crud.allBranches')}
+          error={errors.branchId}
+          options={(branches ?? []).map((b) => ({ value: b.id, label: b.name }))}
         />
       </div>
-
-      <Select
-        label={t('fields.branch')}
-        value={branchId}
-        onChange={(e) => setBranchId(e.target.value)}
-        placeholder={t('crud.allBranches')}
-        error={errors.branchId}
-        disabled={submitting}
-        options={(branches ?? []).map((b) => ({ value: b.id, label: b.name }))}
-      />
     </FormModal>
   );
 }

@@ -28,14 +28,12 @@ export function EditPaymentModal({
   const [amount, setAmount] = useState('');
   const [status, setStatus] = useState<PaymentStatus>('UNPAID');
   const [amountError, setAmountError] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!open || !payment) return;
     setAmount(String(payment.amount ?? ''));
     setStatus(payment.status);
     setAmountError(null);
-    setError(null);
   }, [open, payment]);
 
   const statusOptions = [
@@ -43,10 +41,11 @@ export function EditPaymentModal({
     { value: 'PAID', label: t('finance.payments.status.PAID') },
   ];
 
+  // HARD validation (amount > 0) blocks submit; on valid we INSTANT-CLOSE and
+  // let the optimistic update stand, toasting + rolling back only on error.
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!payment) return;
-    setError(null);
     const trimmed = amount.trim();
     const numeric = Number(trimmed);
     if (!trimmed) {
@@ -61,14 +60,12 @@ export function EditPaymentModal({
     updatePayment.mutate(
       { id: payment.id, dto: { amount: numeric, status } },
       {
-        onSuccess: () => {
-          toast.success(t('finance.payments.updated'));
-          onClose();
-        },
+        onSuccess: () => toast.success(t('finance.payments.updated')),
         onError: (err) =>
-          setError(extractErrorMessage(err) ?? t('form.saveError')),
+          toast.error(extractErrorMessage(err) ?? t('form.saveError')),
       },
     );
+    onClose();
   };
 
   return (
@@ -77,8 +74,6 @@ export function EditPaymentModal({
       onClose={onClose}
       title={t('finance.payments.editTitle')}
       onSubmit={handleSubmit}
-      submitting={updatePayment.isPending}
-      error={error ?? undefined}
     >
       <Input
         label={`${t('finance.records.amount')} (TJS)`}

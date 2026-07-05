@@ -59,8 +59,26 @@
     background-color: rgb(var(--color-background));
     color: rgb(var(--color-foreground));
     font-family: theme('fontFamily.sans');
+    /* Calm, professional baseline: regular weight by default (no default bold). */
+    font-weight: 400;
+    font-synthesis-weight: none;
     -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
+  }
+
+  /*
+   * Headings inherit the regular body weight via Tailwind preflight; apply
+   * weight only through utility classes (font-medium / font-semibold). This
+   * prevents the "too bold / AI-generated" look and keeps a composed scale.
+   */
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    letter-spacing: -0.011em;
   }
 
   /* Prevent horizontal overflow across the mobile 320–425px range. */

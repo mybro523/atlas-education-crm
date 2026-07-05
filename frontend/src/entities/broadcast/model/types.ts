@@ -1,7 +1,14 @@
 import type { PaginationParams } from '@/shared/lib/query';
 
-/** Who receives an SMS broadcast (INTEGRATION API). */
-export type BroadcastAudience = 'ALL_STUDENTS' | 'ALL_TEACHERS' | 'BOTH';
+/**
+ * Who receives an SMS broadcast (INTEGRATION API). `GROUP` targets the active
+ * students of a single group and requires `groupId` on the create payload.
+ */
+export type BroadcastAudience =
+  | 'ALL_STUDENTS'
+  | 'ALL_TEACHERS'
+  | 'BOTH'
+  | 'GROUP';
 
 /**
  * Delivery status of a broadcast. `QUEUED`/`SENDING` are transient while the
@@ -21,6 +28,8 @@ export interface Broadcast {
   title?: string | null;
   text: string;
   audience: BroadcastAudience;
+  /** Target group id — present only when `audience` is GROUP. */
+  groupId?: string | null;
   status: BroadcastStatus;
   /** Total recipients targeted (may be absent until the queue resolves). */
   recipientCount?: number | null;
@@ -37,4 +46,6 @@ export interface CreateBroadcastDto {
   title?: string;
   text: string;
   audience: BroadcastAudience;
+  /** Required when `audience` is GROUP; ignored otherwise. */
+  groupId?: string;
 }

@@ -1,4 +1,8 @@
-import { useQuery } from '@tanstack/react-query';
+import {
+  keepPreviousData,
+  useQuery,
+  type QueryClient,
+} from '@tanstack/react-query';
 
 import {
   createQueryKeys,
@@ -13,6 +17,7 @@ import type {
   GroupListParams,
   GroupStudent,
   GroupStudentsParams,
+  GroupAvailableStudentsParams,
   CreateGroupDto,
   UpdateGroupDto,
   AddGroupStudentDto,
@@ -24,12 +29,20 @@ export const groupKeys = {
     ['groups', 'detail', groupId, 'students', params ?? {}] as const,
   studentsAll: (groupId: string) =>
     ['groups', 'detail', groupId, 'students'] as const,
+  availableStudents: (
+    groupId: string,
+    params?: GroupAvailableStudentsParams,
+  ) =>
+    ['groups', 'detail', groupId, 'available-students', params ?? {}] as const,
+  availableStudentsAll: (groupId: string) =>
+    ['groups', 'detail', groupId, 'available-students'] as const,
 };
 
 export function useGroups(params?: GroupListParams) {
   return useQuery({
     queryKey: groupKeys.list(params),
     queryFn: () => groupApi.list(params),
+    placeholderData: keepPreviousData,
   });
 }
 
@@ -49,6 +62,24 @@ export function useGroupStudents(
     queryKey: groupKeys.students(groupId ?? '', params),
     queryFn: () => groupApi.listStudents(groupId as string, params),
     enabled: Boolean(groupId),
+    placeholderData: keepPreviousData,
+  });
+}
+
+/**
+ * Pool of students that can still be enrolled into the group (cross-branch,
+ * excluding current active members). `keepPreviousData` keeps the previous
+ * results visible while the user types in the search box.
+ */
+export function useAvailableStudents(
+  groupId: string | undefined,
+  params?: GroupAvailableStudentsParams,
+) {
+  return useQuery({
+    queryKey: groupKeys.availableStudents(groupId ?? '', params),
+    queryFn: () => groupApi.listAvailableStudents(groupId as string, params),
+    enabled: Boolean(groupId),
+    placeholderData: keepPreviousData,
   });
 }
 
@@ -65,6 +96,7 @@ export function useCreateGroup() {
         teacherId: dto.teacherId ?? null,
         branchId: dto.branchId,
         isActive: dto.isActive ?? true,
+        studentsCount: 0,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };
@@ -109,17 +141,61 @@ export function useDeleteGroup() {
 
 // --- Membership ---
 
+/**
+ * Shift a group's `studentsCount` by `delta` in every list cache page AND the
+ * detail cache, clamped at 0. Keeps the member badge instantly in sync when a
+ * student is added/removed, before the server round-trip settles.
+ */
+function adjustStudentsCount(
+  qc: QueryClient,
+  groupId: string,
+  delta: number,
+): void {
+  const bump = (count: number | undefined) => Math.max(0, (count ?? 0) + delta);
+  qc.setQueriesData<{ items?: Group[] } | Group[]>(
+    { queryKey: groupKeys.lists() },
+    (current) => {
+      if (!current) return current;
+      const patch = (g: Group): Group =>
+        g.id === groupId ? { ...g, studentsCount: bump(g.studentsCount) } : g;
+      if (Array.isArray(current)) return current.map(patch);
+      if (Array.isArray(current.items)) {
+        return { ...current, items: current.items.map(patch) };
+      }
+      return current;
+    },
+  );
+  qc.setQueryData<Group>(groupKeys.detail(groupId), (old) =>
+    old ? { ...old, studentsCount: bump(old.studentsCount) } : old,
+  );
+}
+
+/**
+ * Enrol a student into a group. Idempotent-friendly (the backend re-opens or
+ * no-ops existing links). Optimistically increments the group's `studentsCount`
+ * in the list + detail caches, and refreshes the members + available-students
+ * lists on settle. `keysToInvalidate` also reconciles the count with the server.
+ */
 export function useAddGroupStudent() {
   return useOptimisticMutation<
     GroupStudent,
     { groupId: string; dto: AddGroupStudentDto }
   >({
     mutationFn: ({ groupId, dto }) => groupApi.addStudent(groupId, dto),
-    keysToCancel: (v) => [groupKeys.studentsAll(v.groupId)],
-    keysToInvalidate: (v) => [
+    keysToCancel: (v) => [
       groupKeys.studentsAll(v.groupId),
+      groupKeys.lists(),
       groupKeys.detail(v.groupId),
     ],
+    keysToInvalidate: (v) => [
+      groupKeys.studentsAll(v.groupId),
+      groupKeys.availableStudentsAll(v.groupId),
+      groupKeys.detail(v.groupId),
+      groupKeys.lists(),
+    ],
+    optimisticUpdate: ({ groupId }, qc) => {
+      adjustStudentsCount(qc, groupId, +1);
+    },
   });
 }
 
@@ -130,16 +206,23 @@ export function useRemoveGroupStudent() {
   >({
     mutationFn: ({ groupId, studentId }) =>
       groupApi.removeStudent(groupId, studentId),
-    keysToCancel: (v) => [groupKeys.studentsAll(v.groupId)],
+    keysToCancel: (v) => [
+      groupKeys.studentsAll(v.groupId),
+      groupKeys.lists(),
+      groupKeys.detail(v.groupId),
+    ],
     keysToInvalidate: (v) => [
       groupKeys.studentsAll(v.groupId),
+      groupKeys.availableStudentsAll(v.groupId),
       groupKeys.detail(v.groupId),
+      groupKeys.lists(),
     ],
     optimisticUpdate: ({ groupId, studentId }, qc) => {
       qc.setQueriesData<GroupStudent[]>(
         { queryKey: groupKeys.studentsAll(groupId) },
         (old) => old?.filter((m) => m.studentId !== studentId),
       );
+      adjustStudentsCount(qc, groupId, -1);
     },
   });
 }

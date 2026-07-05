@@ -71,6 +71,7 @@ enum BroadcastAudience {
   ALL_STUDENTS
   ALL_TEACHERS
   BOTH
+  GROUP
 }
 
 enum BroadcastStatus {
@@ -94,6 +95,20 @@ enum SalaryBasis {
 enum ParentRelation {
   FATHER
   MOTHER
+  OTHER
+}
+
+enum StudentLevel {
+  BEGINNER
+  STANDARD
+  ADVANCED
+}
+
+enum ReferralSource {
+  INSTAGRAM
+  FRIENDS
+  ADS
+  SELF
   OTHER
 }
 
@@ -177,22 +192,28 @@ model RefreshToken {
 // ==========================================================================
 
 model Student {
-  id             String    @id @default(cuid())
-  userId         String?   @unique
+  id             String          @id @default(cuid())
+  userId         String?         @unique
   branchId       String
   firstName      String
   lastName       String
   middleName     String?
   birthDate      DateTime?
   phone          String?
+  courseId       String?
+  level          StudentLevel?
+  referralSource ReferralSource?
+  // The amount the student must pay for the course.
+  courseFee      Decimal?        @db.Decimal(10, 2)
   // Date the student joined — anchors the billing month (e.g. 15th to 15th).
-  enrollmentDate DateTime  @default(now())
-  isActive       Boolean   @default(true)
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
+  enrollmentDate DateTime        @default(now())
+  isActive       Boolean         @default(true)
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
 
   user    User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
   branch  Branch   @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  course  Course?  @relation(fields: [courseId], references: [id], onDelete: SetNull)
   parents Parent[]
 
   groupLinks  GroupStudent[]
@@ -228,15 +249,21 @@ model Parent {
 }
 
 model Teacher {
-  id         String   @id @default(cuid())
-  userId     String?  @unique
-  branchId   String
-  firstName  String
-  lastName   String
-  middleName String?
-  phone      String?
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  id               String    @id @default(cuid())
+  userId           String?   @unique
+  branchId         String
+  firstName        String
+  lastName         String
+  middleName       String?
+  phone            String?
+  specialty        String?
+  educationLevel   String?
+  telegramUsername String?
+  birthDate        DateTime?
+  // Date the teacher started working at the academy.
+  hireDate         DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
 
   user     User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
   branch   Branch   @relation(fields: [branchId], references: [id], onDelete: Cascade)
@@ -318,6 +345,7 @@ model Course {
   courseType CourseType @relation(fields: [courseTypeId], references: [id])
   branch     Branch     @relation(fields: [branchId], references: [id], onDelete: Cascade)
   groups     Group[]
+  students   Student[]
 
   @@index([branchId])
   @@index([courseTypeId])
@@ -342,6 +370,7 @@ model Group {
   lessons     Lesson[]
   lessonRates LessonRate[]
   payments    Payment[]
+  broadcasts  Broadcast[]
 
   @@index([branchId])
   @@index([courseId])
@@ -589,11 +618,13 @@ model Broadcast {
   audience  BroadcastAudience
   status    BroadcastStatus   @default(DRAFT)
   authorId  String?
+  groupId   String?
   sentAt    DateTime?
   createdAt DateTime          @default(now())
   updatedAt DateTime          @updatedAt
 
-  author User? @relation("BroadcastAuthor", fields: [authorId], references: [id], onDelete: SetNull)
+  author User?  @relation("BroadcastAuthor", fields: [authorId], references: [id], onDelete: SetNull)
+  group  Group? @relation(fields: [groupId], references: [id], onDelete: SetNull)
 
   @@index([status])
   @@map("broadcasts")

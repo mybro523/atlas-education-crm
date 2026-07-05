@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, CalendarDays, Plus, Trash2, Users } from 'lucide-react';
@@ -40,11 +40,6 @@ export function GroupDetailPage() {
 
   const [addOpen, setAddOpen] = useState(false);
   const [removing, setRemoving] = useState<GroupStudent | null>(null);
-
-  const existingStudentIds = useMemo(
-    () => (members ?? []).map((m) => m.studentId),
-    [members],
-  );
 
   const handleRemove = () => {
     if (!removing || !id) return;
@@ -233,8 +228,6 @@ export function GroupDetailPage() {
           open={addOpen}
           onClose={() => setAddOpen(false)}
           groupId={id}
-          branchId={group.branchId}
-          existingStudentIds={existingStudentIds}
         />
       )}
 

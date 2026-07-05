@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { keepPreviousData, useQuery } from '@tanstack/react-query';
 
 import {
   createQueryKeys,
@@ -15,6 +15,7 @@ export function useBroadcasts(params?: BroadcastListParams) {
   return useQuery({
     queryKey: broadcastKeys.list(params),
     queryFn: () => broadcastApi.list(params),
+    placeholderData: keepPreviousData,
   });
 }
 
@@ -43,6 +44,7 @@ export function useCreateBroadcast() {
         title: dto.title ?? null,
         text: dto.text,
         audience: dto.audience,
+        groupId: dto.groupId ?? null,
         status: 'QUEUED',
         recipientCount: null,
         sentCount: null,

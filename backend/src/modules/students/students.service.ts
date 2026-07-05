@@ -26,10 +26,11 @@ export interface CallerContext {
   role: Role | string;
 }
 
-// Detail include: parents, branch, and active group links with the group.
+// Detail include: parents, branch, course, and active group links with the group.
 const studentDetailInclude = {
   parents: { orderBy: { lastName: 'asc' } },
   branch: true,
+  course: { select: { id: true, name: true } },
   groupLinks: {
     include: {
       group: { select: { id: true, name: true, teacherId: true } },
@@ -38,10 +39,11 @@ const studentDetailInclude = {
   },
 } satisfies Prisma.StudentInclude;
 
-// List include: parents + branch (no group links for a lighter payload).
+// List include: parents + branch + course (no group links for a lighter payload).
 const studentListInclude = {
   parents: { orderBy: { lastName: 'asc' } },
   branch: true,
+  course: { select: { id: true, name: true } },
 } satisfies Prisma.StudentInclude;
 
 @Injectable()
@@ -56,6 +58,17 @@ export class StudentsService {
     });
     if (!branch) {
       throw new NotFoundException(`Branch ${branchId} not found`);
+    }
+  }
+
+  /** Ensure a course exists, else 404. */
+  private async assertCourseExists(courseId: string): Promise<void> {
+    const course = await this.prisma.course.findUnique({
+      where: { id: courseId },
+      select: { id: true },
+    });
+    if (!course) {
+      throw new NotFoundException(`Course ${courseId} not found`);
     }
   }
 
@@ -180,6 +193,9 @@ export class StudentsService {
   /** Create a student, optionally with father/mother slots and/or parents[]. */
   async create(dto: CreateStudentDto) {
     await this.assertBranchExists(dto.branchId);
+    if (dto.courseId) {
+      await this.assertCourseExists(dto.courseId);
+    }
 
     const parentCreates = this.buildParentCreates(dto);
 
@@ -189,11 +205,15 @@ export class StudentsService {
       middleName: dto.middleName,
       birthDate: dto.birthDate ? new Date(dto.birthDate) : undefined,
       phone: dto.phone,
+      level: dto.level,
+      referralSource: dto.referralSource,
+      courseFee: dto.courseFee,
       isActive: dto.isActive,
       enrollmentDate: dto.enrollmentDate
         ? new Date(dto.enrollmentDate)
         : undefined,
       branch: { connect: { id: dto.branchId } },
+      ...(dto.courseId ? { course: { connect: { id: dto.courseId } } } : {}),
       ...(dto.userId ? { user: { connect: { id: dto.userId } } } : {}),
       ...(parentCreates.length > 0 ? { parents: { create: parentCreates } } : {}),
     };
@@ -219,12 +239,19 @@ export class StudentsService {
     if (dto.branchId) {
       await this.assertBranchExists(dto.branchId);
     }
+    if (dto.courseId) {
+      await this.assertCourseExists(dto.courseId);
+    }
 
     const data: Prisma.StudentUpdateInput = {
       firstName: dto.firstName,
       lastName: dto.lastName,
       middleName: dto.middleName,
       phone: dto.phone,
+      // Nullable scalars: undefined = leave unchanged, null = clear.
+      level: dto.level,
+      referralSource: dto.referralSource,
+      courseFee: dto.courseFee,
       isActive: dto.isActive,
     };
     if (dto.birthDate !== undefined) {
@@ -235,6 +262,11 @@ export class StudentsService {
     }
     if (dto.branchId) {
       data.branch = { connect: { id: dto.branchId } };
+    }
+    if (dto.courseId !== undefined) {
+      data.course = dto.courseId
+        ? { connect: { id: dto.courseId } }
+        : { disconnect: true };
     }
     if (dto.userId !== undefined) {
       data.user = dto.userId

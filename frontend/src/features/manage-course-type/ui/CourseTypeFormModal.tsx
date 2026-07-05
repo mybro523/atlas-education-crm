@@ -42,7 +42,6 @@ export function CourseTypeFormModal({
     register,
     handleSubmit,
     reset,
-    setError,
     formState: { errors },
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -58,16 +57,17 @@ export function CourseTypeFormModal({
     }
   }, [open, courseType, reset]);
 
-  const submitting = createCourseType.isPending || updateCourseType.isPending;
-
+  // A duplicate name (409) surfaces as a toast because the modal has already
+  // closed — the optimistic row rolls back automatically.
   const handleError = (err: unknown) => {
     if (isAxiosError(err) && err.response?.status === 409) {
-      setError('name', { message: 'duplicate' });
+      toast.error(t('courseTypes.duplicate'));
       return;
     }
     toast.error(isEdit ? t('crud.updateError') : t('crud.createError'));
   };
 
+  // INSTANT-CLOSE: fire optimistically and close immediately.
   const onValid = (values: FormValues) => {
     const dto = { name: values.name.trim(), isActive: values.isActive };
 
@@ -75,29 +75,21 @@ export function CourseTypeFormModal({
       updateCourseType.mutate(
         { id: courseType.id, dto },
         {
-          onSuccess: () => {
-            toast.success(t('crud.updated'));
-            onClose();
-          },
+          onSuccess: () => toast.success(t('crud.updated')),
           onError: handleError,
         },
       );
     } else {
       createCourseType.mutate(dto, {
-        onSuccess: () => {
-          toast.success(t('crud.created'));
-          onClose();
-        },
+        onSuccess: () => toast.success(t('crud.created')),
         onError: handleError,
       });
     }
+
+    onClose();
   };
 
-  const nameError = errors.name
-    ? errors.name.message === 'duplicate'
-      ? t('courseTypes.duplicate')
-      : t('crud.required')
-    : undefined;
+  const nameError = errors.name ? t('crud.required') : undefined;
 
   return (
     <FormModal
@@ -105,7 +97,6 @@ export function CourseTypeFormModal({
       onClose={onClose}
       title={isEdit ? t('courseTypes.editTitle') : t('courseTypes.addTitle')}
       onSubmit={handleSubmit(onValid)}
-      submitting={submitting}
     >
       <Input
         label={t('courseTypes.name')}

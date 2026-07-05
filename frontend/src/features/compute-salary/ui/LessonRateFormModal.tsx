@@ -40,7 +40,6 @@ export function LessonRateFormModal({
   const [amount, setAmount] = useState('');
   const [groupId, setGroupId] = useState('');
   const [amountError, setAmountError] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -48,7 +47,6 @@ export function LessonRateFormModal({
     setAmount(rate ? String(rate.amount) : '');
     setGroupId(rate?.groupId ?? '');
     setAmountError(null);
-    setError(null);
   }, [open, rate]);
 
   const groupOptions = useMemo(
@@ -62,11 +60,10 @@ export function LessonRateFormModal({
     [groupsData, t],
   );
 
-  const submitting = createRate.isPending || updateRate.isPending;
-
+  // HARD validation (amount > 0) blocks submit; on valid we INSTANT-CLOSE and
+  // toast on error while the optimistic row rolls back.
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setError(null);
     const trimmed = amount.trim();
     const numeric = Number(trimmed);
     if (!trimmed) {
@@ -86,28 +83,24 @@ export function LessonRateFormModal({
     };
 
     const onError = (err: unknown) =>
-      setError(extractErrorMessage(err) ?? t('form.saveError'));
+      toast.error(extractErrorMessage(err) ?? t('form.saveError'));
 
     if (isEdit && rate) {
       updateRate.mutate(
         { id: rate.id, dto },
         {
-          onSuccess: () => {
-            toast.success(t('finance.rates.updated'));
-            onClose();
-          },
+          onSuccess: () => toast.success(t('finance.rates.updated')),
           onError,
         },
       );
     } else {
       createRate.mutate(dto, {
-        onSuccess: () => {
-          toast.success(t('finance.rates.created'));
-          onClose();
-        },
+        onSuccess: () => toast.success(t('finance.rates.created')),
         onError,
       });
     }
+
+    onClose();
   };
 
   return (
@@ -116,8 +109,6 @@ export function LessonRateFormModal({
       onClose={onClose}
       title={isEdit ? t('finance.rates.editTitle') : t('finance.rates.createTitle')}
       onSubmit={handleSubmit}
-      submitting={submitting}
-      error={error ?? undefined}
     >
       <Input
         label={`${t('finance.rates.name')} (${t('form.optional')})`}

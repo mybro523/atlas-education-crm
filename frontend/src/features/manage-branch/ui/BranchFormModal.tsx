@@ -76,8 +76,9 @@ export function BranchFormModal({ open, onClose, branch }: BranchFormModalProps)
     }
   }, [open, branch, reset]);
 
-  const submitting = createBranch.isPending || updateBranch.isPending;
-
+  // INSTANT-CLOSE: fire the optimistic mutation and close immediately — the
+  // optimistic cache write already reflects the change; on error a toast fires
+  // and the entity hook rolls the cache back.
   const onValid = (values: FormValues) => {
     const dto = {
       name: values.name.trim(),
@@ -89,22 +90,18 @@ export function BranchFormModal({ open, onClose, branch }: BranchFormModalProps)
       updateBranch.mutate(
         { id: branch.id, dto },
         {
-          onSuccess: () => {
-            toast.success(t('crud.updated'));
-            onClose();
-          },
+          onSuccess: () => toast.success(t('crud.updated')),
           onError: () => toast.error(t('crud.updateError')),
         },
       );
     } else {
       createBranch.mutate(dto, {
-        onSuccess: () => {
-          toast.success(t('crud.created'));
-          onClose();
-        },
+        onSuccess: () => toast.success(t('crud.created')),
         onError: () => toast.error(t('crud.createError')),
       });
     }
+
+    onClose();
   };
 
   return (
@@ -113,7 +110,6 @@ export function BranchFormModal({ open, onClose, branch }: BranchFormModalProps)
       onClose={onClose}
       title={isEdit ? t('branches.editTitle') : t('branches.addTitle')}
       onSubmit={handleSubmit(onValid)}
-      submitting={submitting}
     >
       <Input
         label={t('branches.name')}

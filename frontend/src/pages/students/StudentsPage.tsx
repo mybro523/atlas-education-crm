@@ -23,6 +23,7 @@ import {
 } from '@/entities/student';
 import { StudentSearch } from '@/features/search-students';
 import { StudentFormModal } from './ui/StudentFormModal';
+import { StudentDetailModal } from './ui/StudentDetailModal';
 
 const PAGE_SIZE = 20;
 
@@ -45,6 +46,7 @@ export function StudentsPage() {
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Student | null>(null);
   const [pendingDelete, setPendingDelete] = useState<Student | null>(null);
+  const [detailStudent, setDetailStudent] = useState<Student | null>(null);
 
   const params = useMemo<StudentListParams>(
     () => ({
@@ -63,6 +65,13 @@ export function StudentsPage() {
   const students = data?.items ?? [];
   const pageCount = data?.meta.pageCount ?? 1;
   const total = data?.meta.total ?? 0;
+
+  // Keep the open detail card in sync with the latest list data (e.g. once an
+  // optimistically-created student is replaced by the server row), falling back
+  // to the clicked snapshot if it has paged out of the current results.
+  const detailStudentLive = detailStudent
+    ? (students.find((s) => s.id === detailStudent.id) ?? detailStudent)
+    : null;
 
   const branchName = (id: string) =>
     branches?.find((b) => b.id === id)?.name ?? '—';
@@ -144,7 +153,10 @@ export function StudentsPage() {
             variant="ghost"
             size="icon"
             aria-label={t('actions.edit')}
-            onClick={() => openEdit(student)}
+            onClick={(e) => {
+              e.stopPropagation();
+              openEdit(student);
+            }}
           >
             <Pencil className="h-4 w-4" />
           </Button>
@@ -153,7 +165,10 @@ export function StudentsPage() {
             variant="ghost"
             size="icon"
             aria-label={t('actions.delete')}
-            onClick={() => setPendingDelete(student)}
+            onClick={(e) => {
+              e.stopPropagation();
+              setPendingDelete(student);
+            }}
             className="text-danger hover:bg-danger/10"
           >
             <Trash2 className="h-4 w-4" />
@@ -204,6 +219,7 @@ export function StudentsPage() {
         data={students}
         rowKey={(student) => student.id}
         loading={isLoading}
+        onRowClick={setDetailStudent}
         emptyIcon={<Users className="h-6 w-6" aria-hidden />}
         emptyTitle={isError ? t('crud.loadError') : t('students.empty')}
         emptyDescription={isError ? undefined : t('students.emptyHint')}
@@ -222,6 +238,12 @@ export function StudentsPage() {
         open={formOpen}
         onClose={() => setFormOpen(false)}
         student={editing}
+      />
+
+      <StudentDetailModal
+        open={Boolean(detailStudent)}
+        onClose={() => setDetailStudent(null)}
+        student={detailStudentLive}
       />
 
       <ConfirmDialog

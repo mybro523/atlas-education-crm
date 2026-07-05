@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { keepPreviousData, useQuery } from '@tanstack/react-query';
 
 import {
   createQueryKeys,
@@ -27,6 +27,7 @@ export function useLessons(params?: LessonListParams) {
   return useQuery({
     queryKey: lessonKeys.list(params),
     queryFn: () => lessonApi.list(params),
+    placeholderData: keepPreviousData,
   });
 }
 
@@ -120,5 +121,6 @@ export function useRoomOccupancy(params?: RoomOccupancyParams) {
     queryKey: lessonKeys.occupancy(params),
     queryFn: () => lessonApi.roomOccupancy(params),
     enabled: Boolean(params?.date || (params?.from && params?.to)),
+    placeholderData: keepPreviousData,
   });
 }

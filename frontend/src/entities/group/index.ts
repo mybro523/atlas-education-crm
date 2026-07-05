@@ -2,8 +2,10 @@ export { groupApi } from './api';
 export type {
   Group,
   GroupStudent,
+  AvailableStudent,
   GroupListParams,
   GroupStudentsParams,
+  GroupAvailableStudentsParams,
   CreateGroupDto,
   UpdateGroupDto,
   AddGroupStudentDto,
@@ -13,6 +15,7 @@ export {
   useGroups,
   useGroup,
   useGroupStudents,
+  useAvailableStudents,
   useCreateGroup,
   useUpdateGroup,
   useDeleteGroup,

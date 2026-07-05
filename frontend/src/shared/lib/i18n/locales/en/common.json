@@ -143,7 +143,13 @@
     "deleteError": "Could not delete. Please try again.",
     "duplicateError": "This record already exists.",
     "optional": "optional",
-    "saveError": "Could not save. Please try again."
+    "saveError": "Could not save. Please try again.",
+    "birthDateFuture": "Date of birth cannot be in the future",
+    "hireBeforeBirth": "Hire date cannot be earlier than the date of birth",
+    "invalidAmount": "Enter a valid amount",
+    "invalidPhone": "Enter a valid phone number",
+    "invalidTelegram": "Enter a valid Telegram username",
+    "notSelected": "Not selected"
   },
   "fields": {
     "firstName": "First name",
@@ -156,7 +162,15 @@
     "birthDate": "Date of birth",
     "enrollmentDate": "Enrollment date",
     "status": "Status",
-    "position": "Position"
+    "position": "Position",
+    "course": "Course",
+    "courseFee": "Course fee",
+    "level": "Level",
+    "referralSource": "Referral source",
+    "specialty": "Specialty",
+    "educationLevel": "Education level",
+    "hireDate": "Hire date",
+    "telegram": "Telegram"
   },
   "teachers": {
     "title": "Teachers",
@@ -213,7 +227,21 @@
       "count_one": "{{count}} parent",
       "count_other": "{{count}} parents",
       "father": "Father",
-      "mother": "Mother"
+      "mother": "Mother",
+      "notAdded": "Not added"
+    },
+    "mainInfo": "Main information",
+    "level": {
+      "BEGINNER": "Beginner",
+      "STANDARD": "Standard",
+      "ADVANCED": "Advanced"
+    },
+    "referral": {
+      "INSTAGRAM": "Instagram",
+      "FRIENDS": "Friends",
+      "ADS": "Advertising",
+      "SELF": "Found us directly",
+      "OTHER": "Other"
     }
   },
   "pages": {
@@ -400,7 +428,8 @@
       "searchPlaceholder": "Search by name…",
       "empty": "No students found",
       "add": "Add",
-      "alreadyIn": "Already in group"
+      "alreadyIn": "Already in group",
+      "refineHint": "Refine your search to see more students"
     }
   },
   "schedule": {
@@ -475,6 +504,11 @@
       "fri": "Fri",
       "sat": "Sat",
       "sun": "Sun"
+    },
+    "views": {
+      "month": "Month",
+      "week": "Week",
+      "day": "Day"
     }
   },
   "finance": {
@@ -626,6 +660,13 @@
       "deleted": "Rate deleted",
       "empty": "No rates yet",
       "emptyHint": "Add your first lesson rate."
+    },
+    "tabs": {
+      "overview": "Overview",
+      "payments": "Payments",
+      "debts": "Debts",
+      "records": "Records",
+      "salaries": "Salaries"
     }
   },
   "journal": {
@@ -840,8 +881,12 @@
     "audience": {
       "ALL_STUDENTS": "All students",
       "ALL_TEACHERS": "All teachers",
-      "BOTH": "Students and teachers"
-    }
+      "BOTH": "Students and teachers",
+      "GROUP": "Group students"
+    },
+    "group": "Group",
+    "selectGroup": "Select a group",
+    "groupRequired": "Select a group"
   },
   "telegram": {
     "title": "Connect Telegram",

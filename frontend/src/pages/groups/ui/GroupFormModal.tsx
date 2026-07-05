@@ -1,8 +1,7 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { FormModal, Input, Select } from '@/shared/ui';
-import { extractErrorMessage } from '@/shared/api';
+import { FormModal, Input, Select, useToast } from '@/shared/ui';
 import {
   useCreateGroup,
   useUpdateGroup,
@@ -48,6 +47,7 @@ export function GroupFormModal({
   onSaved,
 }: GroupFormModalProps) {
   const { t } = useTranslation();
+  const toast = useToast();
   const isEdit = Boolean(group);
 
   const createGroup = useCreateGroup();
@@ -62,12 +62,10 @@ export function GroupFormModal({
   const [errors, setErrors] = useState<Partial<Record<keyof FormState, string>>>(
     {},
   );
-  const [formError, setFormError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!open) return;
     setErrors({});
-    setFormError(null);
     if (group) {
       setForm({
         name: group.name,
@@ -113,7 +111,6 @@ export function GroupFormModal({
 
   const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setFormError(null);
     if (!validate()) return;
 
     const dto: CreateGroupDto = {
@@ -124,19 +121,23 @@ export function GroupFormModal({
       isActive: form.isActive,
     };
 
-    const onError = (error: unknown) => {
-      setFormError(extractErrorMessage(error) ?? t('groups.saveError'));
-    };
-    const onSuccess = () => {
-      onSaved?.(!isEdit);
-      onClose();
-    };
+    // INSTANT-CLOSE: fire the optimistic mutation and close immediately. The
+    // optimistic cache update shows the change at once; a failed round-trip
+    // rolls back and surfaces a toast.
+    const onError = () => toast.error(t('groups.saveError'));
 
     if (group) {
-      updateGroup.mutate({ id: group.id, dto }, { onSuccess, onError });
+      updateGroup.mutate(
+        { id: group.id, dto },
+        { onSuccess: () => onSaved?.(false), onError },
+      );
     } else {
-      createGroup.mutate(dto, { onSuccess, onError });
+      createGroup.mutate(dto, {
+        onSuccess: () => onSaved?.(true),
+        onError,
+      });
     }
+    onClose();
   };
 
   return (
@@ -146,7 +147,6 @@ export function GroupFormModal({
       title={isEdit ? t('groups.editTitle') : t('groups.createTitle')}
       onSubmit={handleSubmit}
       submitting={submitting}
-      error={formError ?? undefined}
     >
       <Input
         label={t('groups.fields.name')}

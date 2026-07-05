@@ -49,6 +49,25 @@ export interface GroupStudentsParams {
   includeLeft?: boolean;
 }
 
+/**
+ * A student in the "addable" pool for a group (`GET /groups/:id/available-students`).
+ * Lightweight projection — NOT the full Student entity — and intentionally
+ * cross-branch (any student may join any group).
+ */
+export interface AvailableStudent {
+  id: string;
+  firstName: string;
+  lastName: string;
+  middleName?: string | null;
+  phone?: string | null;
+  branchId: string;
+}
+
+export interface GroupAvailableStudentsParams extends PaginationParams {
+  /** Matches student firstName / lastName / phone (contains, case-insensitive). */
+  search?: string;
+}
+
 export interface CreateGroupDto {
   name: string;
   courseId: string;

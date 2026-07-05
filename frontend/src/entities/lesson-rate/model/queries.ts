@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { keepPreviousData, useQuery } from '@tanstack/react-query';
 
 import {
   createQueryKeys,
@@ -21,6 +21,7 @@ export function useLessonRates(params?: LessonRateListParams) {
   return useQuery({
     queryKey: lessonRateKeys.list(params),
     queryFn: () => lessonRateApi.list(params),
+    placeholderData: keepPreviousData,
   });
 }
 

@@ -1,4 +1,5 @@
 import {
+  keepPreviousData,
   useQuery,
   useQueryClient,
   type QueryClient,
@@ -37,6 +38,7 @@ export function useConversations(params?: ConversationListParams) {
   return useQuery({
     queryKey: conversationKeys.list(params),
     queryFn: () => conversationApi.list(params),
+    placeholderData: keepPreviousData,
   });
 }
 
@@ -54,6 +56,7 @@ export function useMessages(
         pageSize,
       }),
     enabled: Boolean(conversationId),
+    placeholderData: keepPreviousData,
   });
 }
 

@@ -86,6 +86,8 @@ export function ComputeSalaryModal({ open, onClose }: ComputeSalaryModalProps) {
     );
   };
 
+  // INSTANT-CLOSE: persist the previewed salary optimistically and close now;
+  // a failed write toasts while the optimistic PENDING row rolls back.
   const handlePersist = () => {
     if (!result) return;
     createSalary.mutate(
@@ -98,14 +100,12 @@ export function ComputeSalaryModal({ open, onClose }: ComputeSalaryModalProps) {
         status: 'PENDING',
       },
       {
-        onSuccess: () => {
-          toast.success(t('finance.salaries.saved'));
-          onClose();
-        },
+        onSuccess: () => toast.success(t('finance.salaries.saved')),
         onError: (err) =>
           toast.error(extractErrorMessage(err) ?? t('form.saveError')),
       },
     );
+    onClose();
   };
 
   return (
@@ -209,20 +209,10 @@ export function ComputeSalaryModal({ open, onClose }: ComputeSalaryModalProps) {
         ) : null}
 
         <div className="flex flex-col-reverse gap-2 pt-2 sm:flex-row sm:justify-end">
-          <Button
-            type="button"
-            variant="secondary"
-            onClick={onClose}
-            disabled={createSalary.isPending}
-          >
+          <Button type="button" variant="secondary" onClick={onClose}>
             {t('common.cancel')}
           </Button>
-          <Button
-            type="button"
-            onClick={handlePersist}
-            disabled={!result}
-            loading={createSalary.isPending}
-          >
+          <Button type="button" onClick={handlePersist} disabled={!result}>
             {t('finance.salaries.save')}
           </Button>
         </div>

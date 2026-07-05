@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { keepPreviousData, useQuery } from '@tanstack/react-query';
 
 import { useSessionStore } from '@/entities/session';
 import { meApi } from '../api';
@@ -52,6 +52,7 @@ export function useMyGrades(params?: MyGradesParams) {
     queryKey: meKeys.student.grades(params),
     queryFn: () => meApi.student.grades(params),
     enabled,
+    placeholderData: keepPreviousData,
   });
 }
 
@@ -61,6 +62,7 @@ export function useMyStudentSchedule(params?: DateRangeParams) {
     queryKey: meKeys.student.schedule(params),
     queryFn: () => meApi.student.schedule(params),
     enabled,
+    placeholderData: keepPreviousData,
   });
 }
 
@@ -90,6 +92,7 @@ export function useMyTeacherStudents(params?: MyTeacherStudentsParams) {
     queryKey: meKeys.teacher.students(params),
     queryFn: () => meApi.teacher.students(params),
     enabled,
+    placeholderData: keepPreviousData,
   });
 }
 
@@ -99,5 +102,6 @@ export function useMyTeacherSchedule(params?: DateRangeParams) {
     queryKey: meKeys.teacher.schedule(params),
     queryFn: () => meApi.teacher.schedule(params),
     enabled,
+    placeholderData: keepPreviousData,
   });
 }

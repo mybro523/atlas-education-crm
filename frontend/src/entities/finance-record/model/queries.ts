@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { keepPreviousData, useQuery } from '@tanstack/react-query';
 
 import {
   createQueryKeys,
@@ -21,6 +21,7 @@ export function useFinanceRecords(params?: FinanceRecordListParams) {
   return useQuery({
     queryKey: financeRecordKeys.list(params),
     queryFn: () => financeRecordApi.list(params),
+    placeholderData: keepPreviousData,
   });
 }
 

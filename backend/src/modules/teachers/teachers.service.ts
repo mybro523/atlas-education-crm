@@ -101,6 +101,11 @@ export class TeachersService {
           lastName: dto.lastName,
           middleName: dto.middleName,
           phone: dto.phone,
+          specialty: dto.specialty,
+          educationLevel: dto.educationLevel,
+          telegramUsername: dto.telegramUsername,
+          birthDate: dto.birthDate ? new Date(dto.birthDate) : undefined,
+          hireDate: dto.hireDate ? new Date(dto.hireDate) : undefined,
           branch: { connect: { id: dto.branchId } },
           ...(dto.userId ? { user: { connect: { id: dto.userId } } } : {}),
         },
@@ -127,7 +132,16 @@ export class TeachersService {
       lastName: dto.lastName,
       middleName: dto.middleName,
       phone: dto.phone,
+      specialty: dto.specialty,
+      educationLevel: dto.educationLevel,
+      telegramUsername: dto.telegramUsername,
     };
+    if (dto.birthDate !== undefined) {
+      data.birthDate = dto.birthDate ? new Date(dto.birthDate) : null;
+    }
+    if (dto.hireDate !== undefined) {
+      data.hireDate = dto.hireDate ? new Date(dto.hireDate) : null;
+    }
     if (dto.branchId) {
       data.branch = { connect: { id: dto.branchId } };
     }

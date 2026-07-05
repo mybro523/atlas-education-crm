@@ -45,14 +45,22 @@ const config: Config = {
         success: 'rgb(var(--color-success) / <alpha-value>)',
       },
       fontFamily: {
+        // Self-hosted Source Sans 3 (variable). Calm, professional, editorial.
         sans: [
-          'Inter',
+          '"Source Sans 3 Variable"',
+          '"Source Sans 3"',
           'system-ui',
           '-apple-system',
           'Segoe UI',
           'Roboto',
           'sans-serif',
         ],
+      },
+      // Tighter, calmer editorial scale — larger sizes get slightly negative
+      // tracking so headings read composed rather than shouty.
+      letterSpacing: {
+        tight: '-0.011em',
+        tighter: '-0.02em',
       },
       borderRadius: {
         xl: '0.875rem',

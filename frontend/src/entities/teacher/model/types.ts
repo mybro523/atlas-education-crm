@@ -12,6 +12,16 @@ export interface Teacher {
   lastName: string;
   middleName?: string | null;
   phone?: string | null;
+  /** Subject / area the teacher specializes in (e.g. "English"). */
+  specialty?: string | null;
+  /** Free-form education level / qualification (e.g. "Bachelor"). */
+  educationLevel?: string | null;
+  /** Telegram handle (optional leading "@", 5–32 word chars). */
+  telegramUsername?: string | null;
+  /** Date of birth (ISO 8601 date string). */
+  birthDate?: string | null;
+  /** Date the teacher started at the academy (ISO 8601 date string). */
+  hireDate?: string | null;
   branchId: string;
   userId?: string | null;
   createdAt: string;
@@ -29,8 +39,28 @@ export interface CreateTeacherDto {
   lastName: string;
   middleName?: string;
   phone?: string;
+  /** Subject / area the teacher specializes in (≤ 120 chars). */
+  specialty?: string;
+  /** Free-form education level / qualification (≤ 120 chars). */
+  educationLevel?: string;
+  /** Telegram handle (optional leading "@", 5–32 word chars). */
+  telegramUsername?: string;
+  /** Date of birth (ISO 8601 date string). */
+  birthDate?: string;
+  /** Date the teacher started at the academy (ISO 8601 date string). */
+  hireDate?: string;
   branchId: string;
   userId?: string;
 }
 
-export type UpdateTeacherDto = Partial<CreateTeacherDto>;
+/**
+ * Update a teacher. `birthDate` / `hireDate` / `telegramUsername` accept `null`
+ * (or empty string) to clear the stored value.
+ */
+export type UpdateTeacherDto = Partial<
+  Omit<CreateTeacherDto, 'birthDate' | 'hireDate' | 'telegramUsername'>
+> & {
+  birthDate?: string | null;
+  hireDate?: string | null;
+  telegramUsername?: string | null;
+};

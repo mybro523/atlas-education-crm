@@ -61,7 +61,6 @@ export function FinanceRecordFormModal({
     register,
     handleSubmit,
     reset,
-    setError,
     formState: { errors },
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -97,8 +96,8 @@ export function FinanceRecordFormModal({
     { value: 'EXPENSE', label: t('finance.records.expense') },
   ];
 
-  const submitting = createRecord.isPending || updateRecord.isPending;
-
+  // INSTANT-CLOSE: fire optimistically and close immediately; a failed write
+  // surfaces as a toast while the entity hook rolls the optimistic row back.
   const onValid = (values: FormValues) => {
     const dto = {
       branchId: values.branchId,
@@ -110,30 +109,24 @@ export function FinanceRecordFormModal({
     };
 
     const onError = (err: unknown) =>
-      setError('root', {
-        message: extractErrorMessage(err) ?? t('form.saveError'),
-      });
+      toast.error(extractErrorMessage(err) ?? t('form.saveError'));
 
     if (isEdit && record) {
       updateRecord.mutate(
         { id: record.id, dto },
         {
-          onSuccess: () => {
-            toast.success(t('finance.records.updated'));
-            onClose();
-          },
+          onSuccess: () => toast.success(t('finance.records.updated')),
           onError,
         },
       );
     } else {
       createRecord.mutate(dto, {
-        onSuccess: () => {
-          toast.success(t('finance.records.created'));
-          onClose();
-        },
+        onSuccess: () => toast.success(t('finance.records.created')),
         onError,
       });
     }
+
+    onClose();
   };
 
   const amountError = errors.amount
@@ -152,8 +145,6 @@ export function FinanceRecordFormModal({
           : t('finance.records.createTitle')
       }
       onSubmit={handleSubmit(onValid)}
-      submitting={submitting}
-      error={errors.root?.message}
     >
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <Select

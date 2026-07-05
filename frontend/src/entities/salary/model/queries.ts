@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { keepPreviousData, useQuery } from '@tanstack/react-query';
 
 import {
   createQueryKeys,
@@ -24,6 +24,7 @@ export function useSalaries(params?: SalaryListParams) {
   return useQuery({
     queryKey: salaryKeys.list(params),
     queryFn: () => salaryApi.list(params),
+    placeholderData: keepPreviousData,
   });
 }
 

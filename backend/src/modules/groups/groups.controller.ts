@@ -20,6 +20,7 @@ import { CreateGroupDto } from './dto/create-group.dto';
 import { UpdateGroupDto } from './dto/update-group.dto';
 import { ListGroupsQueryDto } from './dto/list-groups.query.dto';
 import { ListMembersQueryDto } from './dto/list-members.query.dto';
+import { ListAvailableStudentsQueryDto } from './dto/list-available-students.query.dto';
 import { AddGroupStudentDto } from './dto/add-group-student.dto';
 
 /**
@@ -76,6 +77,16 @@ export class GroupsController {
     @CurrentUser() user: AuthUser,
   ) {
     return this.groupsService.listStudents(id, query.includeLeft ?? false, user);
+  }
+
+  @Get(':id/available-students')
+  @Roles(Role.FOUNDER, Role.ADMIN, Role.TEACHER)
+  listAvailableStudents(
+    @Param('id') id: string,
+    @Query() query: ListAvailableStudentsQueryDto,
+    @CurrentUser() user: AuthUser,
+  ) {
+    return this.groupsService.listAvailableStudents(id, query, user);
   }
 
   @Post(':id/students')

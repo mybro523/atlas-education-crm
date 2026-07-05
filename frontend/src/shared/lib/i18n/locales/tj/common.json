@@ -145,7 +145,13 @@
     "deleteError": "Нест карда нашуд. Дубора кӯшиш кунед.",
     "duplicateError": "Чунин сабт аллакай вуҷуд дорад.",
     "optional": "ихтиёрӣ",
-    "saveError": "Нигоҳ дошта нашуд. Дубора кӯшиш кунед."
+    "saveError": "Нигоҳ дошта нашуд. Дубора кӯшиш кунед.",
+    "birthDateFuture": "Санаи таваллуд дар оянда буда наметавонад",
+    "hireBeforeBirth": "Санаи ба кор қабул пеш аз санаи таваллуд буда наметавонад",
+    "invalidAmount": "Маблағи дурустро ворид кунед",
+    "invalidPhone": "Рақами телефони дурустро ворид кунед",
+    "invalidTelegram": "Номи корбари Telegram-и дурустро ворид кунед",
+    "notSelected": "Интихоб нашудааст"
   },
   "fields": {
     "firstName": "Ном",
@@ -158,7 +164,15 @@
     "birthDate": "Санаи таваллуд",
     "enrollmentDate": "Санаи воридшавӣ",
     "status": "Ҳолат",
-    "position": "Вазифа"
+    "position": "Вазифа",
+    "course": "Курс",
+    "courseFee": "Арзиши курс",
+    "level": "Сатҳ",
+    "referralSource": "Манбаи муроҷиат",
+    "specialty": "Ихтисос",
+    "educationLevel": "Сатҳи маълумот",
+    "hireDate": "Санаи ба кор қабул",
+    "telegram": "Telegram"
   },
   "teachers": {
     "title": "Муаллимон",
@@ -221,7 +235,21 @@
       "count_many": "{{count}} волид",
       "count_other": "{{count}} волид",
       "father": "Падар",
-      "mother": "Модар"
+      "mother": "Модар",
+      "notAdded": "Илова нашудааст"
+    },
+    "mainInfo": "Маълумоти асосӣ",
+    "level": {
+      "BEGINNER": "Ибтидоӣ",
+      "STANDARD": "Миёна",
+      "ADVANCED": "Пешрафта"
+    },
+    "referral": {
+      "INSTAGRAM": "Instagram",
+      "FRIENDS": "Дӯстон",
+      "ADS": "Реклама",
+      "SELF": "Худаш муроҷиат кард",
+      "OTHER": "Дигар"
     }
   },
   "pages": {
@@ -408,7 +436,8 @@
       "searchPlaceholder": "Ҷустуҷӯ аз рӯи ном…",
       "empty": "Донишҷӯён ёфт нашуданд",
       "add": "Илова",
-      "alreadyIn": "Аллакай дар гурӯҳ"
+      "alreadyIn": "Аллакай дар гурӯҳ",
+      "refineHint": "Ҷустуҷӯро дақиқтар кунед, то хонандагони бештарро бинед"
     }
   },
   "schedule": {
@@ -485,6 +514,11 @@
       "fri": "Ҷм",
       "sat": "Шб",
       "sun": "Яш"
+    },
+    "views": {
+      "month": "Моҳ",
+      "week": "Ҳафта",
+      "day": "Рӯз"
     }
   },
   "finance": {
@@ -646,6 +680,13 @@
       "deleted": "Меъёр нест карда шуд",
       "empty": "Ҳоло меъёр нест",
       "emptyHint": "Аввалин меъёрро барои дарс илова кунед."
+    },
+    "tabs": {
+      "overview": "Шарҳи умумӣ",
+      "payments": "Пардохтҳо",
+      "debts": "Қарзҳо",
+      "records": "Сабтҳо",
+      "salaries": "Маошҳо"
     }
   },
   "journal": {
@@ -870,8 +911,12 @@
     "audience": {
       "ALL_STUDENTS": "Ҳама донишҷӯён",
       "ALL_TEACHERS": "Ҳама муаллимон",
-      "BOTH": "Донишҷӯён ва муаллимон"
-    }
+      "BOTH": "Донишҷӯён ва муаллимон",
+      "GROUP": "Хонандагони гурӯҳ"
+    },
+    "group": "Гурӯҳ",
+    "selectGroup": "Гурӯҳро интихоб кунед",
+    "groupRequired": "Гурӯҳро интихоб кунед"
   },
   "telegram": {
     "title": "Пайвасти Telegram",

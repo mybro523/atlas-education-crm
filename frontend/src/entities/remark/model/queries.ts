@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { keepPreviousData, useQuery } from '@tanstack/react-query';
 
 import {
   createQueryKeys,
@@ -15,6 +15,7 @@ export function useRemarks(params?: RemarkListParams) {
   return useQuery({
     queryKey: remarkKeys.list(params),
     queryFn: () => remarkApi.list(params),
+    placeholderData: keepPreviousData,
   });
 }
 

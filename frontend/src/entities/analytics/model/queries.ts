@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { keepPreviousData, useQuery } from '@tanstack/react-query';
 
 import { analyticsApi } from '../api';
 import type {
@@ -18,6 +18,7 @@ export function useAnalyticsSummary(params?: AnalyticsSummaryParams) {
   return useQuery({
     queryKey: analyticsKeys.summary(params),
     queryFn: () => analyticsApi.summary(params),
+    placeholderData: keepPreviousData,
   });
 }
 
@@ -25,5 +26,6 @@ export function useAnalyticsSeries(params?: AnalyticsSeriesParams) {
   return useQuery({
     queryKey: analyticsKeys.series(params),
     queryFn: () => analyticsApi.series(params),
+    placeholderData: keepPreviousData,
   });
 }

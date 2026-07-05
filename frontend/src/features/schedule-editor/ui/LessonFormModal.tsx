@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { FormModal, Input, Select } from '@/shared/ui';
+import { FormModal, Input, Select, useToast } from '@/shared/ui';
 import { extractErrorMessage } from '@/shared/api';
 import {
   useCreateLesson,
@@ -63,11 +63,11 @@ export function LessonFormModal({
   onSaved,
 }: LessonFormModalProps) {
   const { t } = useTranslation();
+  const toast = useToast();
   const isEdit = Boolean(lesson);
 
   const createLesson = useCreateLesson();
   const updateLesson = useUpdateLesson();
-  const submitting = createLesson.isPending || updateLesson.isPending;
 
   // Options. Fetch a generous page so the selects are usable without a picker.
   const { data: coursesData } = useCourses({ pageSize: 100 });
@@ -82,13 +82,11 @@ export function LessonFormModal({
   const [errors, setErrors] = useState<Partial<Record<keyof FormState, string>>>(
     {},
   );
-  const [formError, setFormError] = useState<string | null>(null);
 
   // Reset the form whenever the modal opens or the target lesson changes.
   useEffect(() => {
     if (!open) return;
     setErrors({});
-    setFormError(null);
     if (lesson) {
       const start = fromIso(lesson.startsAt);
       const end = fromIso(lesson.endsAt);
@@ -189,9 +187,11 @@ export function LessonFormModal({
     return Object.keys(next).length === 0;
   };
 
+  // HARD validation blocks submit with inline field errors; on valid the lesson
+  // saves optimistically and the modal closes instantly (INSTANT-CLOSE). A failed
+  // write toasts while the entity hook rolls the optimistic lesson back.
   const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setFormError(null);
     if (!validate()) return;
 
     const startsAt = combineToIso(form.date, form.startTime);
@@ -199,13 +199,8 @@ export function LessonFormModal({
       ? combineToIso(form.date, form.endTime)
       : undefined;
 
-    const onError = (error: unknown) => {
-      setFormError(extractErrorMessage(error) ?? t('schedule.saveError'));
-    };
-    const onSuccess = () => {
-      onSaved?.();
-      onClose();
-    };
+    const onError = (error: unknown) =>
+      toast.error(extractErrorMessage(error) ?? t('schedule.saveError'));
 
     if (lesson) {
       // Edit: an empty room clears the assignment (backend disconnects on '').
@@ -216,7 +211,13 @@ export function LessonFormModal({
         startsAt,
         endsAt,
       };
-      updateLesson.mutate({ id: lesson.id, dto }, { onSuccess, onError });
+      updateLesson.mutate(
+        { id: lesson.id, dto },
+        {
+          onSuccess: () => toast.success(t('crud.updated')),
+          onError,
+        },
+      );
     } else {
       const dto: CreateLessonDto = {
         groupId: form.groupId,
@@ -225,8 +226,14 @@ export function LessonFormModal({
         startsAt,
         endsAt,
       };
-      createLesson.mutate(dto, { onSuccess, onError });
+      createLesson.mutate(dto, {
+        onSuccess: () => toast.success(t('crud.created')),
+        onError,
+      });
     }
+
+    onSaved?.();
+    onClose();
   };
 
   return (
@@ -235,8 +242,6 @@ export function LessonFormModal({
       onClose={onClose}
       title={isEdit ? t('schedule.editTitle') : t('schedule.createTitle')}
       onSubmit={handleSubmit}
-      submitting={submitting}
-      error={formError ?? undefined}
     >
       <Select
         label={t('schedule.fields.course')}

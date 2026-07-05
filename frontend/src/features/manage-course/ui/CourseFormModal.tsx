@@ -100,8 +100,6 @@ export function CourseFormModal({ open, onClose, course }: CourseFormModalProps)
     }
   }, [open, course, reset]);
 
-  const submitting = createCourse.isPending || updateCourse.isPending;
-
   const branchOptions = useMemo(
     () => (branches ?? []).map((b) => ({ value: b.id, label: b.name })),
     [branches],
@@ -127,26 +125,23 @@ export function CourseFormModal({ open, onClose, course }: CourseFormModalProps)
       ...(values.endDate ? { endDate: values.endDate } : {}),
     };
 
+    // INSTANT-CLOSE: fire optimistically, close now, reconcile/rollback later.
     if (isEdit && course) {
       updateCourse.mutate(
         { id: course.id, dto },
         {
-          onSuccess: () => {
-            toast.success(t('crud.updated'));
-            onClose();
-          },
+          onSuccess: () => toast.success(t('crud.updated')),
           onError: () => toast.error(t('crud.updateError')),
         },
       );
     } else {
       createCourse.mutate(dto, {
-        onSuccess: () => {
-          toast.success(t('crud.created'));
-          onClose();
-        },
+        onSuccess: () => toast.success(t('crud.created')),
         onError: () => toast.error(t('crud.createError')),
       });
     }
+
+    onClose();
   };
 
   const priceError = errors.pricePerMonth
@@ -164,7 +159,6 @@ export function CourseFormModal({ open, onClose, course }: CourseFormModalProps)
       onClose={onClose}
       title={isEdit ? t('courses.editTitle') : t('courses.addTitle')}
       onSubmit={handleSubmit(onValid)}
-      submitting={submitting}
     >
       <Input
         label={t('courses.name')}

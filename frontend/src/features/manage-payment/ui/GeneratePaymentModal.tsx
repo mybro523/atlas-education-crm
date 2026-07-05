@@ -69,6 +69,8 @@ export function GeneratePaymentModal({
     [groupsData, t],
   );
 
+  // INSTANT-CLOSE: kick off generation and close now — the result count lands
+  // as a toast when the (background) run settles; the list invalidation refreshes.
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     generate.mutate(
@@ -78,18 +80,17 @@ export function GeneratePaymentModal({
         ref: ref || undefined,
       },
       {
-        onSuccess: (payments) => {
+        onSuccess: (payments) =>
           toast.success(
             t('finance.payments.generatedCount', {
               count: payments?.length ?? 0,
             }),
-          );
-          onClose();
-        },
+          ),
         onError: (err) =>
           toast.error(extractErrorMessage(err) ?? t('form.saveError')),
       },
     );
+    onClose();
   };
 
   return (
@@ -98,7 +99,6 @@ export function GeneratePaymentModal({
       onClose={onClose}
       title={t('finance.payments.generateTitle')}
       onSubmit={handleSubmit}
-      submitting={generate.isPending}
       submitLabel={t('finance.payments.generate')}
     >
       <p className="text-sm text-foreground-muted">

@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { keepPreviousData, useQuery } from '@tanstack/react-query';
 
 import {
   createQueryKeys,
@@ -26,6 +26,7 @@ export function usePayments(params?: PaymentListParams) {
   return useQuery({
     queryKey: paymentKeys.list(params),
     queryFn: () => paymentApi.list(params),
+    placeholderData: keepPreviousData,
   });
 }
 
@@ -41,6 +42,7 @@ export function useDebts(params?: DebtsParams) {
   return useQuery({
     queryKey: paymentKeys.debts(params),
     queryFn: () => paymentApi.debts(params),
+    placeholderData: keepPreviousData,
   });
 }
 

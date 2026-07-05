@@ -2,12 +2,16 @@ import { Type } from 'class-transformer';
 import {
   IsBoolean,
   IsDateString,
+  IsEnum,
   IsNotEmpty,
+  IsNumber,
   IsObject,
   IsOptional,
   IsString,
+  Min,
   ValidateNested,
 } from 'class-validator';
+import { ReferralSource, StudentLevel } from '@prisma/client';
 import { ParentFigureDto } from './parent-figure.dto';
 
 /**
@@ -45,6 +49,30 @@ export class UpdateStudentDto {
   @IsOptional()
   @IsString()
   branchId?: string;
+
+  /**
+   * Course the student is enrolled in — must reference an existing Course.
+   * Send an empty string / null to un-link the current course.
+   */
+  @IsOptional()
+  @IsString()
+  courseId?: string | null;
+
+  /** Learning level (beginner / standard / advanced). */
+  @IsOptional()
+  @IsEnum(StudentLevel)
+  level?: StudentLevel | null;
+
+  /** How the student found the academy. */
+  @IsOptional()
+  @IsEnum(ReferralSource)
+  referralSource?: ReferralSource | null;
+
+  /** The sum the student must pay for the course (TJS, stored as Decimal). */
+  @IsOptional()
+  @IsNumber({ maxDecimalPlaces: 2 })
+  @Min(0)
+  courseFee?: number | null;
 
   @IsOptional()
   @IsDateString()

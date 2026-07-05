@@ -4,6 +4,23 @@ import type { Branch } from '@/entities/branch';
 /** Which parent/guardian slot a Parent occupies (API_CONTRACT §6). */
 export type ParentRelation = 'FATHER' | 'MOTHER' | 'OTHER';
 
+/** Learning level of a student (backend enum StudentLevel). */
+export type StudentLevel = 'BEGINNER' | 'STANDARD' | 'ADVANCED';
+
+/** How the student found the academy (backend enum ReferralSource). */
+export type ReferralSource =
+  | 'INSTAGRAM'
+  | 'FRIENDS'
+  | 'ADS'
+  | 'SELF'
+  | 'OTHER';
+
+/** Lightweight course projection embedded on the student detail/list payload. */
+export interface StudentCourseRef {
+  id: string;
+  name: string;
+}
+
 /**
  * Parent / guardian. `position` (должность) and `workplace` both participate in
  * student search (spec §4.4). `relation` marks the parent as FATHER / MOTHER /
@@ -41,6 +58,14 @@ export interface Student {
   birthDate?: string | null;
   phone?: string | null;
   branchId: string;
+  /** Course the student is enrolled in (nullable). */
+  courseId?: string | null;
+  /** Learning level (beginner / standard / advanced). */
+  level?: StudentLevel | null;
+  /** How the student found the academy. */
+  referralSource?: ReferralSource | null;
+  /** Sum the student must pay for the course (TJS). */
+  courseFee?: number | null;
   /** Billing anchor (period counts from here). */
   enrollmentDate: string;
   isActive: boolean;
@@ -49,6 +74,8 @@ export interface Student {
   updatedAt: string;
   parents?: Parent[];
   branch?: Branch;
+  /** Populated on detail/list GET (id + name). */
+  course?: StudentCourseRef | null;
   groupLinks?: StudentGroupLink[];
 }
 
@@ -94,6 +121,14 @@ export interface CreateStudentDto {
   birthDate?: string;
   phone?: string;
   branchId: string;
+  /** Course the student is enrolled in — references an existing Course. */
+  courseId?: string | null;
+  /** Learning level (beginner / standard / advanced). */
+  level?: StudentLevel | null;
+  /** How the student found the academy. */
+  referralSource?: ReferralSource | null;
+  /** Sum the student must pay for the course (TJS, ≥ 0, 2 decimals). */
+  courseFee?: number | null;
   /** Defaults to now server-side; billing anchor. */
   enrollmentDate?: string;
   isActive?: boolean;

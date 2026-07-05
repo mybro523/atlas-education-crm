@@ -57,8 +57,6 @@ export function RoomFormModal({ open, onClose, room }: RoomFormModalProps) {
     }
   }, [open, room, reset]);
 
-  const submitting = createRoom.isPending || updateRoom.isPending;
-
   const branchOptions = useMemo(
     () => [
       { value: '', label: t('rooms.noBranch') },
@@ -67,6 +65,7 @@ export function RoomFormModal({ open, onClose, room }: RoomFormModalProps) {
     [branches, t],
   );
 
+  // INSTANT-CLOSE: fire optimistically and close immediately.
   const onValid = (values: FormValues) => {
     const name = values.name.trim();
 
@@ -78,10 +77,7 @@ export function RoomFormModal({ open, onClose, room }: RoomFormModalProps) {
           dto: { name, branchId: values.branchId || null, isActive: values.isActive },
         },
         {
-          onSuccess: () => {
-            toast.success(t('crud.updated'));
-            onClose();
-          },
+          onSuccess: () => toast.success(t('crud.updated')),
           onError: () => toast.error(t('crud.updateError')),
         },
       );
@@ -89,14 +85,13 @@ export function RoomFormModal({ open, onClose, room }: RoomFormModalProps) {
       createRoom.mutate(
         { name, branchId: values.branchId || undefined, isActive: values.isActive },
         {
-          onSuccess: () => {
-            toast.success(t('crud.created'));
-            onClose();
-          },
+          onSuccess: () => toast.success(t('crud.created')),
           onError: () => toast.error(t('crud.createError')),
         },
       );
     }
+
+    onClose();
   };
 
   return (
@@ -105,7 +100,6 @@ export function RoomFormModal({ open, onClose, room }: RoomFormModalProps) {
       onClose={onClose}
       title={isEdit ? t('rooms.editTitle') : t('rooms.addTitle')}
       onSubmit={handleSubmit(onValid)}
-      submitting={submitting}
     >
       <Input
         label={t('rooms.name')}

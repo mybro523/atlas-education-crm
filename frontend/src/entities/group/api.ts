@@ -5,6 +5,8 @@ import type {
   GroupListParams,
   GroupStudent,
   GroupStudentsParams,
+  AvailableStudent,
+  GroupAvailableStudentsParams,
   CreateGroupDto,
   UpdateGroupDto,
   AddGroupStudentDto,
@@ -46,6 +48,21 @@ export const groupApi = {
   ): Promise<GroupStudent[]> {
     const { data } = await axiosClient.get<GroupStudent[]>(
       `/groups/${groupId}/students`,
+      { params },
+    );
+    return data;
+  },
+
+  /**
+   * Students that can still be enrolled into the group (NOT already active
+   * members; cross-branch). Paginated `{ items, meta }`.
+   */
+  async listAvailableStudents(
+    groupId: string,
+    params?: GroupAvailableStudentsParams,
+  ): Promise<Paginated<AvailableStudent>> {
+    const { data } = await axiosClient.get<Paginated<AvailableStudent>>(
+      `/groups/${groupId}/available-students`,
       { params },
     );
     return data;

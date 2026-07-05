@@ -3,12 +3,15 @@ import { useTranslation } from 'react-i18next';
 import { FormModal, Input, Select, useToast } from '@/shared/ui';
 import { extractErrorMessage } from '@/shared/api';
 import { useBranches } from '@/entities/branch';
+import { useCourses } from '@/entities/course';
 import {
   useCreateStudent,
   useUpdateStudent,
   type Student,
   type CreateStudentDto,
   type UpdateStudentDto,
+  type StudentLevel,
+  type ReferralSource,
 } from '@/entities/student';
 import {
   ParentFigureFields,
@@ -18,6 +21,12 @@ import {
   type ParentFigureDraft,
   type ParentFigureErrors,
 } from '@/features/manage-parents';
+import {
+  STUDENT_LEVELS,
+  REFERRAL_SOURCES,
+  levelLabelKey,
+  referralLabelKey,
+} from '../lib/studentEnums';
 
 export interface StudentFormModalProps {
   open: boolean;
@@ -33,6 +42,23 @@ interface FieldErrors {
   birthDate?: string;
   enrollmentDate?: string;
   branchId?: string;
+  courseFee?: string;
+}
+
+/**
+ * A course fee is optional but, when present, must be a non-negative amount with
+ * at most two decimals (matches the backend `@IsNumber({ maxDecimalPlaces: 2 })
+ * @Min(0)`). Accepts a comma or dot as the decimal separator.
+ */
+function isValidFee(value: string): boolean {
+  return /^\d+([.,]\d{1,2})?$/.test(value.trim());
+}
+
+/** Parse a validated fee string to a number (null when blank). */
+function parseFee(value: string): number | null {
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  return Number(trimmed.replace(',', '.'));
 }
 
 /** Trim an ISO datetime down to the `YYYY-MM-DD` a date input expects. */
@@ -75,6 +101,7 @@ export function StudentFormModal({
   const isEdit = Boolean(student);
 
   const { data: branches } = useBranches();
+  const { data: coursesData } = useCourses({ pageSize: 100 });
   const createStudent = useCreateStudent();
   const updateStudent = useUpdateStudent();
 
@@ -85,13 +112,16 @@ export function StudentFormModal({
   const [birthDate, setBirthDate] = useState('');
   const [enrollmentDate, setEnrollmentDate] = useState('');
   const [branchId, setBranchId] = useState('');
+  const [courseId, setCourseId] = useState('');
+  const [level, setLevel] = useState<StudentLevel | ''>('');
+  const [referralSource, setReferralSource] = useState<ReferralSource | ''>('');
+  const [courseFee, setCourseFee] = useState('');
   const [isActive, setIsActive] = useState(true);
   const [father, setFather] = useState<ParentFigureDraft>(figureFromParent());
   const [mother, setMother] = useState<ParentFigureDraft>(figureFromParent());
   const [errors, setErrors] = useState<FieldErrors>({});
   const [fatherErrors, setFatherErrors] = useState<ParentFigureErrors>({});
   const [motherErrors, setMotherErrors] = useState<ParentFigureErrors>({});
-  const [formError, setFormError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -102,6 +132,10 @@ export function StudentFormModal({
     setBirthDate(toDateInput(student?.birthDate));
     setEnrollmentDate(toDateInput(student?.enrollmentDate));
     setBranchId(student?.branchId ?? '');
+    setCourseId(student?.courseId ?? '');
+    setLevel(student?.level ?? '');
+    setReferralSource(student?.referralSource ?? '');
+    setCourseFee(student?.courseFee != null ? String(student.courseFee) : '');
     setIsActive(student?.isActive ?? true);
     setFather(
       figureFromParent(
@@ -116,7 +150,6 @@ export function StudentFormModal({
     setErrors({});
     setFatherErrors({});
     setMotherErrors({});
-    setFormError(null);
   }, [open, student]);
 
   const today = todayInput();
@@ -145,6 +178,9 @@ export function StudentFormModal({
     // may be pre-enrolled for an upcoming term).
     if (birthDate && enrollmentDate && enrollmentDate < birthDate)
       next.enrollmentDate = t('form.requiredField');
+    // Course fee: optional, but when entered must be a valid non-negative amount.
+    if (courseFee.trim() && !isValidFee(courseFee))
+      next.courseFee = t('form.invalidAmount');
 
     const fErr = validateFigure(father);
     const mErr = validateFigure(mother);
@@ -162,11 +198,19 @@ export function StudentFormModal({
 
   const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setFormError(null);
     if (!validate()) return;
 
     const fatherDto = parentFigureToDto(father);
     const motherDto = parentFigureToDto(mother);
+    // Shared enum/course/fee slots. Empty selects clear the field (null), which
+    // the backend treats as "disconnect / unset" — an empty string would fail the
+    // @IsEnum / @IsString checks.
+    const shared = {
+      courseId: courseId || null,
+      level: level || null,
+      referralSource: referralSource || null,
+      courseFee: parseFee(courseFee),
+    };
 
     if (isEdit && student) {
       const dto: UpdateStudentDto = {
@@ -178,43 +222,43 @@ export function StudentFormModal({
         enrollmentDate: enrollmentDate || undefined,
         branchId,
         isActive,
+        ...shared,
         father: fatherDto,
         mother: motherDto,
       };
       updateStudent.mutate(
         { id: student.id, dto },
         {
-          onSuccess: () => {
-            toast.success(t('students.updated'));
-            onClose();
-          },
+          onSuccess: () => toast.success(t('students.updated')),
           onError: (err) =>
-            setFormError(extractErrorMessage(err) ?? t('form.updateError')),
+            toast.error(extractErrorMessage(err) ?? t('form.updateError')),
         },
       );
-      return;
+    } else {
+      const dto: CreateStudentDto = {
+        firstName: firstName.trim(),
+        lastName: lastName.trim(),
+        middleName: middleName.trim() || undefined,
+        phone: phone.trim() || undefined,
+        birthDate: birthDate || undefined,
+        enrollmentDate: enrollmentDate || undefined,
+        branchId,
+        isActive,
+        ...shared,
+        father: fatherDto,
+        mother: motherDto,
+      };
+      createStudent.mutate(dto, {
+        onSuccess: () => toast.success(t('students.created')),
+        onError: (err) =>
+          toast.error(extractErrorMessage(err) ?? t('form.createError')),
+      });
     }
 
-    const dto: CreateStudentDto = {
-      firstName: firstName.trim(),
-      lastName: lastName.trim(),
-      middleName: middleName.trim() || undefined,
-      phone: phone.trim() || undefined,
-      birthDate: birthDate || undefined,
-      enrollmentDate: enrollmentDate || undefined,
-      branchId,
-      isActive,
-      father: fatherDto,
-      mother: motherDto,
-    };
-    createStudent.mutate(dto, {
-      onSuccess: () => {
-        toast.success(t('students.created'));
-        onClose();
-      },
-      onError: (err) =>
-        setFormError(extractErrorMessage(err) ?? t('form.createError')),
-    });
+    // INSTANT-CLOSE: the optimistic cache update already reflects the change, so
+    // close immediately instead of blocking on the network round-trip. On error
+    // the mutation rolls back and surfaces a toast.
+    onClose();
   };
 
   const submitting = createStudent.isPending || updateStudent.isPending;
@@ -226,7 +270,6 @@ export function StudentFormModal({
       title={isEdit ? t('students.editTitle') : t('students.createTitle')}
       onSubmit={handleSubmit}
       submitting={submitting}
-      error={formError ?? undefined}
       className="max-w-2xl"
     >
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -303,6 +346,61 @@ export function StudentFormModal({
             { value: 'active', label: t('students.active') },
             { value: 'inactive', label: t('students.inactive') },
           ]}
+        />
+
+        {/* Course & enrolment details (rework additions — all optional). A
+            selectable empty option lets the user clear the field again on edit. */}
+        <Select
+          label={`${t('fields.course')} (${t('form.optional')})`}
+          value={courseId}
+          onChange={(e) => setCourseId(e.target.value)}
+          disabled={submitting}
+          options={[
+            { value: '', label: t('form.notSelected') },
+            ...(coursesData?.items ?? []).map((c) => ({
+              value: c.id,
+              label: c.name,
+            })),
+          ]}
+        />
+        <Select
+          label={`${t('fields.level')} (${t('form.optional')})`}
+          value={level}
+          onChange={(e) => setLevel(e.target.value as StudentLevel | '')}
+          disabled={submitting}
+          options={[
+            { value: '', label: t('form.notSelected') },
+            ...STUDENT_LEVELS.map((lvl) => ({
+              value: lvl,
+              label: t(levelLabelKey(lvl)),
+            })),
+          ]}
+        />
+        <Select
+          label={`${t('fields.referralSource')} (${t('form.optional')})`}
+          value={referralSource}
+          onChange={(e) =>
+            setReferralSource(e.target.value as ReferralSource | '')
+          }
+          disabled={submitting}
+          options={[
+            { value: '', label: t('form.notSelected') },
+            ...REFERRAL_SOURCES.map((src) => ({
+              value: src,
+              label: t(referralLabelKey(src)),
+            })),
+          ]}
+        />
+        <Input
+          label={`${t('fields.courseFee')} (${t('form.optional')})`}
+          type="number"
+          inputMode="decimal"
+          min={0}
+          step="0.01"
+          value={courseFee}
+          onChange={(e) => setCourseFee(e.target.value)}
+          error={errors.courseFee}
+          disabled={submitting}
         />
       </div>
 

@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { keepPreviousData, useQuery } from '@tanstack/react-query';
 
 import {
   createQueryKeys,
@@ -21,6 +21,7 @@ export function useCourses(params?: CourseListParams) {
   return useQuery({
     queryKey: courseKeys.list(params),
     queryFn: () => courseApi.list(params),
+    placeholderData: keepPreviousData,
   });
 }
 
