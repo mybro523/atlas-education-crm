@@ -58,7 +58,7 @@
     "chats": "Чатҳо",
     "broadcast": "SMS-паём",
     "branches": "Филиалҳо",
-    "subjects": "Фанҳо",
+    "rooms": "Ҳуҷраҳо",
     "courseTypes": "Намудҳои курс",
     "studentCabinet": "Кабинети ман",
     "teacherCabinet": "Кабинети ман",
@@ -83,6 +83,23 @@
       "finance": "Ҷамъбасти молиявӣ",
       "chats": "Чатҳои фаъол",
       "journal": "Журнал"
+    },
+    "founder": {
+      "kpiTitle": "Нишондиҳандаҳои асосӣ",
+      "totalStudents": "Донишҷӯён",
+      "totalTeachers": "Муаллимон",
+      "totalGroups": "Гурӯҳҳо",
+      "monthIncome": "Даромади моҳона",
+      "outstandingDebt": "Қарзи пардохтнашуда",
+      "salariesPayable": "Барои пардохт (маошҳо)",
+      "pendingCount_one": "{{count}} барои пардохт",
+      "pendingCount_few": "{{count}} барои пардохт",
+      "pendingCount_many": "{{count}} барои пардохт",
+      "pendingCount_other": "{{count}} барои пардохт",
+      "thisMonth": "Дар ин моҳ",
+      "asOfToday": "Ба имрӯз",
+      "chartTitle": "Даромад ва хароҷот",
+      "chartSubtitle": "Аз рӯи моҳҳо"
     }
   },
   "notFound": {
@@ -129,7 +146,8 @@
     "workplace": "Ҷои кор",
     "birthDate": "Санаи таваллуд",
     "enrollmentDate": "Санаи воридшавӣ",
-    "status": "Ҳолат"
+    "status": "Ҳолат",
+    "position": "Вазифа"
   },
   "teachers": {
     "title": "Муаллимон",
@@ -159,6 +177,7 @@
     "title": "Донишҷӯён",
     "subtitle": "Идоракунии донишҷӯён ва волидони онҳо",
     "searchPlaceholder": "Ҷустуҷӯ аз рӯи ном ё ҷои кори волидон",
+    "searchHint": "Ҷустуҷӯ аз рӯи номи донишҷӯ, ҷои кор ё вазифаи волидон",
     "add": "Илова кардани донишҷӯ",
     "createTitle": "Донишҷӯи нав",
     "editTitle": "Таҳрири донишҷӯ",
@@ -189,7 +208,9 @@
       "count_one": "{{count}} волид",
       "count_few": "{{count}} волид",
       "count_many": "{{count}} волид",
-      "count_other": "{{count}} волид"
+      "count_other": "{{count}} волид",
+      "father": "Падар",
+      "mother": "Модар"
     }
   },
   "pages": {
@@ -272,6 +293,19 @@
     "empty": "Ҳоло намуди курс нест",
     "emptyHint": "Аввалин намуди курсро илова кунед."
   },
+  "rooms": {
+    "title": "Ҳуҷраҳо",
+    "subtitle": "Идоракунии ҳуҷраҳо (синфхонаҳо)",
+    "name": "Ном",
+    "namePlaceholder": "Ҳуҷраи 1",
+    "branch": "Филиал",
+    "noBranch": "Бе филиал",
+    "isActive": "Фаъол",
+    "empty": "Ҳоло ҳуҷра нест",
+    "emptyHint": "Аввалин ҳуҷраро илова кунед",
+    "addTitle": "Ҳуҷраи нав",
+    "editTitle": "Таҳрири ҳуҷра"
+  },
   "courses": {
     "title": "Курсҳо",
     "subtitle": "Барномаҳои таълимӣ аз рӯи филиалҳо",
@@ -289,6 +323,10 @@
     "selectSubject": "Фанро интихоб кунед",
     "selectBranch": "Филиалро интихоб кунед",
     "priceMin": "Нарх наметавонад манфӣ бошад",
+    "term": "Мӯҳлат",
+    "startDate": "Санаи оғоз",
+    "endDate": "Санаи анҷом",
+    "dateRange": "Мӯҳлати курс",
     "empty": "Ҳоло курс нест",
     "emptyHint": "Аввалин курсро илова кунед."
   },
@@ -372,6 +410,8 @@
     "deleteConfirm": "Ин дарсро нест мекунед? Ин амал бебозгашт аст.",
     "allGroups": "Ҳама гурӯҳҳо",
     "allTeachers": "Ҳама муаллимон",
+    "allCourses": "Ҳама курсҳо",
+    "allRooms": "Ҳама ҳуҷраҳо",
     "prevWeek": "Ҳафтаи гузашта",
     "nextWeek": "Ҳафтаи оянда",
     "today": "Имрӯз",
@@ -389,6 +429,25 @@
     "conductedToast": "Дарс ҳамчун гузаронидашуда қайд шуд",
     "notConductedToast": "Қайд бардошта шуд",
     "saveError": "Дарс нигоҳ дошта нашуд",
+    "emptyDay": "Дар ин рӯз дарс нест",
+    "moreLessons_one": "Боз {{count}}",
+    "moreLessons_few": "Боз {{count}}",
+    "moreLessons_many": "Боз {{count}}",
+    "moreLessons_other": "Боз {{count}}",
+    "nextPeriod": "Баъдӣ",
+    "prevPeriod": "Қаблӣ",
+    "viewLabel": "Намуд",
+    "occupancy": {
+      "toggle": "Ишғоли ҳуҷраҳо",
+      "title": "Ишғоли ҳуҷраҳо",
+      "date": "Сана",
+      "start": "Аз",
+      "end": "То",
+      "free": "Озод",
+      "occupied": "Ишғол",
+      "noRooms": "Ҳуҷра нест",
+      "summary": "{{free}} аз {{total}} озод"
+    },
     "fields": {
       "group": "Гурӯҳ",
       "groupPlaceholder": "Гурӯҳро интихоб кунед",
@@ -401,7 +460,11 @@
       "topicPlaceholder": "Мавзӯи дарс",
       "room": "Ҳуҷра",
       "roomPlaceholder": "Масалан, 204",
-      "isConducted": "Гузаронида шуд"
+      "isConducted": "Гузаронида шуд",
+      "course": "Курс",
+      "coursePlaceholder": "Курсро интихоб кунед",
+      "endAfterStart": "Вақти анҷом бояд пас аз оғоз бошад",
+      "noRoom": "Бе ҳуҷра"
     },
     "weekdays": {
       "mon": "Дш",
@@ -633,7 +696,13 @@
       "totalAbsences": "Ҳамагӣ ғоибиҳо",
       "subjectsCount": "Фанҳо",
       "empty": "Ҳоло маълумот нест",
-      "emptyHint": "Омор пас аз аввалин дарсҳо пайдо мешавад."
+      "emptyHint": "Омор пас аз аввалин дарсҳо пайдо мешавад.",
+      "course": "Курс",
+      "coursesCount_one": "{{count}} курс",
+      "coursesCount_few": "{{count}} курс",
+      "coursesCount_many": "{{count}} курс",
+      "coursesCount_other": "{{count}} курс",
+      "chartTitleByCourse": "Баҳои миёна аз рӯи курсҳо"
     },
     "profile": {
       "personalData": "Маълумоти шахсӣ",

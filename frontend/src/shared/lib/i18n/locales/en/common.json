@@ -53,7 +53,7 @@
     "groups": "Groups",
     "courses": "Courses",
     "branches": "Branches",
-    "subjects": "Subjects",
+    "rooms": "Rooms",
     "courseTypes": "Course types",
     "schedule": "Schedule",
     "journal": "Journal",
@@ -83,6 +83,21 @@
       "finance": "Finance summary",
       "chats": "Active chats",
       "journal": "Journal"
+    },
+    "founder": {
+      "kpiTitle": "Key metrics",
+      "totalStudents": "Students",
+      "totalTeachers": "Teachers",
+      "totalGroups": "Groups",
+      "monthIncome": "Monthly income",
+      "outstandingDebt": "Outstanding debt",
+      "salariesPayable": "Salaries payable",
+      "pendingCount_one": "{{count}} pending",
+      "pendingCount_other": "{{count}} pending",
+      "thisMonth": "This month",
+      "asOfToday": "As of today",
+      "chartTitle": "Income and expenses",
+      "chartSubtitle": "By month"
     }
   },
   "notFound": {
@@ -129,7 +144,8 @@
     "workplace": "Workplace",
     "birthDate": "Date of birth",
     "enrollmentDate": "Enrollment date",
-    "status": "Status"
+    "status": "Status",
+    "position": "Position"
   },
   "teachers": {
     "title": "Teachers",
@@ -157,6 +173,7 @@
     "title": "Students",
     "subtitle": "Manage students and their parents",
     "searchPlaceholder": "Search by name or parent's workplace",
+    "searchHint": "Search by student name, parents' workplace or position",
     "add": "Add student",
     "createTitle": "New student",
     "editTitle": "Edit student",
@@ -183,7 +200,9 @@
       "updated": "Parent updated",
       "deleted": "Parent deleted",
       "count_one": "{{count}} parent",
-      "count_other": "{{count}} parents"
+      "count_other": "{{count}} parents",
+      "father": "Father",
+      "mother": "Mother"
     }
   },
   "pages": {
@@ -266,6 +285,19 @@
     "empty": "No course types yet",
     "emptyHint": "Add the first course type."
   },
+  "rooms": {
+    "title": "Rooms",
+    "subtitle": "Manage rooms (classrooms)",
+    "name": "Name",
+    "namePlaceholder": "Room 1",
+    "branch": "Branch",
+    "noBranch": "No branch",
+    "isActive": "Active",
+    "empty": "No rooms yet",
+    "emptyHint": "Add the first room",
+    "addTitle": "New room",
+    "editTitle": "Edit room"
+  },
   "courses": {
     "title": "Courses",
     "subtitle": "Programs by branch",
@@ -283,6 +315,10 @@
     "selectSubject": "Select a subject",
     "selectBranch": "Select a branch",
     "priceMin": "Price cannot be negative",
+    "term": "Term",
+    "startDate": "Start date",
+    "endDate": "End date",
+    "dateRange": "Course term",
     "empty": "No courses yet",
     "emptyHint": "Add the first course."
   },
@@ -366,6 +402,8 @@
     "deleteConfirm": "Delete this lesson? This action cannot be undone.",
     "allGroups": "All groups",
     "allTeachers": "All teachers",
+    "allCourses": "All courses",
+    "allRooms": "All rooms",
     "prevWeek": "Previous week",
     "nextWeek": "Next week",
     "today": "Today",
@@ -383,6 +421,23 @@
     "conductedToast": "Lesson marked as conducted",
     "notConductedToast": "Mark removed",
     "saveError": "Failed to save the lesson",
+    "emptyDay": "No lessons on this day",
+    "moreLessons_one": "{{count}} more",
+    "moreLessons_other": "{{count}} more",
+    "nextPeriod": "Next",
+    "prevPeriod": "Back",
+    "viewLabel": "View",
+    "occupancy": {
+      "toggle": "Room occupancy",
+      "title": "Room occupancy",
+      "date": "Date",
+      "start": "From",
+      "end": "To",
+      "free": "Free",
+      "occupied": "Occupied",
+      "noRooms": "No rooms",
+      "summary": "{{free}} of {{total}} free"
+    },
     "fields": {
       "group": "Group",
       "groupPlaceholder": "Select a group",
@@ -395,7 +450,11 @@
       "topicPlaceholder": "Lesson topic",
       "room": "Room",
       "roomPlaceholder": "e.g. 204",
-      "isConducted": "Conducted"
+      "isConducted": "Conducted",
+      "course": "Course",
+      "coursePlaceholder": "Select a course",
+      "endAfterStart": "End time must be after the start time",
+      "noRoom": "No room"
     },
     "weekdays": {
       "mon": "Mon",
@@ -617,7 +676,11 @@
       "totalAbsences": "Total absences",
       "subjectsCount": "Subjects",
       "empty": "No data yet",
-      "emptyHint": "Stats will appear after your first lessons."
+      "emptyHint": "Stats will appear after your first lessons.",
+      "course": "Course",
+      "coursesCount_one": "{{count}} course",
+      "coursesCount_other": "{{count}} courses",
+      "chartTitleByCourse": "Average grade by course"
     },
     "profile": {
       "personalData": "Personal data",

@@ -53,7 +53,7 @@
     "groups": "Группы",
     "courses": "Курсы",
     "branches": "Филиалы",
-    "subjects": "Предметы",
+    "rooms": "Кабинеты",
     "courseTypes": "Типы курсов",
     "schedule": "Расписание",
     "journal": "Журнал",
@@ -83,6 +83,23 @@
       "finance": "Финансовая сводка",
       "chats": "Активные чаты",
       "journal": "Журнал"
+    },
+    "founder": {
+      "kpiTitle": "Ключевые показатели",
+      "totalStudents": "Студентов",
+      "totalTeachers": "Учителей",
+      "totalGroups": "Групп",
+      "monthIncome": "Доход за месяц",
+      "outstandingDebt": "Задолженность",
+      "salariesPayable": "К выплате (зарплаты)",
+      "pendingCount_one": "{{count}} к выплате",
+      "pendingCount_few": "{{count}} к выплате",
+      "pendingCount_many": "{{count}} к выплате",
+      "pendingCount_other": "{{count}} к выплате",
+      "thisMonth": "В этом месяце",
+      "asOfToday": "На сегодня",
+      "chartTitle": "Доходы и расходы",
+      "chartSubtitle": "По месяцам"
     }
   },
   "notFound": {
@@ -129,7 +146,8 @@
     "workplace": "Место работы",
     "birthDate": "Дата рождения",
     "enrollmentDate": "Дата вступления",
-    "status": "Статус"
+    "status": "Статус",
+    "position": "Должность"
   },
   "teachers": {
     "title": "Учителя",
@@ -159,6 +177,7 @@
     "title": "Студенты",
     "subtitle": "Управление студентами и их родителями",
     "searchPlaceholder": "Поиск по имени или месту работы родителей",
+    "searchHint": "Поиск по имени студента, месту работы или должности родителей",
     "add": "Добавить студента",
     "createTitle": "Новый студент",
     "editTitle": "Редактировать студента",
@@ -189,7 +208,9 @@
       "count_one": "{{count}} родитель",
       "count_few": "{{count}} родителя",
       "count_many": "{{count}} родителей",
-      "count_other": "{{count}} родителей"
+      "count_other": "{{count}} родителей",
+      "father": "Отец",
+      "mother": "Мать"
     }
   },
   "pages": {
@@ -272,6 +293,19 @@
     "empty": "Типов курсов пока нет",
     "emptyHint": "Добавьте первый тип курса."
   },
+  "rooms": {
+    "title": "Кабинеты",
+    "subtitle": "Управление кабинетами (аудиториями)",
+    "name": "Название",
+    "namePlaceholder": "Кабинет 1",
+    "branch": "Филиал",
+    "noBranch": "Без филиала",
+    "isActive": "Активен",
+    "empty": "Кабинетов пока нет",
+    "emptyHint": "Добавьте первый кабинет",
+    "addTitle": "Новый кабинет",
+    "editTitle": "Редактировать кабинет"
+  },
   "courses": {
     "title": "Курсы",
     "subtitle": "Программы обучения по филиалам",
@@ -289,6 +323,10 @@
     "selectSubject": "Выберите предмет",
     "selectBranch": "Выберите филиал",
     "priceMin": "Цена не может быть отрицательной",
+    "term": "Срок",
+    "startDate": "Дата начала",
+    "endDate": "Дата окончания",
+    "dateRange": "Срок курса",
     "empty": "Курсов пока нет",
     "emptyHint": "Добавьте первый курс."
   },
@@ -372,6 +410,8 @@
     "deleteConfirm": "Удалить это занятие? Это действие необратимо.",
     "allGroups": "Все группы",
     "allTeachers": "Все учителя",
+    "allCourses": "Все курсы",
+    "allRooms": "Все кабинеты",
     "prevWeek": "Предыдущая неделя",
     "nextWeek": "Следующая неделя",
     "today": "Сегодня",
@@ -389,6 +429,25 @@
     "conductedToast": "Занятие отмечено проведённым",
     "notConductedToast": "Отметка снята",
     "saveError": "Не удалось сохранить занятие",
+    "emptyDay": "На этот день занятий нет",
+    "moreLessons_one": "Ещё {{count}}",
+    "moreLessons_few": "Ещё {{count}}",
+    "moreLessons_many": "Ещё {{count}}",
+    "moreLessons_other": "Ещё {{count}}",
+    "nextPeriod": "Вперёд",
+    "prevPeriod": "Назад",
+    "viewLabel": "Вид",
+    "occupancy": {
+      "toggle": "Занятость кабинетов",
+      "title": "Занятость кабинетов",
+      "date": "Дата",
+      "start": "С",
+      "end": "По",
+      "free": "Свободен",
+      "occupied": "Занят",
+      "noRooms": "Кабинетов нет",
+      "summary": "Свободно {{free}} из {{total}}"
+    },
     "fields": {
       "group": "Группа",
       "groupPlaceholder": "Выберите группу",
@@ -401,7 +460,11 @@
       "topicPlaceholder": "Тема занятия",
       "room": "Кабинет",
       "roomPlaceholder": "Например, 204",
-      "isConducted": "Проведено"
+      "isConducted": "Проведено",
+      "course": "Курс",
+      "coursePlaceholder": "Выберите курс",
+      "endAfterStart": "Время окончания должно быть позже начала",
+      "noRoom": "Без кабинета"
     },
     "weekdays": {
       "mon": "Пн",
@@ -633,7 +696,13 @@
       "totalAbsences": "Всего пропусков",
       "subjectsCount": "Предметов",
       "empty": "Данных пока нет",
-      "emptyHint": "Статистика появится после первых занятий."
+      "emptyHint": "Статистика появится после первых занятий.",
+      "course": "Курс",
+      "coursesCount_one": "{{count}} курс",
+      "coursesCount_few": "{{count}} курса",
+      "coursesCount_many": "{{count}} курсов",
+      "coursesCount_other": "{{count}} курсов",
+      "chartTitleByCourse": "Средний балл по курсам"
     },
     "profile": {
       "personalData": "Личные данные",
