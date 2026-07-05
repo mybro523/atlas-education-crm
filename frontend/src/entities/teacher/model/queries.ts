@@ -13,7 +13,6 @@ import type {
   TeacherListParams,
   CreateTeacherDto,
   UpdateTeacherDto,
-  SetTeacherSubjectsDto,
 } from './types';
 
 export const teacherKeys = createQueryKeys('teachers');
@@ -49,7 +48,6 @@ export function useCreateTeacher() {
         userId: dto.userId ?? null,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
-        subjects: [],
       };
       qc.setQueriesData(
         { queryKey: teacherKeys.lists() },
@@ -87,17 +85,5 @@ export function useDeleteTeacher() {
         removeFromListCache<Teacher>(id),
       );
     },
-  });
-}
-
-/** Replace a teacher's assigned subjects (PUT /teachers/:id/subjects). */
-export function useSetTeacherSubjects() {
-  return useOptimisticMutation<
-    Teacher,
-    { id: string; dto: SetTeacherSubjectsDto }
-  >({
-    mutationFn: ({ id, dto }) => teacherApi.setSubjects(id, dto),
-    keysToCancel: [teacherKeys.details(), teacherKeys.lists()],
-    keysToInvalidate: [teacherKeys.details(), teacherKeys.lists()],
   });
 }

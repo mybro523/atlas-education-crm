@@ -6,6 +6,8 @@ import type {
   CreateLessonDto,
   UpdateLessonDto,
   ConductLessonDto,
+  RoomOccupancy,
+  RoomOccupancyParams,
 } from './model/types';
 
 /** Schedule / Lessons (API_CONTRACT §8). Paginated list. */
@@ -41,6 +43,15 @@ export const lessonApi = {
     const { data } = await axiosClient.patch<Lesson>(
       `/lessons/${id}/conduct`,
       dto,
+    );
+    return data;
+  },
+
+  /** GET /schedule/rooms/occupancy — free vs. occupied rooms over a window. */
+  async roomOccupancy(params?: RoomOccupancyParams): Promise<RoomOccupancy> {
+    const { data } = await axiosClient.get<RoomOccupancy>(
+      '/schedule/rooms/occupancy',
+      { params },
     );
     return data;
   },

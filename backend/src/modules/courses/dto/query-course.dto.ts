@@ -4,7 +4,7 @@ import { PaginationQueryDto } from '../../../common/dto/pagination.dto';
 
 /**
  * Query for listing Courses (§4): pagination + optional filters on branch,
- * course type, subject, active flag, and a case-insensitive name `search`.
+ * course type, active flag, and a case-insensitive name `search`.
  */
 export class QueryCourseDto extends PaginationQueryDto {
   @IsOptional()
@@ -14,10 +14,6 @@ export class QueryCourseDto extends PaginationQueryDto {
   @IsOptional()
   @IsString()
   courseTypeId?: string;
-
-  @IsOptional()
-  @IsString()
-  subjectId?: string;
 
   @IsOptional()
   @Transform(({ value }) => {

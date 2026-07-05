@@ -20,7 +20,6 @@ import { ListGroupsQueryDto } from './dto/list-groups.query.dto';
 // Group detail shape (scalars + the relations the contract requires on GET :id).
 const groupDetailInclude = {
   course: true,
-  subject: true,
   teacher: true,
   _count: { select: { students: { where: { leftAt: null } } } },
 } satisfies Prisma.GroupInclude;
@@ -82,7 +81,6 @@ export class GroupsService {
   async create(dto: CreateGroupDto) {
     await this.assertReferencesExist(
       dto.courseId,
-      dto.subjectId,
       dto.branchId,
       dto.teacherId,
     );
@@ -91,7 +89,6 @@ export class GroupsService {
       data: {
         name: dto.name,
         courseId: dto.courseId,
-        subjectId: dto.subjectId,
         teacherId: dto.teacherId ?? null,
         branchId: dto.branchId,
         isActive: dto.isActive ?? true,
@@ -104,19 +101,12 @@ export class GroupsService {
     // Ensure it exists first for a clean 404 (vs. a Prisma P2025).
     await this.findOne(id);
 
-    await this.assertReferencesExist(
-      dto.courseId,
-      dto.subjectId,
-      dto.branchId,
-      dto.teacherId,
-    );
+    await this.assertReferencesExist(dto.courseId, dto.branchId, dto.teacherId);
 
     const data: Prisma.GroupUpdateInput = {};
     if (dto.name !== undefined) data.name = dto.name;
     if (dto.courseId !== undefined)
       data.course = { connect: { id: dto.courseId } };
-    if (dto.subjectId !== undefined)
-      data.subject = { connect: { id: dto.subjectId } };
     if (dto.teacherId !== undefined) {
       data.teacher = dto.teacherId
         ? { connect: { id: dto.teacherId } }
@@ -224,7 +214,6 @@ export class GroupsService {
    */
   private async assertReferencesExist(
     courseId?: string,
-    subjectId?: string,
     branchId?: string,
     teacherId?: string,
   ): Promise<void> {
@@ -234,14 +223,6 @@ export class GroupsService {
         select: { id: true },
       });
       if (!course) throw new NotFoundException(`Course ${courseId} not found`);
-    }
-    if (subjectId !== undefined) {
-      const subject = await this.prisma.subject.findUnique({
-        where: { id: subjectId },
-        select: { id: true },
-      });
-      if (!subject)
-        throw new NotFoundException(`Subject ${subjectId} not found`);
     }
     if (branchId !== undefined) {
       const branch = await this.prisma.branch.findUnique({

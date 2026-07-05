@@ -30,7 +30,7 @@ export const ROUTES = {
   groups: '/groups',
   courses: '/courses',
   branches: '/branches',
-  subjects: '/subjects',
+  rooms: '/rooms',
   courseTypes: '/course-types',
   schedule: '/schedule',
   journal: '/journal',

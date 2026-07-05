@@ -31,13 +31,10 @@ export class UpdateLessonDto {
   @IsDateString()
   endsAt?: string;
 
+  // Room (kabinet) FK. Empty string clears the room; a real id must exist (→ 404).
   @IsOptional()
   @IsString()
-  topic?: string;
-
-  @IsOptional()
-  @IsString()
-  room?: string;
+  roomId?: string;
 
   @IsOptional()
   @IsNumber()

@@ -4,7 +4,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { Prisma, Subject, Teacher } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import {
   buildPaginatedResult,
@@ -15,37 +15,26 @@ import { CreateTeacherDto } from './dto/create-teacher.dto';
 import { UpdateTeacherDto } from './dto/update-teacher.dto';
 import { QueryTeachersDto } from './dto/query-teachers.dto';
 
-/** Teacher enriched with a flattened `subjects: Subject[]` and its branch. */
-export type TeacherWithSubjects = Teacher & {
-  subjects: Subject[];
-  branch?: unknown;
-};
-
-// Detail include: pull TeacherSubject → subject and the branch.
-const teacherDetailInclude = {
-  subjects: { include: { subject: true }, orderBy: { subject: { name: 'asc' } } },
+// Detail include: the branch and the teacher's groups (each carrying its course).
+// Subjects were removed from the model — what a teacher teaches is now expressed
+// through the groups they lead and each group's course.
+const teacherInclude = {
   branch: true,
+  groups: {
+    include: {
+      course: { select: { id: true, name: true } },
+    },
+    orderBy: { name: 'asc' },
+  },
 } satisfies Prisma.TeacherInclude;
 
-type TeacherWithRelations = Prisma.TeacherGetPayload<{
-  include: typeof teacherDetailInclude;
+export type TeacherWithRelations = Prisma.TeacherGetPayload<{
+  include: typeof teacherInclude;
 }>;
 
 @Injectable()
 export class TeachersService {
   constructor(private readonly prisma: PrismaService) {}
-
-  /**
-   * Flatten the nested TeacherSubject join into a plain `subjects: Subject[]`
-   * array (the shape the API contract §5 promises), keeping `branch`.
-   */
-  private toResponse(teacher: TeacherWithRelations): TeacherWithSubjects {
-    const { subjects, ...rest } = teacher;
-    return {
-      ...rest,
-      subjects: subjects.map((link) => link.subject),
-    };
-  }
 
   /** Ensure a branch exists, else 404 (API contract: unknown branchId → 404). */
   private async assertBranchExists(branchId: string): Promise<void> {
@@ -58,35 +47,15 @@ export class TeachersService {
     }
   }
 
-  /** Ensure every subject id exists, else 404 listing the missing ones. */
-  private async assertSubjectsExist(subjectIds: string[]): Promise<void> {
-    if (subjectIds.length === 0) {
-      return;
-    }
-    const found = await this.prisma.subject.findMany({
-      where: { id: { in: subjectIds } },
-      select: { id: true },
-    });
-    if (found.length !== subjectIds.length) {
-      const foundIds = new Set(found.map((s) => s.id));
-      const missing = subjectIds.filter((id) => !foundIds.has(id));
-      throw new NotFoundException(`Subject(s) not found: ${missing.join(', ')}`);
-    }
-  }
-
   /** Paginated list/search of teachers (API contract §5). */
   async findAll(
     query: QueryTeachersDto,
-  ): Promise<PaginatedResult<TeacherWithSubjects>> {
+  ): Promise<PaginatedResult<TeacherWithRelations>> {
     const { skip, take, page, pageSize } = toSkipTake(query);
 
     const where: Prisma.TeacherWhereInput = {};
     if (query.branchId) {
       where.branchId = query.branchId;
-    }
-    if (query.subjectId) {
-      // Teachers linked to the given subject via TeacherSubject.
-      where.subjects = { some: { subjectId: query.subjectId } };
     }
     if (query.search) {
       where.OR = [
@@ -98,7 +67,7 @@ export class TeachersService {
     const [rows, total] = await this.prisma.$transaction([
       this.prisma.teacher.findMany({
         where,
-        include: teacherDetailInclude,
+        include: teacherInclude,
         orderBy: [{ lastName: 'asc' }, { firstName: 'asc' }],
         skip,
         take,
@@ -106,35 +75,27 @@ export class TeachersService {
       this.prisma.teacher.count({ where }),
     ]);
 
-    return buildPaginatedResult(
-      rows.map((r) => this.toResponse(r)),
-      total,
-      page,
-      pageSize,
-    );
+    return buildPaginatedResult(rows, total, page, pageSize);
   }
 
-  /** One teacher with subjects[] + branch, else 404. */
-  async findOne(id: string): Promise<TeacherWithSubjects> {
+  /** One teacher with branch + groups (with course), else 404. */
+  async findOne(id: string): Promise<TeacherWithRelations> {
     const teacher = await this.prisma.teacher.findUnique({
       where: { id },
-      include: teacherDetailInclude,
+      include: teacherInclude,
     });
     if (!teacher) {
       throw new NotFoundException(`Teacher ${id} not found`);
     }
-    return this.toResponse(teacher);
+    return teacher;
   }
 
-  /** Create a teacher, optionally with initial subject links. */
-  async create(dto: CreateTeacherDto): Promise<TeacherWithSubjects> {
+  /** Create a teacher. */
+  async create(dto: CreateTeacherDto): Promise<TeacherWithRelations> {
     await this.assertBranchExists(dto.branchId);
 
-    const subjectIds = dto.subjectIds ?? [];
-    await this.assertSubjectsExist(subjectIds);
-
     try {
-      const created = await this.prisma.teacher.create({
+      return await this.prisma.teacher.create({
         data: {
           firstName: dto.firstName,
           lastName: dto.lastName,
@@ -142,22 +103,19 @@ export class TeachersService {
           phone: dto.phone,
           branch: { connect: { id: dto.branchId } },
           ...(dto.userId ? { user: { connect: { id: dto.userId } } } : {}),
-          subjects: {
-            create: subjectIds.map((subjectId) => ({
-              subject: { connect: { id: subjectId } },
-            })),
-          },
         },
-        include: teacherDetailInclude,
+        include: teacherInclude,
       });
-      return this.toResponse(created);
     } catch (error) {
       throw this.mapWriteError(error, dto.userId);
     }
   }
 
   /** Partial update of a teacher's scalar fields / branch / linked user. */
-  async update(id: string, dto: UpdateTeacherDto): Promise<TeacherWithSubjects> {
+  async update(
+    id: string,
+    dto: UpdateTeacherDto,
+  ): Promise<TeacherWithRelations> {
     await this.ensureExists(id);
 
     if (dto.branchId) {
@@ -181,66 +139,21 @@ export class TeachersService {
     }
 
     try {
-      const updated = await this.prisma.teacher.update({
+      return await this.prisma.teacher.update({
         where: { id },
         data,
-        include: teacherDetailInclude,
+        include: teacherInclude,
       });
-      return this.toResponse(updated);
     } catch (error) {
       throw this.mapWriteError(error, dto.userId);
     }
   }
 
-  /** Delete a teacher (TeacherSubject rows cascade per schema). */
+  /** Delete a teacher (groups keep their rows; teacherId is set null per schema). */
   async remove(id: string): Promise<{ id: string }> {
     await this.ensureExists(id);
     await this.prisma.teacher.delete({ where: { id } });
     return { id };
-  }
-
-  /**
-   * Replace the full set of a teacher's subjects (API contract §5).
-   * Diffs against existing links: deletes missing, creates new, in one tx.
-   */
-  async setSubjects(
-    id: string,
-    subjectIds: string[],
-  ): Promise<TeacherWithSubjects> {
-    await this.ensureExists(id);
-    await this.assertSubjectsExist(subjectIds);
-
-    const target = new Set(subjectIds);
-    const existing = await this.prisma.teacherSubject.findMany({
-      where: { teacherId: id },
-      select: { subjectId: true },
-    });
-    const existingIds = new Set(existing.map((e) => e.subjectId));
-
-    const toCreate = subjectIds.filter((s) => !existingIds.has(s));
-    const toDelete = [...existingIds].filter((s) => !target.has(s));
-
-    await this.prisma.$transaction([
-      ...(toDelete.length > 0
-        ? [
-            this.prisma.teacherSubject.deleteMany({
-              where: { teacherId: id, subjectId: { in: toDelete } },
-            }),
-          ]
-        : []),
-      ...(toCreate.length > 0
-        ? [
-            this.prisma.teacherSubject.createMany({
-              data: toCreate.map((subjectId) => ({
-                teacherId: id,
-                subjectId,
-              })),
-            }),
-          ]
-        : []),
-    ]);
-
-    return this.findOne(id);
   }
 
   /** Throw 404 if the teacher does not exist. */

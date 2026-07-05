@@ -5,7 +5,7 @@ import {
   Boxes,
   BookOpen,
   Building2,
-  Library,
+  DoorOpen,
   Layers,
   CalendarDays,
   ClipboardList,
@@ -93,9 +93,9 @@ export const NAV_ITEMS: NavItem[] = [
     roles: [ROLES.FOUNDER, ROLES.ADMIN],
   },
   {
-    to: ROUTES.subjects,
-    labelKey: 'nav.subjects',
-    icon: Library,
+    to: ROUTES.rooms,
+    labelKey: 'nav.rooms',
+    icon: DoorOpen,
     roles: [ROLES.FOUNDER, ROLES.ADMIN],
   },
   {

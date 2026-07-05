@@ -11,7 +11,8 @@ import {
 /**
  * Body for POST /lessons — schedule a concrete lesson for a group.
  * `groupId` must exist (→ 404). `teacherId` defaults to the group's teacher
- * when omitted. Money fields are TJS decimals.
+ * when omitted. `roomId`, when set, must reference an existing Room (→ 404).
+ * `startsAt`/`endsAt` are the lesson's start & end times. Money fields are TJS.
  */
 export class CreateLessonDto {
   @IsString()
@@ -30,13 +31,11 @@ export class CreateLessonDto {
   @IsDateString()
   endsAt?: string;
 
+  // Room (kabinet) FK. Optional; must reference an existing Room when provided.
   @IsOptional()
   @IsString()
-  topic?: string;
-
-  @IsOptional()
-  @IsString()
-  room?: string;
+  @IsNotEmpty()
+  roomId?: string;
 
   // Per-lesson pay-rate override for the teacher (TJS). Falls back to lessonRate.
   @IsOptional()

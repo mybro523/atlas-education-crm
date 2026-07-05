@@ -3,7 +3,7 @@ import { Plus } from 'lucide-react';
 
 import { cn } from '@/shared/lib/cn';
 import type { Lesson } from '@/entities/lesson';
-import type { Week } from '@/features/schedule-editor';
+import type { Week, LessonView } from '@/features/schedule-editor';
 import { isSameDay } from '@/features/schedule-editor';
 import { LessonCard } from './LessonCard';
 
@@ -12,6 +12,8 @@ export interface WeekGridProps {
   weekdayKeys: readonly string[];
   /** 7 buckets (Mon→Sun) of lessons for the visible week. */
   lessonsByDay: Lesson[][];
+  /** Resolve a lesson's display fields (course/teacher/room + time). */
+  resolve: (lesson: Lesson) => LessonView;
   /** ADMIN/FOUNDER may create/delete + add lessons anywhere. */
   canCrud: boolean;
   /** Per-lesson: may the caller conduct/edit this lesson (owner teacher too)? */
@@ -31,6 +33,7 @@ export function WeekGrid({
   week,
   weekdayKeys,
   lessonsByDay,
+  resolve,
   canCrud,
   canManageLesson,
   onAddForDay,
@@ -96,6 +99,7 @@ export function WeekGrid({
           <LessonCard
             key={lesson.id}
             lesson={lesson}
+            view={resolve(lesson)}
             canManage={canManageLesson(lesson)}
             canDelete={canCrud}
             onEdit={onEditLesson}

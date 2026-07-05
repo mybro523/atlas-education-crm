@@ -55,9 +55,9 @@ export function MyGroupsTab() {
               <h3 className="truncate text-base font-semibold text-foreground">
                 {group.name}
               </h3>
-              {group.subject?.name && (
+              {group.course?.name && (
                 <p className="truncate text-sm text-foreground-muted">
-                  {group.subject.name}
+                  {group.course.name}
                 </p>
               )}
             </div>

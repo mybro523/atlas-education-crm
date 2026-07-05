@@ -6,7 +6,6 @@ import {
   Param,
   Patch,
   Post,
-  Put,
   Query,
   UseGuards,
 } from '@nestjs/common';
@@ -16,7 +15,6 @@ import { Roles } from '../../common/decorators/roles.decorator';
 import { Role } from '../../common/enums/role.enum';
 import { CreateTeacherDto } from './dto/create-teacher.dto';
 import { UpdateTeacherDto } from './dto/update-teacher.dto';
-import { SetTeacherSubjectsDto } from './dto/set-teacher-subjects.dto';
 import { QueryTeachersDto } from './dto/query-teachers.dto';
 
 /**
@@ -61,13 +59,5 @@ export class TeachersController {
   @Roles(Role.ADMIN, Role.FOUNDER)
   remove(@Param('id') id: string) {
     return this.teachersService.remove(id);
-  }
-
-  /** Replace the full set of subjects assigned to a teacher. */
-  @Put(':id/subjects')
-  @UseGuards(RolesGuard)
-  @Roles(Role.ADMIN, Role.FOUNDER)
-  setSubjects(@Param('id') id: string, @Body() dto: SetTeacherSubjectsDto) {
-    return this.teachersService.setSubjects(id, dto.subjectIds);
   }
 }

@@ -1,20 +1,15 @@
 import { useTranslation } from 'react-i18next';
-import {
-  Check,
-  Clock,
-  MapPin,
-  Pencil,
-  Trash2,
-  Undo2,
-} from 'lucide-react';
+import { Check, Clock, MapPin, Pencil, Trash2, Undo2, User } from 'lucide-react';
 
 import { cn } from '@/shared/lib/cn';
 import { Badge } from '@/shared/ui';
 import type { Lesson } from '@/entities/lesson';
-import { toTimeInput } from '@/features/schedule-editor';
+import type { LessonView } from '@/features/schedule-editor';
 
 export interface LessonCardProps {
   lesson: Lesson;
+  /** Resolved display fields (course/teacher/room + time label). */
+  view: LessonView;
   /** May the caller edit + conduct this lesson (owner teacher or admin/founder). */
   canManage: boolean;
   /** May the caller delete this lesson (admin/founder only). */
@@ -24,9 +19,10 @@ export interface LessonCardProps {
   onDelete: (lesson: Lesson) => void;
 }
 
-/** A single lesson tile inside the weekly grid. Themed + compact. */
+/** A single lesson tile inside the schedule grid. Course-labelled, themed. */
 export function LessonCard({
   lesson,
+  view,
   canManage,
   canDelete,
   onEdit,
@@ -34,13 +30,6 @@ export function LessonCard({
   onDelete,
 }: LessonCardProps) {
   const { t } = useTranslation();
-
-  const start = toTimeInput(new Date(lesson.startsAt));
-  const end = lesson.endsAt ? toTimeInput(new Date(lesson.endsAt)) : null;
-
-  const teacherName = lesson.teacher
-    ? `${lesson.teacher.lastName} ${lesson.teacher.firstName}`
-    : null;
 
   return (
     <div
@@ -54,10 +43,7 @@ export function LessonCard({
       <div className="flex items-start justify-between gap-2">
         <div className="flex items-center gap-1 text-xs font-medium text-foreground">
           <Clock className="h-3.5 w-3.5 text-foreground-muted" aria-hidden />
-          <span>
-            {start}
-            {end ? `–${end}` : ''}
-          </span>
+          <span>{view.timeLabel}</span>
         </div>
         <Badge
           variant={lesson.isConducted ? 'success' : 'muted'}
@@ -69,21 +55,26 @@ export function LessonCard({
         </Badge>
       </div>
 
-      <p className="mt-1.5 truncate text-sm font-medium text-foreground">
-        {lesson.group?.name ?? '—'}
+      <p className="mt-1.5 truncate text-sm font-semibold text-foreground">
+        {view.courseName}
       </p>
-      {lesson.topic && (
-        <p className="truncate text-xs text-foreground-muted">{lesson.topic}</p>
+      {view.groupName && (
+        <p className="truncate text-xs text-foreground-muted">
+          {view.groupName}
+        </p>
       )}
 
-      <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-foreground-muted">
-        {teacherName && <span className="truncate">{teacherName}</span>}
-        {lesson.room && (
-          <span className="flex items-center gap-0.5">
-            <MapPin className="h-3 w-3" aria-hidden />
-            {lesson.room}
+      <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-foreground-muted">
+        {view.teacherName && (
+          <span className="flex min-w-0 items-center gap-0.5">
+            <User className="h-3 w-3 shrink-0" aria-hidden />
+            <span className="truncate">{view.teacherName}</span>
           </span>
         )}
+        <span className="flex items-center gap-0.5">
+          <MapPin className="h-3 w-3 shrink-0" aria-hidden />
+          {view.roomName ?? t('schedule.fields.noRoom')}
+        </span>
       </div>
 
       {(canManage || canDelete) && (

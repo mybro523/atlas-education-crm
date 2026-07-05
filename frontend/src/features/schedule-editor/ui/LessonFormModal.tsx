@@ -8,9 +8,12 @@ import {
   useUpdateLesson,
   type Lesson,
   type CreateLessonDto,
+  type UpdateLessonDto,
 } from '@/entities/lesson';
-import { useGroups, type Group } from '@/entities/group';
+import { useGroups } from '@/entities/group';
 import { useTeachers } from '@/entities/teacher';
+import { useCourses } from '@/entities/course';
+import { useRooms } from '@/entities/room';
 import { combineToIso, fromIso, toDateInput } from '../model/datetime';
 
 export interface LessonFormModalProps {
@@ -25,29 +28,31 @@ export interface LessonFormModalProps {
 }
 
 interface FormState {
+  /** Filter only — narrows the group list; the lesson's course comes via group. */
+  courseId: string;
   groupId: string;
   teacherId: string;
+  roomId: string;
   date: string;
   startTime: string;
   endTime: string;
-  topic: string;
-  room: string;
 }
 
 const EMPTY: FormState = {
+  courseId: '',
   groupId: '',
   teacherId: '',
+  roomId: '',
   date: '',
   startTime: '',
   endTime: '',
-  topic: '',
-  room: '',
 };
 
 /**
- * Create / edit a scheduled lesson (contract §8). Date + start/end time fields
- * are combined into ISO `startsAt`/`endsAt`. Saving is optimistic via the
- * lesson entity hooks.
+ * Create / edit a scheduled lesson (contract §8). There is no topic — a lesson
+ * is labelled by its group's course. Date + start/end times combine into ISO
+ * `startsAt`/`endsAt`; room is a FK selected from the rooms dictionary. Saving is
+ * optimistic via the lesson entity hooks.
  */
 export function LessonFormModal({
   open,
@@ -64,9 +69,14 @@ export function LessonFormModal({
   const updateLesson = useUpdateLesson();
   const submitting = createLesson.isPending || updateLesson.isPending;
 
-  // Options. Fetch a generous page so selects are usable without a picker.
+  // Options. Fetch a generous page so the selects are usable without a picker.
+  const { data: coursesData } = useCourses({ pageSize: 100 });
   const { data: groupsData } = useGroups({ pageSize: 100 });
   const { data: teachersData } = useTeachers({ pageSize: 100 });
+  const { data: roomsData } = useRooms();
+
+  const groups = useMemo(() => groupsData?.items ?? [], [groupsData]);
+  const rooms = useMemo(() => roomsData ?? [], [roomsData]);
 
   const [form, setForm] = useState<FormState>(EMPTY);
   const [errors, setErrors] = useState<Partial<Record<keyof FormState, string>>>(
@@ -83,31 +93,44 @@ export function LessonFormModal({
       const start = fromIso(lesson.startsAt);
       const end = fromIso(lesson.endsAt);
       setForm({
+        courseId: lesson.group?.courseId ?? '',
         groupId: lesson.groupId,
         teacherId: lesson.teacherId ?? '',
+        roomId: lesson.roomId ?? '',
         date: start.date,
         startTime: start.time,
         endTime: end.time,
-        topic: lesson.topic ?? '',
-        room: lesson.room ?? '',
       });
     } else {
+      const seedGroup = defaultGroupId
+        ? groups.find((g) => g.id === defaultGroupId)
+        : undefined;
       setForm({
         ...EMPTY,
+        courseId: seedGroup?.courseId ?? '',
         groupId: defaultGroupId ?? '',
+        teacherId: seedGroup?.teacherId ?? '',
         date: defaultDate ? toDateInput(defaultDate) : '',
       });
     }
-  }, [open, lesson, defaultGroupId, defaultDate]);
+  }, [open, lesson, defaultGroupId, defaultDate, groups]);
+
+  const courseOptions = useMemo(
+    () => [
+      { value: '', label: t('schedule.allCourses') },
+      ...(coursesData?.items ?? []).map((c) => ({ value: c.id, label: c.name })),
+    ],
+    [coursesData, t],
+  );
 
   const groupOptions = useMemo(
     () =>
-      (groupsData?.items ?? []).map((g: Group) => ({
-        value: g.id,
-        label: g.name,
-      })),
-    [groupsData],
+      groups
+        .filter((g) => !form.courseId || g.courseId === form.courseId)
+        .map((g) => ({ value: g.id, label: g.name })),
+    [groups, form.courseId],
   );
+
   const teacherOptions = useMemo(
     () =>
       (teachersData?.items ?? []).map((te) => ({
@@ -117,8 +140,37 @@ export function LessonFormModal({
     [teachersData],
   );
 
+  const roomOptions = useMemo(() => {
+    const opts = rooms
+      .filter((r) => r.isActive || r.id === form.roomId)
+      .map((r) => ({ value: r.id, label: r.name }));
+    return [{ value: '', label: t('schedule.fields.noRoom') }, ...opts];
+  }, [rooms, form.roomId, t]);
+
   const setField = <K extends keyof FormState>(key: K, value: FormState[K]) => {
     setForm((prev) => ({ ...prev, [key]: value }));
+  };
+
+  // Course change: drop a group that no longer belongs to the chosen course.
+  const handleCourseChange = (courseId: string) => {
+    setForm((prev) => {
+      const group = groups.find((g) => g.id === prev.groupId);
+      const keepGroup = !courseId || (group && group.courseId === courseId);
+      return { ...prev, courseId, groupId: keepGroup ? prev.groupId : '' };
+    });
+  };
+
+  // Group change: sync course + default the teacher from the group when empty.
+  const handleGroupChange = (groupId: string) => {
+    setForm((prev) => {
+      const group = groups.find((g) => g.id === groupId);
+      return {
+        ...prev,
+        groupId,
+        courseId: group?.courseId ?? prev.courseId,
+        teacherId: prev.teacherId || (group?.teacherId ?? ''),
+      };
+    });
   };
 
   const validate = (): boolean => {
@@ -126,6 +178,9 @@ export function LessonFormModal({
     if (!form.groupId) next.groupId = t('form.required');
     if (!form.date) next.date = t('form.required');
     if (!form.startTime) next.startTime = t('form.required');
+    if (form.endTime && form.startTime && form.endTime <= form.startTime) {
+      next.endTime = t('schedule.fields.endAfterStart');
+    }
     setErrors(next);
     return Object.keys(next).length === 0;
   };
@@ -140,15 +195,6 @@ export function LessonFormModal({
       ? combineToIso(form.date, form.endTime)
       : undefined;
 
-    const dto: CreateLessonDto = {
-      groupId: form.groupId,
-      teacherId: form.teacherId || undefined,
-      startsAt,
-      endsAt,
-      topic: form.topic.trim() || undefined,
-      room: form.room.trim() || undefined,
-    };
-
     const onError = (error: unknown) => {
       setFormError(extractErrorMessage(error) ?? t('schedule.saveError'));
     };
@@ -158,8 +204,23 @@ export function LessonFormModal({
     };
 
     if (lesson) {
+      // Edit: an empty room clears the assignment (backend disconnects on '').
+      const dto: UpdateLessonDto = {
+        groupId: form.groupId,
+        teacherId: form.teacherId || undefined,
+        roomId: form.roomId,
+        startsAt,
+        endsAt,
+      };
       updateLesson.mutate({ id: lesson.id, dto }, { onSuccess, onError });
     } else {
+      const dto: CreateLessonDto = {
+        groupId: form.groupId,
+        teacherId: form.teacherId || undefined,
+        roomId: form.roomId || undefined,
+        startsAt,
+        endsAt,
+      };
       createLesson.mutate(dto, { onSuccess, onError });
     }
   };
@@ -174,20 +235,20 @@ export function LessonFormModal({
       error={formError ?? undefined}
     >
       <Select
+        label={t('schedule.fields.course')}
+        placeholder={t('schedule.fields.coursePlaceholder')}
+        options={courseOptions}
+        value={form.courseId}
+        onChange={(e) => handleCourseChange(e.target.value)}
+      />
+
+      <Select
         label={t('schedule.fields.group')}
         placeholder={t('schedule.fields.groupPlaceholder')}
         options={groupOptions}
         value={form.groupId}
-        onChange={(e) => setField('groupId', e.target.value)}
+        onChange={(e) => handleGroupChange(e.target.value)}
         error={errors.groupId}
-      />
-
-      <Select
-        label={t('schedule.fields.teacher')}
-        placeholder={t('schedule.fields.teacherPlaceholder')}
-        options={teacherOptions}
-        value={form.teacherId}
-        onChange={(e) => setField('teacherId', e.target.value)}
       />
 
       <Input
@@ -211,21 +272,23 @@ export function LessonFormModal({
           label={t('schedule.fields.endTime')}
           value={form.endTime}
           onChange={(e) => setField('endTime', e.target.value)}
+          error={errors.endTime}
         />
       </div>
 
-      <Input
-        label={t('schedule.fields.topic')}
-        placeholder={t('schedule.fields.topicPlaceholder')}
-        value={form.topic}
-        onChange={(e) => setField('topic', e.target.value)}
+      <Select
+        label={t('schedule.fields.room')}
+        options={roomOptions}
+        value={form.roomId}
+        onChange={(e) => setField('roomId', e.target.value)}
       />
 
-      <Input
-        label={t('schedule.fields.room')}
-        placeholder={t('schedule.fields.roomPlaceholder')}
-        value={form.room}
-        onChange={(e) => setField('room', e.target.value)}
+      <Select
+        label={t('schedule.fields.teacher')}
+        placeholder={t('schedule.fields.teacherPlaceholder')}
+        options={teacherOptions}
+        value={form.teacherId}
+        onChange={(e) => setField('teacherId', e.target.value)}
       />
     </FormModal>
   );

@@ -6,27 +6,42 @@ import { useTranslation } from 'react-i18next';
 
 import { FormModal, Input, Select, useToast } from '@/shared/ui';
 import { useBranches } from '@/entities/branch';
-import { useSubjects } from '@/entities/subject';
 import { useCourseTypes } from '@/entities/course-type';
 import {
   useCreateCourse,
   useUpdateCourse,
   type Course,
+  type CreateCourseDto,
+  type UpdateCourseDto,
 } from '@/entities/course';
 
-const schema = z.object({
-  name: z.string().trim().min(1, { message: 'required' }),
-  courseTypeId: z.string().min(1, { message: 'required' }),
-  subjectId: z.string().min(1, { message: 'required' }),
-  branchId: z.string().min(1, { message: 'required' }),
-  // Coerce the numeric string from the input; must be a non-negative number.
-  pricePerMonth: z.coerce
-    .number({ invalid_type_error: 'required' })
-    .min(0, { message: 'min' }),
-  isActive: z.boolean(),
-});
+const schema = z
+  .object({
+    name: z.string().trim().min(1, { message: 'required' }),
+    courseTypeId: z.string().min(1, { message: 'required' }),
+    branchId: z.string().min(1, { message: 'required' }),
+    // Coerce the numeric string from the input; must be a non-negative number.
+    pricePerMonth: z.coerce
+      .number({ invalid_type_error: 'required' })
+      .min(0, { message: 'min' }),
+    // Optional term dates (empty string = not set).
+    startDate: z.string().optional(),
+    endDate: z.string().optional(),
+    isActive: z.boolean(),
+  })
+  // Date-only ISO strings sort chronologically, so a string compare is enough.
+  .refine((v) => !v.startDate || !v.endDate || v.startDate <= v.endDate, {
+    path: ['endDate'],
+    message: 'range',
+  });
 
 type FormValues = z.infer<typeof schema>;
+
+/** Trim an ISO timestamp down to the `YYYY-MM-DD` a `<input type="date">` wants. */
+function toDateInput(value?: string | null): string {
+  if (!value) return '';
+  return value.slice(0, 10);
+}
 
 export interface CourseFormModalProps {
   open: boolean;
@@ -35,8 +50,8 @@ export interface CourseFormModalProps {
 }
 
 /**
- * Create/edit a Course. References course-type / subject / branch dictionaries
- * via select inputs (loaded through their entity hooks). Optimistic + localized.
+ * Create/edit a Course. References the course-type / branch dictionaries via
+ * select inputs and carries optional term dates. Optimistic + localized.
  */
 export function CourseFormModal({ open, onClose, course }: CourseFormModalProps) {
   const { t } = useTranslation();
@@ -44,7 +59,6 @@ export function CourseFormModal({ open, onClose, course }: CourseFormModalProps)
   const isEdit = Boolean(course);
 
   const { data: branches } = useBranches();
-  const { data: subjects } = useSubjects();
   // Only active course-types are selectable for new courses; when editing keep
   // the current one visible even if it was since deactivated.
   const { data: courseTypes } = useCourseTypes();
@@ -62,9 +76,10 @@ export function CourseFormModal({ open, onClose, course }: CourseFormModalProps)
     defaultValues: {
       name: '',
       courseTypeId: '',
-      subjectId: '',
       branchId: '',
       pricePerMonth: 0,
+      startDate: '',
+      endDate: '',
       isActive: true,
     },
   });
@@ -74,9 +89,10 @@ export function CourseFormModal({ open, onClose, course }: CourseFormModalProps)
       reset({
         name: course?.name ?? '',
         courseTypeId: course?.courseTypeId ?? '',
-        subjectId: course?.subjectId ?? '',
         branchId: course?.branchId ?? '',
         pricePerMonth: course?.pricePerMonth ?? 0,
+        startDate: toDateInput(course?.startDate),
+        endDate: toDateInput(course?.endDate),
         isActive: course?.isActive ?? true,
       });
     }
@@ -88,10 +104,6 @@ export function CourseFormModal({ open, onClose, course }: CourseFormModalProps)
     () => (branches ?? []).map((b) => ({ value: b.id, label: b.name })),
     [branches],
   );
-  const subjectOptions = useMemo(
-    () => (subjects ?? []).map((s) => ({ value: s.id, label: s.name })),
-    [subjects],
-  );
   const courseTypeOptions = useMemo(
     () =>
       (courseTypes ?? [])
@@ -101,13 +113,16 @@ export function CourseFormModal({ open, onClose, course }: CourseFormModalProps)
   );
 
   const onValid = (values: FormValues) => {
-    const dto = {
+    // Only send dates that are set — omitting them avoids clobbering the
+    // optimistic cache (and, on edit, leaves an existing value untouched).
+    const dto: CreateCourseDto & UpdateCourseDto = {
       name: values.name.trim(),
       courseTypeId: values.courseTypeId,
-      subjectId: values.subjectId,
       branchId: values.branchId,
       pricePerMonth: values.pricePerMonth,
       isActive: values.isActive,
+      ...(values.startDate ? { startDate: values.startDate } : {}),
+      ...(values.endDate ? { endDate: values.endDate } : {}),
     };
 
     if (isEdit && course) {
@@ -138,6 +153,9 @@ export function CourseFormModal({ open, onClose, course }: CourseFormModalProps)
       : t('crud.required')
     : undefined;
 
+  const endDateError =
+    errors.endDate?.message === 'range' ? t('courses.dateRange') : undefined;
+
   return (
     <FormModal
       open={open}
@@ -163,14 +181,6 @@ export function CourseFormModal({ open, onClose, course }: CourseFormModalProps)
       />
 
       <Select
-        label={t('courses.subject')}
-        placeholder={t('courses.selectSubject')}
-        options={subjectOptions}
-        error={errors.subjectId ? t('crud.required') : undefined}
-        {...register('subjectId')}
-      />
-
-      <Select
         label={t('courses.branch')}
         placeholder={t('courses.selectBranch')}
         options={branchOptions}
@@ -188,6 +198,20 @@ export function CourseFormModal({ open, onClose, course }: CourseFormModalProps)
         error={priceError}
         {...register('pricePerMonth')}
       />
+
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <Input
+          label={`${t('courses.startDate')} (${t('form.optional')})`}
+          type="date"
+          {...register('startDate')}
+        />
+        <Input
+          label={`${t('courses.endDate')} (${t('form.optional')})`}
+          type="date"
+          error={endDateError}
+          {...register('endDate')}
+        />
+      </div>
 
       <label className="flex cursor-pointer items-center gap-2.5 text-sm font-medium text-foreground">
         <input

@@ -221,7 +221,7 @@ export class TelegramBotService implements OnModuleInit, OnModuleDestroy {
         lesson: {
           select: {
             startsAt: true,
-            group: { select: { subject: { select: { name: true } } } },
+            group: { select: { course: { select: { name: true } } } },
           },
         },
       },
@@ -235,7 +235,7 @@ export class TelegramBotService implements OnModuleInit, OnModuleDestroy {
     }
 
     const lines = grades.map((g) => {
-      const subject = g.lesson.group.subject.name;
+      const subject = g.lesson.group.course.name;
       const date = this.formatDate(g.lesson.startsAt ?? g.createdAt);
       const comment = g.comment ? ` — ${g.comment}` : '';
       return `• ${subject}: ${g.value} (${date})${comment}`;
@@ -262,12 +262,11 @@ export class TelegramBotService implements OnModuleInit, OnModuleDestroy {
         where: { teacherId, startsAt: { gte: now } },
         select: {
           startsAt: true,
-          room: true,
-          topic: true,
+          room: { select: { name: true } },
           group: {
             select: {
               name: true,
-              subject: { select: { name: true } },
+              course: { select: { name: true } },
             },
           },
         },
@@ -298,12 +297,11 @@ export class TelegramBotService implements OnModuleInit, OnModuleDestroy {
         },
         select: {
           startsAt: true,
-          room: true,
-          topic: true,
+          room: { select: { name: true } },
           group: {
             select: {
               name: true,
-              subject: { select: { name: true } },
+              course: { select: { name: true } },
             },
           },
         },
@@ -348,7 +346,7 @@ export class TelegramBotService implements OnModuleInit, OnModuleDestroy {
           value: true,
           lesson: {
             select: {
-              group: { select: { subject: { select: { name: true } } } },
+              group: { select: { course: { select: { name: true } } } },
             },
           },
         },
@@ -359,7 +357,7 @@ export class TelegramBotService implements OnModuleInit, OnModuleDestroy {
           status: true,
           lesson: {
             select: {
-              group: { select: { subject: { select: { name: true } } } },
+              group: { select: { course: { select: { name: true } } } },
             },
           },
         },
@@ -390,7 +388,7 @@ export class TelegramBotService implements OnModuleInit, OnModuleDestroy {
     let sumAll = 0;
     let countAll = 0;
     for (const g of grades) {
-      const name = g.lesson.group.subject.name;
+      const name = g.lesson.group.course.name;
       const acc = ensure(name);
       acc.sum += g.value;
       acc.count += 1;
@@ -399,7 +397,7 @@ export class TelegramBotService implements OnModuleInit, OnModuleDestroy {
     }
     let totalAbsences = 0;
     for (const a of attendances) {
-      const name = a.lesson.group.subject.name;
+      const name = a.lesson.group.course.name;
       const acc = ensure(name);
       if (a.status === 'ABSENT') {
         acc.absences += 1;
@@ -514,16 +512,14 @@ export class TelegramBotService implements OnModuleInit, OnModuleDestroy {
 
   private formatLessonLine(lesson: {
     startsAt: Date;
-    room: string | null;
-    topic: string | null;
-    group: { name: string; subject: { name: string } };
+    room: { name: string } | null;
+    group: { name: string; course: { name: string } };
   }): string {
     const when = this.formatDateTime(lesson.startsAt);
-    const subject = lesson.group.subject.name;
+    const subject = lesson.group.course.name;
     const group = lesson.group.name;
-    const room = lesson.room ? `, ${lesson.room}` : '';
-    const topic = lesson.topic ? ` — ${lesson.topic}` : '';
-    return `• ${when}: ${subject} (${group}${room})${topic}`;
+    const room = lesson.room ? `, ${lesson.room.name}` : '';
+    return `• ${when}: ${subject} (${group}${room})`;
   }
 
   private formatDate(date: Date): string {

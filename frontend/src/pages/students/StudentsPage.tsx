@@ -176,22 +176,27 @@ export function StudentsPage() {
         }
       />
 
-      {/* Filters: single search box (name OR parent workplace) + branch. */}
-      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center">
-        <StudentSearch value={searchInput} onChange={onSearchChange} />
-        <Select
-          value={branchId}
-          onChange={(e) => onBranchChange(e.target.value)}
-          className="w-full sm:w-56"
-          aria-label={t('fields.branch')}
-        >
-          <option value="">{t('crud.allBranches')}</option>
-          {(branches ?? []).map((b) => (
-            <option key={b.id} value={b.id}>
-              {b.name}
-            </option>
-          ))}
-        </Select>
+      {/* Filters: single search box (name OR parent workplace OR position) + branch. */}
+      <div className="mb-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+          <StudentSearch value={searchInput} onChange={onSearchChange} />
+          <Select
+            value={branchId}
+            onChange={(e) => onBranchChange(e.target.value)}
+            className="w-full sm:w-56"
+            aria-label={t('fields.branch')}
+          >
+            <option value="">{t('crud.allBranches')}</option>
+            {(branches ?? []).map((b) => (
+              <option key={b.id} value={b.id}>
+                {b.name}
+              </option>
+            ))}
+          </Select>
+        </div>
+        <p className="mt-2 text-xs text-foreground-muted">
+          {t('students.searchHint')}
+        </p>
       </div>
 
       <DataTable

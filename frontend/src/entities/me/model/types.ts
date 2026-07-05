@@ -23,13 +23,15 @@ export interface MyStudentProfile {
     firstName: string;
     lastName: string;
     phone: string;
+    relation: 'FATHER' | 'MOTHER' | 'OTHER';
+    position?: string | null;
     workplace?: string | null;
   }>;
   groups: Array<{ id: string; name: string }>;
 }
 
 export interface MyGradesParams extends DateRangeParams {
-  subjectId?: string;
+  courseId?: string;
 }
 
 export interface MyGrade {
@@ -40,11 +42,10 @@ export interface MyGrade {
   lesson: {
     id: string;
     startsAt: string;
-    topic?: string | null;
     group: {
       id: string;
       name: string;
-      subject: { id: string; name: string };
+      course: { id: string; name: string };
     };
   };
 }
@@ -53,25 +54,27 @@ export interface MyScheduleLesson {
   id: string;
   startsAt: string;
   endsAt?: string | null;
-  room?: string | null;
-  topic?: string | null;
+  room?: { id: string; name: string } | null;
   isConducted: boolean;
-  group: { id: string; name: string };
-  subject: { id: string; name: string };
+  group: {
+    id: string;
+    name: string;
+    course: { id: string; name: string };
+  };
   teacher?: { id: string; firstName: string; lastName: string } | null;
 }
 
 export interface MyPerformance {
-  bySubject: Array<{
-    subjectId: string;
-    subjectName: string;
-    averageGrade: number;
+  byCourse: Array<{
+    courseId: string;
+    courseName: string;
+    averageGrade: number | null;
     gradesCount: number;
     absences: number;
     lates: number;
     present: number;
   }>;
-  overall: { averageGrade: number; totalAbsences: number };
+  overall: { averageGrade: number | null; totalAbsences: number };
 }
 
 // ============ Teacher self (§11) ============
@@ -79,7 +82,6 @@ export interface MyPerformance {
 export interface MyTeacherGroup {
   id: string;
   name: string;
-  subject?: { id: string; name: string };
   course?: { id: string; name: string };
   studentsCount?: number;
   lessonsCount?: number;

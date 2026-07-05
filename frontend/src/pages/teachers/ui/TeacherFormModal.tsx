@@ -3,14 +3,12 @@ import { useTranslation } from 'react-i18next';
 import { FormModal, Input, Select, useToast } from '@/shared/ui';
 import { extractErrorMessage } from '@/shared/api';
 import { useBranches } from '@/entities/branch';
-import { useSubjects } from '@/entities/subject';
 import {
   useCreateTeacher,
   useUpdateTeacher,
   type Teacher,
   type CreateTeacherDto,
 } from '@/entities/teacher';
-import { SubjectMultiSelect } from './SubjectMultiSelect';
 
 export interface TeacherFormModalProps {
   open: boolean;
@@ -26,9 +24,10 @@ interface FieldErrors {
 }
 
 /**
- * Create/edit a teacher. On create the form also seeds initial subjects
- * (`subjectIds`); on edit, subjects are managed via the dedicated assign modal,
- * so the subject picker is hidden in edit mode. Both mutations are optimistic.
+ * Create/edit a teacher. Subjects were removed from the model — what a teacher
+ * teaches is now expressed through the groups they lead (each group carries a
+ * course), so the form only captures the teacher's identity + branch. Both
+ * mutations are optimistic.
  */
 export function TeacherFormModal({
   open,
@@ -40,7 +39,6 @@ export function TeacherFormModal({
   const isEdit = Boolean(teacher);
 
   const { data: branches } = useBranches();
-  const { data: subjects } = useSubjects();
   const createTeacher = useCreateTeacher();
   const updateTeacher = useUpdateTeacher();
 
@@ -49,7 +47,6 @@ export function TeacherFormModal({
   const [middleName, setMiddleName] = useState('');
   const [phone, setPhone] = useState('');
   const [branchId, setBranchId] = useState('');
-  const [subjectIds, setSubjectIds] = useState<string[]>([]);
   const [errors, setErrors] = useState<FieldErrors>({});
   const [formError, setFormError] = useState<string | null>(null);
 
@@ -61,7 +58,6 @@ export function TeacherFormModal({
     setMiddleName(teacher?.middleName ?? '');
     setPhone(teacher?.phone ?? '');
     setBranchId(teacher?.branchId ?? '');
-    setSubjectIds(teacher?.subjects?.map((s) => s.id) ?? []);
     setErrors({});
     setFormError(null);
   }, [open, teacher]);
@@ -80,18 +76,17 @@ export function TeacherFormModal({
     setFormError(null);
     if (!validate()) return;
 
+    const dto: CreateTeacherDto = {
+      firstName: firstName.trim(),
+      lastName: lastName.trim(),
+      middleName: middleName.trim() || undefined,
+      phone: phone.trim() || undefined,
+      branchId,
+    };
+
     if (isEdit && teacher) {
       updateTeacher.mutate(
-        {
-          id: teacher.id,
-          dto: {
-            firstName: firstName.trim(),
-            lastName: lastName.trim(),
-            middleName: middleName.trim() || undefined,
-            phone: phone.trim() || undefined,
-            branchId,
-          },
-        },
+        { id: teacher.id, dto },
         {
           onSuccess: () => {
             toast.success(t('teachers.updated'));
@@ -104,14 +99,6 @@ export function TeacherFormModal({
       return;
     }
 
-    const dto: CreateTeacherDto = {
-      firstName: firstName.trim(),
-      lastName: lastName.trim(),
-      middleName: middleName.trim() || undefined,
-      phone: phone.trim() || undefined,
-      branchId,
-      subjectIds: subjectIds.length ? subjectIds : undefined,
-    };
     createTeacher.mutate(dto, {
       onSuccess: () => {
         toast.success(t('teachers.created'));
@@ -173,17 +160,6 @@ export function TeacherFormModal({
         disabled={submitting}
         options={(branches ?? []).map((b) => ({ value: b.id, label: b.name }))}
       />
-
-      {/* Initial subjects only on create; edit uses the assign-subjects modal. */}
-      {!isEdit && (
-        <SubjectMultiSelect
-          label={t('fields.subjects')}
-          subjects={subjects ?? []}
-          value={subjectIds}
-          onChange={setSubjectIds}
-          disabled={submitting}
-        />
-      )}
     </FormModal>
   );
 }

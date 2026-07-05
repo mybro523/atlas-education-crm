@@ -1,3 +1,11 @@
-export { ParentsEditor, type ParentsEditorProps } from './ui/ParentsEditor';
-export { ParentRowForm, type ParentRowFormProps } from './ui/ParentRowForm';
-export type { ParentDraft } from './model/types';
+export {
+  ParentFigureFields,
+  type ParentFigureFieldsProps,
+} from './ui/ParentFigureFields';
+export {
+  emptyParentFigure,
+  figureFromParent,
+  isParentFigureFilled,
+  parentFigureToDto,
+} from './model/types';
+export type { ParentFigureDraft, ParentFigureErrors } from './model/types';

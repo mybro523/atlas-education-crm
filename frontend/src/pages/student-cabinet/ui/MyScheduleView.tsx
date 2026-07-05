@@ -21,7 +21,7 @@ import {
 import { formatTimeRange } from '@/features/view-performance';
 
 /**
- * "My schedule" — the student's weekly lesson grid (subject, time, room,
+ * "My schedule" — the student's weekly lesson grid (course, time, room,
  * teacher). Week navigation drives the `from`/`to` query. Desktop shows a
  * 7-column track; mobile stacks the days (flawless from 320px).
  */
@@ -66,7 +66,7 @@ export function MyScheduleView() {
       className="rounded-xl border border-border bg-background p-3 text-sm"
     >
       <p className="truncate font-medium text-foreground">
-        {lesson.subject.name}
+        {lesson.group.course.name}
       </p>
       <p className="truncate text-xs text-foreground-muted">
         {lesson.group.name}
@@ -79,7 +79,7 @@ export function MyScheduleView() {
         {lesson.room && (
           <span className="flex items-center gap-1.5">
             <MapPin className="h-3.5 w-3.5 shrink-0" aria-hidden />
-            <span className="truncate">{lesson.room}</span>
+            <span className="truncate">{lesson.room.name}</span>
           </span>
         )}
         {lesson.teacher && (

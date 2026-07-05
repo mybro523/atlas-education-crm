@@ -13,7 +13,6 @@ import { QueryCourseDto } from './dto/query-course.dto';
 /** Relations returned on the detail GET (§4). */
 const courseDetailInclude = {
   courseType: true,
-  subject: true,
   branch: true,
 } satisfies Prisma.CourseInclude;
 
@@ -22,8 +21,8 @@ export class CoursesService {
   constructor(private readonly prisma: PrismaService) {}
 
   /**
-   * Paginated course list with optional branch / courseType / subject / active
-   * filters and case-insensitive name search.
+   * Paginated course list with optional branch / courseType / active filters
+   * and case-insensitive name search.
    */
   async findAll(query: QueryCourseDto): Promise<PaginatedResult<Course>> {
     const { skip, take, page, pageSize } = toSkipTake(query);
@@ -31,7 +30,6 @@ export class CoursesService {
     const where: Prisma.CourseWhereInput = {};
     if (query.branchId) where.branchId = query.branchId;
     if (query.courseTypeId) where.courseTypeId = query.courseTypeId;
-    if (query.subjectId) where.subjectId = query.subjectId;
     if (query.active !== undefined) where.isActive = query.active;
     if (query.search) {
       where.name = { contains: query.search, mode: 'insensitive' };
@@ -65,15 +63,16 @@ export class CoursesService {
 
   /** Create a course after validating all foreign keys exist. */
   async create(dto: CreateCourseDto): Promise<Course> {
-    await this.assertRelations(dto.courseTypeId, dto.subjectId, dto.branchId);
+    await this.assertRelations(dto.courseTypeId, dto.branchId);
 
     return this.prisma.course.create({
       data: {
         name: dto.name,
         courseTypeId: dto.courseTypeId,
-        subjectId: dto.subjectId,
         branchId: dto.branchId,
         pricePerMonth: dto.pricePerMonth,
+        startDate: dto.startDate ? new Date(dto.startDate) : undefined,
+        endDate: dto.endDate ? new Date(dto.endDate) : undefined,
         isActive: dto.isActive,
       },
       include: courseDetailInclude,
@@ -83,18 +82,29 @@ export class CoursesService {
   /** Update a course (404 if missing / any provided FK is invalid). */
   async update(id: string, dto: UpdateCourseDto): Promise<Course> {
     await this.findOne(id);
-    await this.assertRelations(dto.courseTypeId, dto.subjectId, dto.branchId);
+    await this.assertRelations(dto.courseTypeId, dto.branchId);
+
+    const data: Prisma.CourseUpdateInput = {
+      name: dto.name,
+      pricePerMonth: dto.pricePerMonth,
+      isActive: dto.isActive,
+    };
+    if (dto.courseTypeId !== undefined) {
+      data.courseType = { connect: { id: dto.courseTypeId } };
+    }
+    if (dto.branchId !== undefined) {
+      data.branch = { connect: { id: dto.branchId } };
+    }
+    if (dto.startDate !== undefined) {
+      data.startDate = dto.startDate ? new Date(dto.startDate) : null;
+    }
+    if (dto.endDate !== undefined) {
+      data.endDate = dto.endDate ? new Date(dto.endDate) : null;
+    }
 
     return this.prisma.course.update({
       where: { id },
-      data: {
-        name: dto.name,
-        courseTypeId: dto.courseTypeId,
-        subjectId: dto.subjectId,
-        branchId: dto.branchId,
-        pricePerMonth: dto.pricePerMonth,
-        isActive: dto.isActive,
-      },
+      data,
       include: courseDetailInclude,
     });
   }
@@ -111,7 +121,6 @@ export class CoursesService {
    */
   private async assertRelations(
     courseTypeId?: string,
-    subjectId?: string,
     branchId?: string,
   ): Promise<void> {
     if (courseTypeId !== undefined) {
@@ -121,16 +130,6 @@ export class CoursesService {
       });
       if (!courseType) {
         throw new NotFoundException(`CourseType ${courseTypeId} not found`);
-      }
-    }
-
-    if (subjectId !== undefined) {
-      const subject = await this.prisma.subject.findUnique({
-        where: { id: subjectId },
-        select: { id: true },
-      });
-      if (!subject) {
-        throw new NotFoundException(`Subject ${subjectId} not found`);
       }
     }
 

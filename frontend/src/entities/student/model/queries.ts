@@ -127,6 +127,8 @@ export function useAddParent() {
         firstName: dto.firstName,
         lastName: dto.lastName,
         phone: dto.phone,
+        relation: dto.relation ?? 'OTHER',
+        position: dto.position ?? null,
         workplace: dto.workplace ?? null,
       };
       qc.setQueryData<Parent[]>(studentKeys.parents(studentId), (old) =>

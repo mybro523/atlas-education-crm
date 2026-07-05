@@ -8,8 +8,16 @@ import {
   useUpdateStudent,
   type Student,
   type CreateStudentDto,
+  type UpdateStudentDto,
 } from '@/entities/student';
-import { ParentsEditor, type ParentDraft } from '@/features/manage-parents';
+import {
+  ParentFigureFields,
+  figureFromParent,
+  isParentFigureFilled,
+  parentFigureToDto,
+  type ParentFigureDraft,
+  type ParentFigureErrors,
+} from '@/features/manage-parents';
 
 export interface StudentFormModalProps {
   open: boolean;
@@ -31,9 +39,10 @@ function toDateInput(value?: string | null): string {
 }
 
 /**
- * Create/edit a student with a nested parents editor. On create, staged parent
- * drafts are sent inline with the student; on edit, the parents editor persists
- * changes live via the parent sub-routes. All mutations optimistic.
+ * Create/edit a student. Parents are captured through two explicit blocks —
+ * ОТЕЦ (father) and МАТЬ (mother) — sent to the API as the `father` / `mother`
+ * slots (persisted with the FATHER / MOTHER relation). Both blocks are optional;
+ * a filled block requires a name + phone. All mutations are optimistic.
  */
 export function StudentFormModal({
   open,
@@ -56,8 +65,11 @@ export function StudentFormModal({
   const [enrollmentDate, setEnrollmentDate] = useState('');
   const [branchId, setBranchId] = useState('');
   const [isActive, setIsActive] = useState(true);
-  const [parentDrafts, setParentDrafts] = useState<ParentDraft[]>([]);
+  const [father, setFather] = useState<ParentFigureDraft>(figureFromParent());
+  const [mother, setMother] = useState<ParentFigureDraft>(figureFromParent());
   const [errors, setErrors] = useState<FieldErrors>({});
+  const [fatherErrors, setFatherErrors] = useState<ParentFigureErrors>({});
+  const [motherErrors, setMotherErrors] = useState<ParentFigureErrors>({});
   const [formError, setFormError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -70,18 +82,50 @@ export function StudentFormModal({
     setEnrollmentDate(toDateInput(student?.enrollmentDate));
     setBranchId(student?.branchId ?? '');
     setIsActive(student?.isActive ?? true);
-    setParentDrafts([]);
+    setFather(
+      figureFromParent(
+        student?.parents?.find((p) => p.relation === 'FATHER') ?? null,
+      ),
+    );
+    setMother(
+      figureFromParent(
+        student?.parents?.find((p) => p.relation === 'MOTHER') ?? null,
+      ),
+    );
     setErrors({});
+    setFatherErrors({});
+    setMotherErrors({});
     setFormError(null);
   }, [open, student]);
+
+  /** Validate a parent block only when it has been filled in. */
+  const validateFigure = (figure: ParentFigureDraft): ParentFigureErrors => {
+    if (!isParentFigureFilled(figure)) return {};
+    const next: ParentFigureErrors = {};
+    if (!figure.lastName.trim()) next.lastName = t('form.requiredField');
+    if (!figure.firstName.trim()) next.firstName = t('form.requiredField');
+    if (!figure.phone.trim()) next.phone = t('form.requiredField');
+    return next;
+  };
 
   const validate = (): boolean => {
     const next: FieldErrors = {};
     if (!firstName.trim()) next.firstName = t('form.requiredField');
     if (!lastName.trim()) next.lastName = t('form.requiredField');
     if (!branchId) next.branchId = t('form.requiredField');
+
+    const fErr = validateFigure(father);
+    const mErr = validateFigure(mother);
+
     setErrors(next);
-    return Object.keys(next).length === 0;
+    setFatherErrors(fErr);
+    setMotherErrors(mErr);
+
+    return (
+      Object.keys(next).length === 0 &&
+      Object.keys(fErr).length === 0 &&
+      Object.keys(mErr).length === 0
+    );
   };
 
   const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
@@ -89,21 +133,24 @@ export function StudentFormModal({
     setFormError(null);
     if (!validate()) return;
 
+    const fatherDto = parentFigureToDto(father);
+    const motherDto = parentFigureToDto(mother);
+
     if (isEdit && student) {
+      const dto: UpdateStudentDto = {
+        firstName: firstName.trim(),
+        lastName: lastName.trim(),
+        middleName: middleName.trim() || undefined,
+        phone: phone.trim() || undefined,
+        birthDate: birthDate || undefined,
+        enrollmentDate: enrollmentDate || undefined,
+        branchId,
+        isActive,
+        father: fatherDto,
+        mother: motherDto,
+      };
       updateStudent.mutate(
-        {
-          id: student.id,
-          dto: {
-            firstName: firstName.trim(),
-            lastName: lastName.trim(),
-            middleName: middleName.trim() || undefined,
-            phone: phone.trim() || undefined,
-            birthDate: birthDate || undefined,
-            enrollmentDate: enrollmentDate || undefined,
-            branchId,
-            isActive,
-          },
-        },
+        { id: student.id, dto },
         {
           onSuccess: () => {
             toast.success(t('students.updated'));
@@ -125,9 +172,8 @@ export function StudentFormModal({
       enrollmentDate: enrollmentDate || undefined,
       branchId,
       isActive,
-      parents: parentDrafts.length
-        ? parentDrafts.map(({ _localId: _drop, id: _id, ...p }) => p)
-        : undefined,
+      father: fatherDto,
+      mother: motherDto,
     };
     createStudent.mutate(dto, {
       onSuccess: () => {
@@ -218,11 +264,24 @@ export function StudentFormModal({
         />
       </div>
 
-      <div className="border-t border-border pt-4">
-        <ParentsEditor
-          studentId={isEdit ? student?.id : undefined}
-          value={parentDrafts}
-          onChange={setParentDrafts}
+      {/* Explicit parent blocks: father + mother (both optional). */}
+      <div className="space-y-3 border-t border-border pt-4">
+        <h3 className="text-sm font-semibold text-foreground">
+          {t('students.parents.title')}
+        </h3>
+        <ParentFigureFields
+          legend={t('students.parents.father')}
+          value={father}
+          onChange={setFather}
+          errors={fatherErrors}
+          disabled={submitting}
+        />
+        <ParentFigureFields
+          legend={t('students.parents.mother')}
+          value={mother}
+          onChange={setMother}
+          errors={motherErrors}
+          disabled={submitting}
         />
       </div>
     </FormModal>

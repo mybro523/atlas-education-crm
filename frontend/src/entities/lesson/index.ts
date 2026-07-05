@@ -6,6 +6,10 @@ export type {
   CreateLessonDto,
   UpdateLessonDto,
   ConductLessonDto,
+  RoomOccupancy,
+  RoomOccupancyItem,
+  RoomOccupancyParams,
+  OccupancyLesson,
 } from './model/types';
 export {
   lessonKeys,
@@ -15,4 +19,5 @@ export {
   useUpdateLesson,
   useDeleteLesson,
   useConductLesson,
+  useRoomOccupancy,
 } from './model/queries';

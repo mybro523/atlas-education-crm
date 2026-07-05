@@ -61,20 +61,17 @@ function ScheduleLessonCard({ lesson }: { lesson: MyScheduleLesson }) {
       <p className="mt-1.5 truncate text-sm font-medium text-foreground">
         {lesson.group?.name ?? '—'}
       </p>
-      {lesson.subject?.name && (
+      {lesson.group?.course?.name && (
         <p className="truncate text-xs text-foreground-muted">
-          {lesson.subject.name}
+          {lesson.group.course.name}
         </p>
       )}
-      {(lesson.topic || lesson.room) && (
+      {lesson.room?.name && (
         <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-foreground-muted">
-          {lesson.topic && <span className="truncate">{lesson.topic}</span>}
-          {lesson.room && (
-            <span className="flex items-center gap-0.5">
-              <MapPin className="h-3 w-3" aria-hidden />
-              {lesson.room}
-            </span>
-          )}
+          <span className="flex items-center gap-0.5">
+            <MapPin className="h-3 w-3" aria-hidden />
+            {lesson.room.name}
+          </span>
         </div>
       )}
     </div>

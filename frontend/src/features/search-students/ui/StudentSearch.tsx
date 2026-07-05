@@ -12,8 +12,9 @@ export interface StudentSearchProps {
 
 /**
  * Single search box for the students list. Per the API contract (§6) the one
- * `search` term matches the student's first/last name OR any parent's
- * workplace — so a single input covers both, no separate fields.
+ * `search` term matches the student's first/last name OR any parent's workplace
+ * (место работы) OR any parent's position/должность — so a single input covers
+ * all of them, no separate fields.
  */
 export function StudentSearch({ value, onChange, className }: StudentSearchProps) {
   const { t } = useTranslation();

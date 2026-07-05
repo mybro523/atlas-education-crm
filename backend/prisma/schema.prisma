@@ -91,6 +91,12 @@ enum SalaryBasis {
   FIXED
 }
 
+enum ParentRelation {
+  FATHER
+  MOTHER
+  OTHER
+}
+
 // ==========================================================================
 // Core / org
 // ==========================================================================
@@ -111,6 +117,7 @@ model Branch {
   groups         Group[]
   payments       Payment[]
   financeRecords FinanceRecord[]
+  rooms          Room[]
 
   @@map("branches")
 }
@@ -149,14 +156,14 @@ model User {
 }
 
 model RefreshToken {
-  id        String   @id @default(cuid())
+  id        String    @id @default(cuid())
   userId    String
   tokenHash String
   userAgent String?
   ip        String?
   expiresAt DateTime
   revokedAt DateTime?
-  createdAt DateTime @default(now())
+  createdAt DateTime  @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -184,9 +191,9 @@ model Student {
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
 
-  user     User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
-  branch   Branch    @relation(fields: [branchId], references: [id], onDelete: Cascade)
-  parents  Parent[]
+  user    User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  branch  Branch   @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  parents Parent[]
 
   groupLinks  GroupStudent[]
   grades      Grade[]
@@ -200,15 +207,18 @@ model Student {
 }
 
 model Parent {
-  id        String   @id @default(cuid())
+  id        String         @id @default(cuid())
   studentId String
   firstName String
   lastName  String
   phone     String
+  relation  ParentRelation @default(OTHER)
+  // Job title / должность — participates in student search.
+  position  String?
   // Place of work — participates in student search.
   workplace String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
 
   student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
 
@@ -218,19 +228,18 @@ model Parent {
 }
 
 model Teacher {
-  id        String   @id @default(cuid())
-  userId    String?  @unique
-  branchId  String
-  firstName String
-  lastName  String
+  id         String   @id @default(cuid())
+  userId     String?  @unique
+  branchId   String
+  firstName  String
+  lastName   String
   middleName String?
-  phone     String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  phone      String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
-  user     User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
-  branch   Branch    @relation(fields: [branchId], references: [id], onDelete: Cascade)
-  subjects TeacherSubject[]
+  user     User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  branch   Branch   @relation(fields: [branchId], references: [id], onDelete: Cascade)
   groups   Group[]
   lessons  Lesson[]
   salaries Salary[]
@@ -241,16 +250,16 @@ model Teacher {
 }
 
 model Employee {
-  id        String   @id @default(cuid())
-  userId    String?  @unique
-  branchId  String
-  firstName String
-  lastName  String
-  position  String?
+  id         String   @id @default(cuid())
+  userId     String?  @unique
+  branchId   String
+  firstName  String
+  lastName   String
+  position   String?
   // Optional fixed monthly salary for admin staff (TJS).
   baseSalary Decimal? @db.Decimal(10, 2)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
   user     User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
   branch   Branch   @relation(fields: [branchId], references: [id], onDelete: Cascade)
@@ -264,28 +273,20 @@ model Employee {
 // Academic dictionaries & structure
 // ==========================================================================
 
-model Subject {
+// Flexible rooms/kabinets dictionary, managed by FOUNDER + ADMIN.
+model Room {
   id        String   @id @default(cuid())
-  name      String   @unique
+  name      String
+  branchId  String?
+  isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  courses  Course[]
-  groups   Group[]
-  teachers TeacherSubject[]
+  branch  Branch?  @relation(fields: [branchId], references: [id], onDelete: SetNull)
+  lessons Lesson[]
 
-  @@map("subjects")
-}
-
-model TeacherSubject {
-  teacherId String
-  subjectId String
-
-  teacher Teacher @relation(fields: [teacherId], references: [id], onDelete: Cascade)
-  subject Subject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
-
-  @@id([teacherId, subjectId])
-  @@map("teacher_subjects")
+  @@index([branchId])
+  @@map("rooms")
 }
 
 // Flexible configurable dictionary (Standard, VIP, Intensive, Kids, For workers, ...)
@@ -302,24 +303,24 @@ model CourseType {
 }
 
 model Course {
-  id            String   @id @default(cuid())
+  id            String    @id @default(cuid())
   name          String
   courseTypeId  String
-  subjectId     String
   branchId      String
-  pricePerMonth Decimal  @db.Decimal(10, 2)
-  isActive      Boolean  @default(true)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  pricePerMonth Decimal   @db.Decimal(10, 2)
+  // Term dates — the course runs e.g. 2026-07-01..2026-08-01.
+  startDate     DateTime?
+  endDate       DateTime?
+  isActive      Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
 
   courseType CourseType @relation(fields: [courseTypeId], references: [id])
-  subject    Subject    @relation(fields: [subjectId], references: [id])
   branch     Branch     @relation(fields: [branchId], references: [id], onDelete: Cascade)
   groups     Group[]
 
   @@index([branchId])
   @@index([courseTypeId])
-  @@index([subjectId])
   @@map("courses")
 }
 
@@ -327,17 +328,15 @@ model Group {
   id        String   @id @default(cuid())
   name      String
   courseId  String
-  subjectId String
   teacherId String?
   branchId  String
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  course   Course  @relation(fields: [courseId], references: [id], onDelete: Cascade)
-  subject  Subject @relation(fields: [subjectId], references: [id])
-  teacher  Teacher? @relation(fields: [teacherId], references: [id], onDelete: SetNull)
-  branch   Branch  @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  course  Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  teacher Teacher? @relation(fields: [teacherId], references: [id], onDelete: SetNull)
+  branch  Branch   @relation(fields: [branchId], references: [id], onDelete: Cascade)
 
   students    GroupStudent[]
   lessons     Lesson[]
@@ -369,22 +368,22 @@ model GroupStudent {
 // ==========================================================================
 
 model Lesson {
-  id        String   @id @default(cuid())
-  groupId   String
-  teacherId String?
-  startsAt  DateTime
-  endsAt    DateTime?
-  topic     String?
-  room      String?
+  id             String    @id @default(cuid())
+  groupId        String
+  teacherId      String?
+  roomId         String?
+  startsAt       DateTime
+  endsAt         DateTime?
   // Flat pay rate for the teacher for this specific lesson (TJS), if overridden.
-  teacherPayRate Decimal? @db.Decimal(10, 2)
+  teacherPayRate Decimal?  @db.Decimal(10, 2)
   lessonRateId   String?
-  isConducted    Boolean  @default(false)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  isConducted    Boolean   @default(false)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 
   group      Group       @relation(fields: [groupId], references: [id], onDelete: Cascade)
   teacher    Teacher?    @relation(fields: [teacherId], references: [id], onDelete: SetNull)
+  room       Room?       @relation(fields: [roomId], references: [id], onDelete: SetNull)
   lessonRate LessonRate? @relation(fields: [lessonRateId], references: [id], onDelete: SetNull)
 
   grades      Grade[]
@@ -393,6 +392,7 @@ model Lesson {
 
   @@index([groupId])
   @@index([teacherId])
+  @@index([roomId])
   @@index([startsAt])
   @@map("lessons")
 }
@@ -474,18 +474,18 @@ model Remark {
 // ==========================================================================
 
 model Payment {
-  id        String        @id @default(cuid())
-  studentId String
-  groupId   String?
-  branchId  String
-  amount    Decimal       @db.Decimal(10, 2)
+  id                String        @id @default(cuid())
+  studentId         String
+  groupId           String?
+  branchId          String
+  amount            Decimal       @db.Decimal(10, 2)
   // Billing month anchored to the student's enrollment date (start of the period).
   billingMonthStart DateTime
   billingMonthEnd   DateTime
-  status    PaymentStatus @default(UNPAID)
-  paidAt    DateTime?
-  createdAt DateTime      @default(now())
-  updatedAt DateTime      @updatedAt
+  status            PaymentStatus @default(UNPAID)
+  paidAt            DateTime?
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
 
   student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
   group   Group?  @relation(fields: [groupId], references: [id], onDelete: SetNull)
@@ -544,15 +544,15 @@ model Salary {
 // ==========================================================================
 
 model Conversation {
-  id          String             @id @default(cuid())
-  channel     MessageChannel
+  id            String             @id @default(cuid())
+  channel       MessageChannel
   // External participant id (phone / IG account id)
-  externalId  String
-  contactName String?
-  status      ConversationStatus @default(OPEN)
+  externalId    String
+  contactName   String?
+  status        ConversationStatus @default(OPEN)
   lastMessageAt DateTime?
-  createdAt   DateTime           @default(now())
-  updatedAt   DateTime           @updatedAt
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
 
   messages Message[]
 

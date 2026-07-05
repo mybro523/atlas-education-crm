@@ -62,7 +62,6 @@ export function useCreateGroup() {
         id: `optimistic-${Date.now()}`,
         name: dto.name,
         courseId: dto.courseId,
-        subjectId: dto.subjectId,
         teacherId: dto.teacherId ?? null,
         branchId: dto.branchId,
         isActive: dto.isActive ?? true,

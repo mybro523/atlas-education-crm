@@ -19,7 +19,7 @@ import { AuthModule } from './modules/auth/auth.module';
 import { UsersModule } from './modules/users/users.module';
 import { HealthModule } from './modules/health/health.module';
 import { BranchesModule } from './modules/branches/branches.module';
-import { SubjectsModule } from './modules/subjects/subjects.module';
+import { RoomsModule } from './modules/rooms/rooms.module';
 import { CourseTypesModule } from './modules/course-types/course-types.module';
 import { StudentsModule } from './modules/students/students.module';
 import { TeachersModule } from './modules/teachers/teachers.module';
@@ -70,7 +70,7 @@ import { AutomationModule } from './modules/automation/automation.module';
     UsersModule,
     HealthModule,
     BranchesModule,
-    SubjectsModule,
+    RoomsModule,
     CourseTypesModule,
     StudentsModule,
     TeachersModule,

@@ -46,6 +46,17 @@ async function main() {
     });
   }
 
+  // --- Rooms / kabinets for the first branch -------------------------------
+  const roomNames = ['Кабинет 1', 'Кабинет 2', 'Кабинет 3'];
+  for (const name of roomNames) {
+    const id = `seed-room-${branches[0].id}-${name}`;
+    await prisma.room.upsert({
+      where: { id },
+      update: {},
+      create: { id, name, branchId: branches[0].id },
+    });
+  }
+
   // eslint-disable-next-line no-console
   console.log('Seed complete:');
   // eslint-disable-next-line no-console
@@ -54,6 +65,8 @@ async function main() {
   console.log(`  Founder login: ${founderEmail} / Atlas12345!`);
   // eslint-disable-next-line no-console
   console.log(`  Course types: ${courseTypes.join(', ')}`);
+  // eslint-disable-next-line no-console
+  console.log(`  Rooms: ${roomNames.join(', ')}`);
 }
 
 main()

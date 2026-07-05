@@ -10,7 +10,7 @@ import { TeachersPage } from '@/pages/teachers';
 import { GroupsPage, GroupDetailPage } from '@/pages/groups';
 import { CoursesPage } from '@/pages/courses';
 import { BranchesPage } from '@/pages/branches';
-import { SubjectsPage } from '@/pages/subjects';
+import { RoomsPage } from '@/pages/rooms';
 import { CourseTypesPage } from '@/pages/course-types';
 import { SchedulePage } from '@/pages/schedule';
 import { JournalPage } from '@/pages/journal';
@@ -64,7 +64,7 @@ export function AppRouter() {
               <Route path={ROUTES.teachers} element={<TeachersPage />} />
               <Route path={ROUTES.courses} element={<CoursesPage />} />
               <Route path={ROUTES.branches} element={<BranchesPage />} />
-              <Route path={ROUTES.subjects} element={<SubjectsPage />} />
+              <Route path={ROUTES.rooms} element={<RoomsPage />} />
               <Route
                 path={ROUTES.courseTypes}
                 element={<CourseTypesPage />}

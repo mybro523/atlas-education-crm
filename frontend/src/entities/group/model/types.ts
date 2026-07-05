@@ -1,15 +1,13 @@
 import type { PaginationParams } from '@/shared/lib/query';
 import type { Branch } from '@/entities/branch';
-import type { Subject } from '@/entities/subject';
 import type { Course } from '@/entities/course';
 import type { Teacher } from '@/entities/teacher';
 
-/** Learning group — a cohort tied to a course, subject and teacher (§7). */
+/** Learning group — a cohort tied to a course and teacher (§7). */
 export interface Group {
   id: string;
   name: string;
   courseId: string;
-  subjectId: string;
   teacherId?: string | null;
   branchId: string;
   isActive: boolean;
@@ -17,7 +15,6 @@ export interface Group {
   updatedAt: string;
   /** Populated on detail GET. */
   course?: Course;
-  subject?: Subject;
   teacher?: Teacher;
   branch?: Branch;
   /** Convenience counts on detail. */
@@ -55,7 +52,6 @@ export interface GroupStudentsParams {
 export interface CreateGroupDto {
   name: string;
   courseId: string;
-  subjectId: string;
   teacherId?: string;
   branchId: string;
   isActive?: boolean;

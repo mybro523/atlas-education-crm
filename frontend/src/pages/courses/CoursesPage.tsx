@@ -18,7 +18,6 @@ import {
 import { CURRENCY } from '@/shared/config';
 import { useDebouncedValue } from '@/shared/lib/hooks';
 import { useBranches } from '@/entities/branch';
-import { useSubjects } from '@/entities/subject';
 import { useCourseTypes } from '@/entities/course-type';
 import {
   useCourses,
@@ -32,7 +31,15 @@ const PAGE_SIZE = 20;
 
 type ActiveFilter = 'all' | 'active' | 'inactive';
 
-/** Admin CRUD screen for Courses (paginated; branch/type/subject/search filters). */
+/** Format an ISO date (or date-only string) as `DD.MM.YYYY`; null when empty. */
+function formatDate(value?: string | null): string | null {
+  if (!value) return null;
+  const [y, m, d] = value.slice(0, 10).split('-');
+  if (!y || !m || !d) return null;
+  return `${d}.${m}.${y}`;
+}
+
+/** Admin CRUD screen for Courses (paginated; branch/type/search filters). */
 export function CoursesPage() {
   const { t } = useTranslation();
   const toast = useToast();
@@ -42,13 +49,12 @@ export function CoursesPage() {
   const search = useDebouncedValue(searchInput.trim(), 350);
   const [branchId, setBranchId] = useState('');
   const [courseTypeId, setCourseTypeId] = useState('');
-  const [subjectId, setSubjectId] = useState('');
   const [activeFilter, setActiveFilter] = useState<ActiveFilter>('all');
 
   // Reset to page 1 whenever any filter changes.
   useEffect(() => {
     setPage(1);
-  }, [search, branchId, courseTypeId, subjectId, activeFilter]);
+  }, [search, branchId, courseTypeId, activeFilter]);
 
   const params: CourseListParams = {
     page,
@@ -56,7 +62,6 @@ export function CoursesPage() {
     ...(search ? { search } : {}),
     ...(branchId ? { branchId } : {}),
     ...(courseTypeId ? { courseTypeId } : {}),
-    ...(subjectId ? { subjectId } : {}),
     ...(activeFilter !== 'all' ? { active: activeFilter === 'active' } : {}),
   };
 
@@ -65,7 +70,6 @@ export function CoursesPage() {
 
   // Dictionaries for filters + resolving relation names in the table.
   const { data: branches } = useBranches();
-  const { data: subjects } = useSubjects();
   const { data: courseTypes } = useCourseTypes();
 
   const [formOpen, setFormOpen] = useState(false);
@@ -95,10 +99,6 @@ export function CoursesPage() {
     const map = new Map((branches ?? []).map((b) => [b.id, b.name]));
     return (c: Course) => c.branch?.name ?? map.get(c.branchId) ?? '—';
   }, [branches]);
-  const subjectName = useMemo(() => {
-    const map = new Map((subjects ?? []).map((s) => [s.id, s.name]));
-    return (c: Course) => c.subject?.name ?? map.get(c.subjectId) ?? '—';
-  }, [subjects]);
   const courseTypeName = useMemo(() => {
     const map = new Map((courseTypes ?? []).map((ct) => [ct.id, ct.name]));
     return (c: Course) => c.courseType?.name ?? map.get(c.courseTypeId) ?? '—';
@@ -127,26 +127,17 @@ export function CoursesPage() {
     ],
     [courseTypes, t],
   );
-  const subjectOptions = useMemo(
-    () => [
-      { value: '', label: t('crud.allSubjects') },
-      ...(subjects ?? []).map((s) => ({ value: s.id, label: s.name })),
-    ],
-    [subjects, t],
-  );
 
   const hasFilters =
     Boolean(searchInput) ||
     Boolean(branchId) ||
     Boolean(courseTypeId) ||
-    Boolean(subjectId) ||
     activeFilter !== 'all';
 
   const resetFilters = () => {
     setSearchInput('');
     setBranchId('');
     setCourseTypeId('');
-    setSubjectId('');
     setActiveFilter('all');
   };
 
@@ -165,18 +156,29 @@ export function CoursesPage() {
         ),
       },
       {
-        id: 'subject',
-        header: t('courses.subject'),
-        cell: (c) => (
-          <span className="text-foreground-muted">{subjectName(c)}</span>
-        ),
-      },
-      {
         id: 'branch',
         header: t('courses.branch'),
         cell: (c) => (
           <span className="text-foreground-muted">{branchName(c)}</span>
         ),
+      },
+      {
+        id: 'term',
+        header: t('courses.term'),
+        mobileLabel: t('courses.term'),
+        className: 'whitespace-nowrap',
+        cell: (c) => {
+          const start = formatDate(c.startDate);
+          const end = formatDate(c.endDate);
+          if (!start && !end) {
+            return <span className="text-foreground-muted">—</span>;
+          }
+          return (
+            <span className="text-foreground-muted">
+              {start ?? '…'} – {end ?? '…'}
+            </span>
+          );
+        },
       },
       {
         id: 'price',
@@ -224,7 +226,7 @@ export function CoursesPage() {
         ),
       },
     ],
-    [t, branchName, subjectName, courseTypeName, priceFormatter],
+    [t, branchName, courseTypeName, priceFormatter],
   );
 
   return (
@@ -262,12 +264,6 @@ export function CoursesPage() {
           onChange={(e) => setCourseTypeId(e.target.value)}
           options={courseTypeOptions}
           aria-label={t('courses.courseType')}
-        />
-        <Select
-          value={subjectId}
-          onChange={(e) => setSubjectId(e.target.value)}
-          options={subjectOptions}
-          aria-label={t('courses.subject')}
         />
         <Select
           value={activeFilter}

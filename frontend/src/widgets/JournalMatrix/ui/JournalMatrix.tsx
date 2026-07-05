@@ -14,7 +14,7 @@ export interface JournalMatrixProps {
   groupId: string | undefined;
 }
 
-function lessonLabel(startsAt: string, topic?: string | null): string {
+function lessonLabel(startsAt: string): string {
   const d = new Date(startsAt);
   const date = d.toLocaleDateString(undefined, {
     day: 'numeric',
@@ -24,7 +24,7 @@ function lessonLabel(startsAt: string, topic?: string | null): string {
     hour: '2-digit',
     minute: '2-digit',
   });
-  return topic ? `${date}, ${time} · ${topic}` : `${date}, ${time}`;
+  return `${date}, ${time}`;
 }
 
 /**
@@ -123,7 +123,7 @@ export function JournalMatrix({ groupId }: JournalMatrixProps) {
       studentId: row.student.id,
       studentName: `${row.student.lastName} ${row.student.firstName}`,
       lessonId,
-      lessonLabel: lessonLabel(lesson.startsAt, lesson.topic),
+      lessonLabel: lessonLabel(lesson.startsAt),
       cell: row.cells[lessonId] ?? {},
     });
   };

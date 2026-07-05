@@ -14,9 +14,14 @@ import type {
   CreateLessonDto,
   UpdateLessonDto,
   ConductLessonDto,
+  RoomOccupancyParams,
 } from './types';
 
-export const lessonKeys = createQueryKeys('lessons');
+export const lessonKeys = {
+  ...createQueryKeys('lessons'),
+  occupancy: (params?: RoomOccupancyParams) =>
+    ['lessons', 'occupancy', params ?? {}] as const,
+};
 
 export function useLessons(params?: LessonListParams) {
   return useQuery({
@@ -43,10 +48,9 @@ export function useCreateLesson() {
         id: `optimistic-${Date.now()}`,
         groupId: dto.groupId,
         teacherId: dto.teacherId ?? null,
+        roomId: dto.roomId ?? null,
         startsAt: dto.startsAt,
         endsAt: dto.endsAt ?? null,
-        topic: dto.topic ?? null,
-        room: dto.room ?? null,
         teacherPayRate: dto.teacherPayRate ?? null,
         lessonRateId: dto.lessonRateId ?? null,
         isConducted: dto.isConducted ?? false,
@@ -107,5 +111,14 @@ export function useConductLesson() {
         old ? { ...old, isConducted: dto.isConducted } : old,
       );
     },
+  });
+}
+
+/** Room free/occupied view over a window (GET /schedule/rooms/occupancy). */
+export function useRoomOccupancy(params?: RoomOccupancyParams) {
+  return useQuery({
+    queryKey: lessonKeys.occupancy(params),
+    queryFn: () => lessonApi.roomOccupancy(params),
+    enabled: Boolean(params?.date || (params?.from && params?.to)),
   });
 }

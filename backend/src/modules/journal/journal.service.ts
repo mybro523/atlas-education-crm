@@ -22,11 +22,10 @@ export interface JournalCell {
 
 /** Full group-journal matrix response shape. */
 export interface JournalMatrix {
-  group: { id: string; name: string; subjectId: string; teacherId: string | null };
+  group: { id: string; name: string; courseId: string; teacherId: string | null };
   lessons: Array<{
     id: string;
     startsAt: Date;
-    topic: string | null;
     isConducted: boolean;
   }>;
   students: Array<{
@@ -299,7 +298,7 @@ export class JournalService {
       where,
       include: {
         student: { select: { id: true, firstName: true, lastName: true } },
-        lesson: { select: { id: true, startsAt: true, topic: true } },
+        lesson: { select: { id: true, startsAt: true } },
       },
       orderBy: { createdAt: 'desc' },
       take: 200,
@@ -341,7 +340,7 @@ export class JournalService {
 
     const group = await this.prisma.group.findUnique({
       where: { id: groupId },
-      select: { id: true, name: true, subjectId: true, teacherId: true },
+      select: { id: true, name: true, courseId: true, teacherId: true },
     });
     // assertGroupAccess already guarantees existence.
     if (!group) {
@@ -351,7 +350,7 @@ export class JournalService {
     // Lessons of the group, chronological.
     const lessons = await this.prisma.lesson.findMany({
       where: { groupId },
-      select: { id: true, startsAt: true, topic: true, isConducted: true },
+      select: { id: true, startsAt: true, isConducted: true },
       orderBy: { startsAt: 'asc' },
     });
     const lessonIds = lessons.map((l) => l.id);

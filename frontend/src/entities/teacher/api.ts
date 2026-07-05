@@ -5,10 +5,9 @@ import type {
   TeacherListParams,
   CreateTeacherDto,
   UpdateTeacherDto,
-  SetTeacherSubjectsDto,
 } from './model/types';
 
-/** Teachers (API_CONTRACT §5). Paginated list + subjects replace endpoint. */
+/** Teachers (API_CONTRACT §5). Paginated list. */
 export const teacherApi = {
   async list(params?: TeacherListParams): Promise<Paginated<Teacher>> {
     const { data } = await axiosClient.get<Paginated<Teacher>>('/teachers', {
@@ -34,17 +33,5 @@ export const teacherApi = {
 
   async remove(id: string): Promise<void> {
     await axiosClient.delete(`/teachers/${id}`);
-  },
-
-  /** PUT /teachers/:id/subjects — replace the full assigned-subject set. */
-  async setSubjects(
-    id: string,
-    dto: SetTeacherSubjectsDto,
-  ): Promise<Teacher> {
-    const { data } = await axiosClient.put<Teacher>(
-      `/teachers/${id}/subjects`,
-      dto,
-    );
-    return data;
   },
 };

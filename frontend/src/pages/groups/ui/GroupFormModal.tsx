@@ -10,7 +10,6 @@ import {
   type CreateGroupDto,
 } from '@/entities/group';
 import { useCourses } from '@/entities/course';
-import { useSubjects } from '@/entities/subject';
 import { useTeachers } from '@/entities/teacher';
 import { useBranches } from '@/entities/branch';
 
@@ -25,7 +24,6 @@ export interface GroupFormModalProps {
 interface FormState {
   name: string;
   courseId: string;
-  subjectId: string;
   teacherId: string;
   branchId: string;
   isActive: boolean;
@@ -34,7 +32,6 @@ interface FormState {
 const EMPTY: FormState = {
   name: '',
   courseId: '',
-  subjectId: '',
   teacherId: '',
   branchId: '',
   isActive: true,
@@ -55,7 +52,6 @@ export function GroupFormModal({
   const submitting = createGroup.isPending || updateGroup.isPending;
 
   const { data: coursesData } = useCourses({ pageSize: 100 });
-  const { data: subjects } = useSubjects();
   const { data: teachersData } = useTeachers({ pageSize: 100 });
   const { data: branches } = useBranches();
 
@@ -73,7 +69,6 @@ export function GroupFormModal({
       setForm({
         name: group.name,
         courseId: group.courseId,
-        subjectId: group.subjectId,
         teacherId: group.teacherId ?? '',
         branchId: group.branchId,
         isActive: group.isActive,
@@ -86,10 +81,6 @@ export function GroupFormModal({
   const courseOptions = useMemo(
     () => (coursesData?.items ?? []).map((c) => ({ value: c.id, label: c.name })),
     [coursesData],
-  );
-  const subjectOptions = useMemo(
-    () => (subjects ?? []).map((s) => ({ value: s.id, label: s.name })),
-    [subjects],
   );
   const teacherOptions = useMemo(
     () =>
@@ -112,7 +103,6 @@ export function GroupFormModal({
     const next: Partial<Record<keyof FormState, string>> = {};
     if (!form.name.trim()) next.name = t('form.required');
     if (!form.courseId) next.courseId = t('form.required');
-    if (!form.subjectId) next.subjectId = t('form.required');
     if (!form.branchId) next.branchId = t('form.required');
     setErrors(next);
     return Object.keys(next).length === 0;
@@ -126,7 +116,6 @@ export function GroupFormModal({
     const dto: CreateGroupDto = {
       name: form.name.trim(),
       courseId: form.courseId,
-      subjectId: form.subjectId,
       teacherId: form.teacherId || undefined,
       branchId: form.branchId,
       isActive: form.isActive,
@@ -172,15 +161,6 @@ export function GroupFormModal({
         value={form.courseId}
         onChange={(e) => setField('courseId', e.target.value)}
         error={errors.courseId}
-      />
-
-      <Select
-        label={t('groups.fields.subject')}
-        placeholder={t('groups.fields.subjectPlaceholder')}
-        options={subjectOptions}
-        value={form.subjectId}
-        onChange={(e) => setField('subjectId', e.target.value)}
-        error={errors.subjectId}
       />
 
       <Select

@@ -3,8 +3,9 @@ import { PaginationQueryDto } from '../../../common/dto/pagination.dto';
 
 /**
  * List/search filters for students (API contract §6).
- * `search` matches student firstName OR lastName OR any parent workplace
- * (case-insensitive `contains`) — hard requirement from spec §4.4.
+ * `search` matches student firstName OR lastName OR any parent workplace OR any
+ * parent position/должность (case-insensitive `contains`) — hard requirement
+ * from spec §4.4.
  */
 export class QueryStudentsDto extends PaginationQueryDto {
   @IsOptional()

@@ -2,17 +2,61 @@ import { useTranslation } from 'react-i18next';
 import { BarChart3, TrendingUp } from 'lucide-react';
 
 import { Badge, Card, EmptyState, Spinner } from '@/shared/ui';
-import { useMyPerformance } from '@/entities/me';
-import {
-  PerformanceChart,
-  formatAverage,
-  gradeVariant,
-} from '@/features/view-performance';
+import { cn } from '@/shared/lib/cn';
+import { useMyPerformance, type MyPerformance } from '@/entities/me';
+import { formatAverage, gradeVariant } from '@/features/view-performance';
+
+type CourseRow = MyPerformance['byCourse'][number];
+
+/** Tailwind bar-fill class for a 2..5 grade value (mirrors gradeVariant). */
+function gradeBarClass(value: number): string {
+  if (value >= 5) return 'bg-success';
+  if (value >= 4) return 'bg-primary';
+  if (value >= 3) return 'bg-amber-500';
+  if (value >= 2) return 'bg-danger';
+  return 'bg-surface-muted';
+}
 
 /**
- * "My performance" — per-subject average grade + attendance counts, an overall
- * summary, and a responsive bar chart of averages. Table on >=sm, stacked cards
- * on mobile (flawless from 320px).
+ * Compact, dependency-free horizontal bar chart of average grade (0..5) per
+ * course. Reads flawlessly from 320px and fully themed for light + dark mode.
+ */
+function CourseAveragesChart({ rows }: { rows: CourseRow[] }) {
+  return (
+    <ul className="space-y-3">
+      {rows.map((row) => {
+        const avg = row.averageGrade ?? 0;
+        const pct = Math.max(0, Math.min(100, (avg / 5) * 100));
+        return (
+          <li key={row.courseId} className="space-y-1.5">
+            <div className="flex items-center justify-between gap-2">
+              <span className="min-w-0 truncate text-sm text-foreground">
+                {row.courseName}
+              </span>
+              <span className="shrink-0 text-sm font-semibold tabular-nums text-foreground">
+                {formatAverage(avg)}
+              </span>
+            </div>
+            <div className="h-2.5 w-full overflow-hidden rounded-full bg-surface-muted">
+              <div
+                className={cn(
+                  'h-full rounded-full transition-[width] duration-500',
+                  gradeBarClass(avg),
+                )}
+                style={{ width: `${pct}%` }}
+              />
+            </div>
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
+/**
+ * "My performance" — per-COURSE average grade + attendance counts, an overall
+ * summary, and a responsive averages chart. Table on >=sm, stacked cards on
+ * mobile (flawless from 320px).
  */
 export function MyPerformanceView() {
   const { t } = useTranslation();
@@ -37,7 +81,7 @@ export function MyPerformanceView() {
     );
   }
 
-  const rows = data?.bySubject ?? [];
+  const rows = data?.byCourse ?? [];
 
   if (rows.length === 0) {
     return (
@@ -75,7 +119,7 @@ export function MyPerformanceView() {
         </Card>
         <Card className="col-span-2 flex flex-col gap-1 sm:col-span-1">
           <span className="text-xs uppercase tracking-wide text-foreground-muted">
-            {t('studentCabinet.performance.subjectsCount')}
+            {t('studentCabinet.performance.coursesCount')}
           </span>
           <span className="text-2xl font-semibold text-foreground">
             {rows.length}
@@ -85,16 +129,16 @@ export function MyPerformanceView() {
 
       {/* Averages chart */}
       <Card>
-        <div className="mb-3 flex items-center gap-2">
+        <div className="mb-4 flex items-center gap-2">
           <BarChart3 className="h-4 w-4 text-primary" aria-hidden />
           <h3 className="text-sm font-semibold text-foreground">
-            {t('studentCabinet.performance.chartTitle')}
+            {t('studentCabinet.performance.chartTitleByCourse')}
           </h3>
         </div>
-        <PerformanceChart bySubject={rows} />
+        <CourseAveragesChart rows={rows} />
       </Card>
 
-      {/* Per-subject breakdown: table (sm+) / cards (mobile) */}
+      {/* Per-course breakdown: table (sm+) / cards (mobile) */}
       <Card flush className="overflow-hidden">
         {/* Desktop table */}
         <div className="hidden overflow-x-auto sm:block">
@@ -102,7 +146,7 @@ export function MyPerformanceView() {
             <thead>
               <tr className="border-b border-border text-left text-xs uppercase tracking-wide text-foreground-muted">
                 <th className="px-4 py-3 font-medium">
-                  {t('studentCabinet.performance.subject')}
+                  {t('studentCabinet.performance.course')}
                 </th>
                 <th className="px-4 py-3 text-center font-medium">
                   {t('studentCabinet.performance.average')}
@@ -122,105 +166,111 @@ export function MyPerformanceView() {
               </tr>
             </thead>
             <tbody>
-              {rows.map((row) => (
-                <tr
-                  key={row.subjectId}
-                  className="border-b border-border last:border-0"
-                >
-                  <td className="px-4 py-3 font-medium text-foreground">
-                    {row.subjectName}
-                  </td>
-                  <td className="px-4 py-3 text-center">
-                    <Badge
-                      variant={gradeVariant(Math.round(row.averageGrade))}
-                      className="justify-center"
-                    >
-                      {formatAverage(row.averageGrade)}
-                    </Badge>
-                  </td>
-                  <td className="px-4 py-3 text-center text-foreground-muted">
-                    {row.gradesCount}
-                  </td>
-                  <td className="px-4 py-3 text-center text-success">
-                    {row.present}
-                  </td>
-                  <td className="px-4 py-3 text-center text-foreground-muted">
-                    {row.lates}
-                  </td>
-                  <td className="px-4 py-3 text-center">
-                    <span
-                      className={
-                        row.absences > 0
-                          ? 'font-medium text-danger'
-                          : 'text-foreground-muted'
-                      }
-                    >
-                      {row.absences}
-                    </span>
-                  </td>
-                </tr>
-              ))}
+              {rows.map((row) => {
+                const avg = row.averageGrade ?? 0;
+                return (
+                  <tr
+                    key={row.courseId}
+                    className="border-b border-border last:border-0"
+                  >
+                    <td className="px-4 py-3 font-medium text-foreground">
+                      {row.courseName}
+                    </td>
+                    <td className="px-4 py-3 text-center">
+                      <Badge
+                        variant={gradeVariant(Math.round(avg))}
+                        className="justify-center"
+                      >
+                        {formatAverage(avg)}
+                      </Badge>
+                    </td>
+                    <td className="px-4 py-3 text-center text-foreground-muted">
+                      {row.gradesCount}
+                    </td>
+                    <td className="px-4 py-3 text-center text-success">
+                      {row.present}
+                    </td>
+                    <td className="px-4 py-3 text-center text-foreground-muted">
+                      {row.lates}
+                    </td>
+                    <td className="px-4 py-3 text-center">
+                      <span
+                        className={
+                          row.absences > 0
+                            ? 'font-medium text-danger'
+                            : 'text-foreground-muted'
+                        }
+                      >
+                        {row.absences}
+                      </span>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
 
         {/* Mobile stacked cards */}
         <ul className="divide-y divide-border sm:hidden">
-          {rows.map((row) => (
-            <li key={row.subjectId} className="p-4">
-              <div className="mb-2 flex items-center justify-between gap-2">
-                <span className="min-w-0 truncate font-medium text-foreground">
-                  {row.subjectName}
-                </span>
-                <Badge
-                  variant={gradeVariant(Math.round(row.averageGrade))}
-                  className="justify-center"
-                >
-                  {formatAverage(row.averageGrade)}
-                </Badge>
-              </div>
-              <dl className="grid grid-cols-2 gap-2 text-center text-xs sm:grid-cols-4">
-                <div>
-                  <dt className="text-foreground-muted">
-                    {t('studentCabinet.performance.grades')}
-                  </dt>
-                  <dd className="mt-0.5 font-medium text-foreground">
-                    {row.gradesCount}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-foreground-muted">
-                    {t('studentCabinet.performance.present')}
-                  </dt>
-                  <dd className="mt-0.5 font-medium text-success">
-                    {row.present}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-foreground-muted">
-                    {t('studentCabinet.performance.lates')}
-                  </dt>
-                  <dd className="mt-0.5 font-medium text-foreground">
-                    {row.lates}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-foreground-muted">
-                    {t('studentCabinet.performance.absences')}
-                  </dt>
-                  <dd
-                    className={
-                      row.absences > 0
-                        ? 'mt-0.5 font-medium text-danger'
-                        : 'mt-0.5 font-medium text-foreground'
-                    }
+          {rows.map((row) => {
+            const avg = row.averageGrade ?? 0;
+            return (
+              <li key={row.courseId} className="p-4">
+                <div className="mb-2 flex items-center justify-between gap-2">
+                  <span className="min-w-0 truncate font-medium text-foreground">
+                    {row.courseName}
+                  </span>
+                  <Badge
+                    variant={gradeVariant(Math.round(avg))}
+                    className="justify-center"
                   >
-                    {row.absences}
-                  </dd>
+                    {formatAverage(avg)}
+                  </Badge>
                 </div>
-              </dl>
-            </li>
-          ))}
+                <dl className="grid grid-cols-2 gap-2 text-center text-xs sm:grid-cols-4">
+                  <div>
+                    <dt className="text-foreground-muted">
+                      {t('studentCabinet.performance.grades')}
+                    </dt>
+                    <dd className="mt-0.5 font-medium text-foreground">
+                      {row.gradesCount}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-foreground-muted">
+                      {t('studentCabinet.performance.present')}
+                    </dt>
+                    <dd className="mt-0.5 font-medium text-success">
+                      {row.present}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-foreground-muted">
+                      {t('studentCabinet.performance.lates')}
+                    </dt>
+                    <dd className="mt-0.5 font-medium text-foreground">
+                      {row.lates}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-foreground-muted">
+                      {t('studentCabinet.performance.absences')}
+                    </dt>
+                    <dd
+                      className={
+                        row.absences > 0
+                          ? 'mt-0.5 font-medium text-danger'
+                          : 'mt-0.5 font-medium text-foreground'
+                      }
+                    >
+                      {row.absences}
+                    </dd>
+                  </div>
+                </dl>
+              </li>
+            );
+          })}
         </ul>
       </Card>
     </div>

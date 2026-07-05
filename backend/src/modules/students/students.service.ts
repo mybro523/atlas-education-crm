@@ -5,7 +5,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { Parent, Prisma } from '@prisma/client';
+import { Parent, ParentRelation, Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import {
   buildPaginatedResult,
@@ -17,6 +17,7 @@ import { CreateStudentDto } from './dto/create-student.dto';
 import { UpdateStudentDto } from './dto/update-student.dto';
 import { CreateParentDto } from './dto/create-parent.dto';
 import { UpdateParentDto } from './dto/update-parent.dto';
+import { ParentFigureDto } from './dto/parent-figure.dto';
 import { QueryStudentsDto } from './dto/query-students.dto';
 
 /** Caller context needed to enforce teacher ownership scoping. */
@@ -106,16 +107,21 @@ export class StudentsService {
       });
     }
     if (query.search) {
-      // Dual search: student name OR any parent workplace (spec §4.4).
+      // Search: student name OR any parent workplace OR any parent position
+      // (должность) — spec §4.4, e.g. 'доктор' finds students by a parent's job.
+      const term = query.search;
       and.push({
         OR: [
-          { firstName: { contains: query.search, mode: 'insensitive' } },
-          { lastName: { contains: query.search, mode: 'insensitive' } },
+          { firstName: { contains: term, mode: 'insensitive' } },
+          { lastName: { contains: term, mode: 'insensitive' } },
           {
             parents: {
-              some: {
-                workplace: { contains: query.search, mode: 'insensitive' },
-              },
+              some: { workplace: { contains: term, mode: 'insensitive' } },
+            },
+          },
+          {
+            parents: {
+              some: { position: { contains: term, mode: 'insensitive' } },
             },
           },
         ],
@@ -171,9 +177,11 @@ export class StudentsService {
     return student;
   }
 
-  /** Create a student, optionally with nested parents. */
+  /** Create a student, optionally with father/mother slots and/or parents[]. */
   async create(dto: CreateStudentDto) {
     await this.assertBranchExists(dto.branchId);
+
+    const parentCreates = this.buildParentCreates(dto);
 
     const data: Prisma.StudentCreateInput = {
       firstName: dto.firstName,
@@ -187,9 +195,7 @@ export class StudentsService {
         : undefined,
       branch: { connect: { id: dto.branchId } },
       ...(dto.userId ? { user: { connect: { id: dto.userId } } } : {}),
-      ...(dto.parents && dto.parents.length > 0
-        ? { parents: { create: dto.parents.map((p) => this.parentData(p)) } }
-        : {}),
+      ...(parentCreates.length > 0 ? { parents: { create: parentCreates } } : {}),
     };
 
     try {
@@ -202,7 +208,11 @@ export class StudentsService {
     }
   }
 
-  /** Partial update of a student's scalar fields / branch / linked user. */
+  /**
+   * Partial update of a student's scalar fields / branch / linked user.
+   * The explicit `father` / `mother` slots, when sent, upsert the single
+   * FATHER / MOTHER parent for this student.
+   */
   async update(id: string, dto: UpdateStudentDto) {
     await this.ensureExists(id);
 
@@ -233,14 +243,23 @@ export class StudentsService {
     }
 
     try {
-      return await this.prisma.student.update({
-        where: { id },
-        data,
-        include: studentDetailInclude,
-      });
+      await this.prisma.student.update({ where: { id }, data });
     } catch (error) {
       throw this.mapWriteError(error, dto.userId);
     }
+
+    // Upsert the explicit father/mother slots (if the form sent them).
+    if (dto.father) {
+      await this.upsertParentFigure(id, dto.father, ParentRelation.FATHER);
+    }
+    if (dto.mother) {
+      await this.upsertParentFigure(id, dto.mother, ParentRelation.MOTHER);
+    }
+
+    return this.prisma.student.findUnique({
+      where: { id },
+      include: studentDetailInclude,
+    });
   }
 
   /** Delete a student (parents/links cascade per schema). */
@@ -283,6 +302,8 @@ export class StudentsService {
         firstName: dto.firstName,
         lastName: dto.lastName,
         phone: dto.phone,
+        relation: dto.relation,
+        position: dto.position,
         workplace: dto.workplace,
       },
     });
@@ -300,14 +321,86 @@ export class StudentsService {
 
   // ---- Helpers ----------------------------------------------------------
 
-  /** Map a parent DTO to Prisma nested-create data. */
-  private parentData(dto: CreateParentDto) {
+  /**
+   * Assemble the nested parent-create rows for a new student, merging the
+   * explicit father/mother slots (forced relation) with the generic parents[]
+   * array (each keeping its own relation, defaulting to OTHER).
+   */
+  private buildParentCreates(
+    dto: CreateStudentDto,
+  ): Prisma.ParentCreateWithoutStudentInput[] {
+    const creates: Prisma.ParentCreateWithoutStudentInput[] = [];
+    if (dto.father) {
+      creates.push(this.figureData(dto.father, ParentRelation.FATHER));
+    }
+    if (dto.mother) {
+      creates.push(this.figureData(dto.mother, ParentRelation.MOTHER));
+    }
+    if (dto.parents && dto.parents.length > 0) {
+      creates.push(...dto.parents.map((p) => this.parentData(p)));
+    }
+    return creates;
+  }
+
+  /** Map a generic parent DTO to Prisma create data (relation defaults to OTHER). */
+  private parentData(
+    dto: CreateParentDto,
+  ): Prisma.ParentCreateWithoutStudentInput {
     return {
       firstName: dto.firstName,
       lastName: dto.lastName,
       phone: dto.phone,
+      relation: dto.relation,
+      position: dto.position,
       workplace: dto.workplace,
     };
+  }
+
+  /** Map a father/mother figure DTO to Prisma create data with a forced relation. */
+  private figureData(
+    dto: ParentFigureDto,
+    relation: ParentRelation,
+  ): Prisma.ParentCreateWithoutStudentInput {
+    return {
+      firstName: dto.firstName,
+      lastName: dto.lastName,
+      phone: dto.phone,
+      relation,
+      position: dto.position,
+      workplace: dto.workplace,
+    };
+  }
+
+  /**
+   * Upsert the single father/mother parent for a student: update the existing
+   * parent that holds this relation, or create one if none exists yet.
+   */
+  private async upsertParentFigure(
+    studentId: string,
+    figure: ParentFigureDto,
+    relation: ParentRelation,
+  ): Promise<void> {
+    const existing = await this.prisma.parent.findFirst({
+      where: { studentId, relation },
+      select: { id: true },
+      orderBy: { createdAt: 'asc' },
+    });
+
+    const data = {
+      firstName: figure.firstName,
+      lastName: figure.lastName,
+      phone: figure.phone,
+      position: figure.position,
+      workplace: figure.workplace,
+    };
+
+    if (existing) {
+      await this.prisma.parent.update({ where: { id: existing.id }, data });
+    } else {
+      await this.prisma.parent.create({
+        data: { studentId, relation, ...data },
+      });
+    }
   }
 
   /** Throw 404 if the student does not exist. */

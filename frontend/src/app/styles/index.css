@@ -4,7 +4,7 @@
 
 /*
  * Semantic color tokens as space-separated RGB channels so Tailwind's
- * <alpha-value> modifier works (e.g. bg-primary/10). Brand = WHITE + PURPLE.
+ * <alpha-value> modifier works (e.g. bg-primary/10). Brand = WHITE + BLUE.
  */
 @layer base {
   :root {
@@ -15,10 +15,10 @@
     --color-foreground: 24 24 27; /* zinc-900 */
     --color-foreground-muted: 113 113 122; /* zinc-500 */
 
-    --color-primary: 124 58 237; /* violet #7C3AED */
+    --color-primary: 37 99 235; /* blue #2563EB (blue-600) */
     --color-primary-foreground: 255 255 255;
-    --color-primary-hover: 109 40 217; /* violet-700 */
-    --color-ring: 124 58 237;
+    --color-primary-hover: 29 78 216; /* blue-700 */
+    --color-ring: 37 99 235;
 
     --color-danger: 220 38 38; /* red-600 */
     --color-success: 22 163 74; /* green-600 */
@@ -34,10 +34,10 @@
     --color-foreground: 244 244 245; /* zinc-100 */
     --color-foreground-muted: 161 161 170; /* zinc-400 */
 
-    --color-primary: 139 92 246; /* violet-500 stays vivid on dark */
+    --color-primary: 59 130 246; /* blue-500 stays vivid on dark */
     --color-primary-foreground: 255 255 255;
-    --color-primary-hover: 124 58 237;
-    --color-ring: 167 139 250;
+    --color-primary-hover: 37 99 235; /* blue-600 */
+    --color-ring: 96 165 250; /* blue-400 */
 
     --color-danger: 248 113 113; /* red-400 */
     --color-success: 74 222 128; /* green-400 */

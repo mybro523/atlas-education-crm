@@ -2,12 +2,14 @@ import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { ArrowRight } from 'lucide-react';
 import { Card, CardDescription, CardTitle } from '@/shared/ui';
-import { navItemsForRole, roleLabelKey, ROUTES } from '@/shared/config';
+import { navItemsForRole, roleLabelKey, ROUTES, ROLES } from '@/shared/config';
 import { useSessionStore, selectUser } from '@/entities/session';
+import { FounderOverview } from './ui/FounderOverview';
 
 export function DashboardPage() {
   const { t } = useTranslation();
   const user = useSessionStore(selectUser);
+  const isFounder = user?.role === ROLES.FOUNDER;
 
   // Quick links = the role's nav items minus the dashboard itself.
   const quickLinks = navItemsForRole(user?.role).filter(
@@ -30,6 +32,9 @@ export function DashboardPage() {
           </p>
         )}
       </div>
+
+      {/* FOUNDER-only analytics overview (other roles skip straight to links). */}
+      {isFounder && <FounderOverview />}
 
       {/* Quick links */}
       <section className="space-y-3">

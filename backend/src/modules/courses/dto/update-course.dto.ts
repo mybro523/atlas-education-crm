@@ -1,5 +1,6 @@
 import {
   IsBoolean,
+  IsDateString,
   IsNotEmpty,
   IsNumber,
   IsOptional,
@@ -22,17 +23,20 @@ export class UpdateCourseDto {
   @IsOptional()
   @IsString()
   @IsNotEmpty()
-  subjectId?: string;
-
-  @IsOptional()
-  @IsString()
-  @IsNotEmpty()
   branchId?: string;
 
   @IsOptional()
   @IsNumber({ maxDecimalPlaces: 2 })
   @Min(0)
   pricePerMonth?: number;
+
+  @IsOptional()
+  @IsDateString()
+  startDate?: string;
+
+  @IsOptional()
+  @IsDateString()
+  endDate?: string;
 
   @IsOptional()
   @IsBoolean()

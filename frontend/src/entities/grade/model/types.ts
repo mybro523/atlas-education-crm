@@ -40,7 +40,6 @@ export interface JournalMatrix {
   lessons: Array<{
     id: string;
     startsAt: string;
-    topic?: string | null;
     isConducted: boolean;
   }>;
   students: JournalStudentRow[];

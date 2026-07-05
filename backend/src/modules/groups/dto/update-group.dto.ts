@@ -19,11 +19,6 @@ export class UpdateGroupDto {
   @IsOptional()
   @IsString()
   @IsNotEmpty()
-  subjectId?: string;
-
-  @IsOptional()
-  @IsString()
-  @IsNotEmpty()
   teacherId?: string;
 
   @IsOptional()

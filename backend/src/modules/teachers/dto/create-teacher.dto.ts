@@ -1,15 +1,9 @@
-import {
-  ArrayUnique,
-  IsArray,
-  IsNotEmpty,
-  IsOptional,
-  IsString,
-} from 'class-validator';
+import { IsNotEmpty, IsOptional, IsString } from 'class-validator';
 
 /**
  * Create a teacher (API contract §5).
- * `subjectIds` are the initial TeacherSubject links; after creation, subjects
- * are managed exclusively via `PUT /teachers/:id/subjects`.
+ * What a teacher teaches is expressed through the groups they lead (each group
+ * carries a course) — there is no longer a subjects assignment.
  */
 export class CreateTeacherDto {
   @IsString()
@@ -31,12 +25,6 @@ export class CreateTeacherDto {
   @IsString()
   @IsNotEmpty()
   branchId!: string;
-
-  @IsOptional()
-  @IsArray()
-  @IsString({ each: true })
-  @ArrayUnique()
-  subjectIds?: string[];
 
   @IsOptional()
   @IsString()

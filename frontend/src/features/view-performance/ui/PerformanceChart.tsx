@@ -15,32 +15,32 @@ import { useThemeStore } from '@/shared/lib/theme';
 import type { MyPerformance } from '@/entities/me';
 
 export interface PerformanceChartProps {
-  /** Per-subject performance rows from `/me/student/performance`. */
-  bySubject: MyPerformance['bySubject'];
+  /** Per-course performance rows from `/me/student/performance`. */
+  byCourse: MyPerformance['byCourse'];
 }
 
 interface ChartDatum {
-  subjectId: string;
+  courseId: string;
   /** Truncated label used on the axis. */
   label: string;
-  /** Full subject name used in the tooltip. */
+  /** Full course name used in the tooltip. */
   fullLabel: string;
   average: number;
 }
 
-/** Brand purple scale (fixed, matches tailwind.config brand.*). */
-const BAR_LIGHT = '#7c3aed';
-const BAR_DARK = '#a78bfa';
+/** Brand blue scale (fixed, matches tailwind.config brand.*). */
+const BAR_LIGHT = '#2563eb'; // brand-600
+const BAR_DARK = '#60a5fa'; // brand-400 (vivid on dark)
 
 function truncate(value: string, max = 12): string {
   return value.length > max ? `${value.slice(0, max - 1)}…` : value;
 }
 
 /**
- * Responsive bar chart of average grade (2..5) per subject.
+ * Responsive bar chart of average grade (2..5) per course.
  * Theme-aware colors; fills its parent width and a fixed responsive height.
  */
-export function PerformanceChart({ bySubject }: PerformanceChartProps) {
+export function PerformanceChart({ byCourse }: PerformanceChartProps) {
   const { t } = useTranslation();
   const theme = useThemeStore((s) => s.theme);
   const isDark = theme === 'dark';
@@ -51,13 +51,13 @@ export function PerformanceChart({ bySubject }: PerformanceChartProps) {
 
   const data = useMemo<ChartDatum[]>(
     () =>
-      bySubject.map((row) => ({
-        subjectId: row.subjectId,
-        label: truncate(row.subjectName),
-        fullLabel: row.subjectName,
+      byCourse.map((row) => ({
+        courseId: row.courseId,
+        label: truncate(row.courseName),
+        fullLabel: row.courseName,
         average: Number(row.averageGrade?.toFixed(2) ?? 0),
       })),
-    [bySubject],
+    [byCourse],
   );
 
   return (
@@ -88,7 +88,7 @@ export function PerformanceChart({ bySubject }: PerformanceChartProps) {
             width={28}
           />
           <Tooltip
-            cursor={{ fill: isDark ? 'rgba(167,139,250,0.10)' : 'rgba(124,58,237,0.08)' }}
+            cursor={{ fill: isDark ? 'rgba(96,165,250,0.12)' : 'rgba(37,99,235,0.08)' }}
             contentStyle={{
               backgroundColor: isDark ? '#18181b' : '#ffffff',
               border: `1px solid ${gridColor}`,
@@ -107,7 +107,7 @@ export function PerformanceChart({ bySubject }: PerformanceChartProps) {
           />
           <Bar dataKey="average" radius={[6, 6, 0, 0]} maxBarSize={56}>
             {data.map((d) => (
-              <Cell key={d.subjectId} fill={barColor} />
+              <Cell key={d.courseId} fill={barColor} />
             ))}
           </Bar>
         </BarChart>

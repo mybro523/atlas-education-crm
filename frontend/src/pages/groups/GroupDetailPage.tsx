@@ -146,7 +146,7 @@ export function GroupDetailPage() {
 
       <PageHeader
         title={group.name}
-        description={group.subject?.name ?? group.course?.name}
+        description={group.course?.name}
         actions={
           <Button
             type="button"

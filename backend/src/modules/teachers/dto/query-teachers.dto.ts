@@ -12,9 +12,5 @@ export class QueryTeachersDto extends PaginationQueryDto {
 
   @IsOptional()
   @IsString()
-  subjectId?: string;
-
-  @IsOptional()
-  @IsString()
   search?: string;
 }

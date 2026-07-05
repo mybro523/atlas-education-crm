@@ -1,9 +1,7 @@
 import { IsNotEmpty, IsOptional, IsString } from 'class-validator';
 
 /**
- * Update a teacher (API contract §5). All fields optional; `subjectIds` is
- * intentionally excluded — subjects are replaced via the dedicated
- * `PUT /teachers/:id/subjects` endpoint.
+ * Update a teacher (API contract §5). All fields optional.
  *
  * Written as an explicit class (rather than `PartialType`) so the module has no
  * dependency on `@nestjs/mapped-types`.

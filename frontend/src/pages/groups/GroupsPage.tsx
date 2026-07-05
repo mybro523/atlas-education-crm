@@ -132,11 +132,6 @@ export function GroupsPage() {
       hideOnMobile: true,
     },
     {
-      id: 'subject',
-      header: t('groups.table.subject'),
-      cell: (g) => g.subject?.name ?? '—',
-    },
-    {
       id: 'teacher',
       header: t('groups.table.teacher'),
       cell: teacherLabel,

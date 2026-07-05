@@ -3,7 +3,7 @@ import type { Config } from 'tailwindcss';
 /**
  * Atlas CRM Tailwind config.
  * - darkMode 'class' (toggled by ThemeProvider on <html>).
- * - Brand palette: WHITE + PURPLE. Primary violet #7C3AED.
+ * - Brand palette: WHITE + BLUE. Primary blue #2563EB (blue-600).
  * - Semantic colors are driven by CSS variables (see app/styles/index.css)
  *   so the same class works in light + dark mode.
  */
@@ -16,19 +16,19 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        // Fixed brand purple scale.
+        // Fixed brand blue scale.
         brand: {
-          50: '#f5f3ff',
-          100: '#ede9fe',
-          200: '#ddd6fe',
-          300: '#c4b5fd',
-          400: '#a78bfa',
-          500: '#8b5cf6',
-          600: '#7c3aed', // primary violet
-          700: '#6d28d9',
-          800: '#5b21b6',
-          900: '#4c1d95',
-          950: '#2e1065',
+          50: '#eff6ff',
+          100: '#dbeafe',
+          200: '#bfdbfe',
+          300: '#93c5fd',
+          400: '#60a5fa',
+          500: '#3b82f6',
+          600: '#2563eb', // primary blue
+          700: '#1d4ed8',
+          800: '#1e40af',
+          900: '#1e3a8a',
+          950: '#172554',
         },
         // Semantic, CSS-variable-driven tokens (RGB channels).
         background: 'rgb(var(--color-background) / <alpha-value>)',
@@ -60,7 +60,7 @@ const config: Config = {
       },
       boxShadow: {
         card: '0 1px 3px 0 rgb(0 0 0 / 0.08), 0 1px 2px -1px rgb(0 0 0 / 0.08)',
-        elevated: '0 10px 30px -12px rgb(124 58 237 / 0.35)',
+        elevated: '0 10px 30px -12px rgb(37 99 235 / 0.35)',
       },
       keyframes: {
         'fade-in': {

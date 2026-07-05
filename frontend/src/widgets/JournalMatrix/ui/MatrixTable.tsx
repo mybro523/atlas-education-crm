@@ -63,7 +63,6 @@ export function MatrixTable({
                   key={lesson.id}
                   scope="col"
                   className="min-w-[3.5rem] border-b border-border bg-surface-muted px-1.5 py-2 text-center align-bottom font-medium"
-                  title={lesson.topic ?? undefined}
                 >
                   <div className="flex flex-col items-center gap-1">
                     <span className="text-xs capitalize text-foreground-muted">

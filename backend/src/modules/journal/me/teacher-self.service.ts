@@ -23,7 +23,7 @@ export class TeacherSelfService {
     return teacher.id;
   }
 
-  /** Own groups with course/subject and active-member counts. */
+  /** Own groups with course and active-member counts. */
   async getGroups(userId: string) {
     const teacherId = await this.resolveTeacherId(userId);
 
@@ -35,7 +35,6 @@ export class TeacherSelfService {
         isActive: true,
         branchId: true,
         course: { select: { id: true, name: true } },
-        subject: { select: { id: true, name: true } },
         _count: {
           select: {
             students: { where: { leftAt: null } },
@@ -52,7 +51,6 @@ export class TeacherSelfService {
       isActive: g.isActive,
       branchId: g.branchId,
       course: g.course,
-      subject: g.subject,
       studentsCount: g._count.students,
       lessonsCount: g._count.lessons,
     }));
@@ -136,14 +134,13 @@ export class TeacherSelfService {
         id: true,
         startsAt: true,
         endsAt: true,
-        topic: true,
-        room: true,
+        room: { select: { id: true, name: true } },
         isConducted: true,
         group: {
           select: {
             id: true,
             name: true,
-            subject: { select: { id: true, name: true } },
+            course: { select: { id: true, name: true } },
           },
         },
       },

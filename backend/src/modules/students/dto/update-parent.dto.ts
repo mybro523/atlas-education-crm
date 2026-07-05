@@ -1,4 +1,5 @@
-import { IsNotEmpty, IsOptional, IsString } from 'class-validator';
+import { ParentRelation } from '@prisma/client';
+import { IsEnum, IsNotEmpty, IsOptional, IsString } from 'class-validator';
 
 /**
  * Partial update of a parent (API contract §6, `UpdateParentDto = Partial`).
@@ -19,6 +20,14 @@ export class UpdateParentDto {
   @IsString()
   @IsNotEmpty()
   phone?: string;
+
+  @IsOptional()
+  @IsEnum(ParentRelation)
+  relation?: ParentRelation;
+
+  @IsOptional()
+  @IsString()
+  position?: string;
 
   @IsOptional()
   @IsString()

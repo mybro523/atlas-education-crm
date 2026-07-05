@@ -2,7 +2,7 @@ import { IsBoolean, IsNotEmpty, IsOptional, IsString } from 'class-validator';
 
 /**
  * Body for creating a study group (spec §7 / API contract).
- * `courseId`, `subjectId`, `branchId` must reference existing rows (→ 404).
+ * `courseId` and `branchId` must reference existing rows (→ 404).
  * `teacherId` is optional; when set it must reference an existing teacher.
  */
 export class CreateGroupDto {
@@ -13,10 +13,6 @@ export class CreateGroupDto {
   @IsString()
   @IsNotEmpty()
   courseId!: string;
-
-  @IsString()
-  @IsNotEmpty()
-  subjectId!: string;
 
   @IsOptional()
   @IsString()

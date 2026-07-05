@@ -4,7 +4,6 @@ export type {
   TeacherListParams,
   CreateTeacherDto,
   UpdateTeacherDto,
-  SetTeacherSubjectsDto,
 } from './model/types';
 export {
   teacherKeys,
@@ -13,5 +12,4 @@ export {
   useCreateTeacher,
   useUpdateTeacher,
   useDeleteTeacher,
-  useSetTeacherSubjects,
 } from './model/queries';

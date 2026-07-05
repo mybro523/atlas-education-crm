@@ -2,6 +2,8 @@ export { studentApi } from './api';
 export type {
   Student,
   Parent,
+  ParentRelation,
+  ParentFigureDto,
   StudentGroupLink,
   StudentListParams,
   CreateStudentDto,

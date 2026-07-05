@@ -4,10 +4,10 @@ import { PrismaService } from '../../../prisma/prisma.service';
 import { GradesQueryDto } from '../dto/grades-query.dto';
 import { ScheduleQueryDto } from '../dto/schedule-query.dto';
 
-/** Per-subject performance row. */
-export interface SubjectPerformance {
-  subjectId: string;
-  subjectName: string;
+/** Per-course performance row. */
+export interface CoursePerformance {
+  courseId: string;
+  courseName: string;
   averageGrade: number | null;
   gradesCount: number;
   absences: number;
@@ -17,7 +17,7 @@ export interface SubjectPerformance {
 
 /** Aggregate student performance response. */
 export interface StudentPerformance {
-  bySubject: SubjectPerformance[];
+  byCourse: CoursePerformance[];
   overall: { averageGrade: number | null; totalAbsences: number };
 }
 
@@ -54,7 +54,7 @@ export class StudentSelfService {
               select: {
                 id: true,
                 name: true,
-                subject: { select: { id: true, name: true } },
+                course: { select: { id: true, name: true } },
                 teacher: {
                   select: { id: true, firstName: true, lastName: true },
                 },
@@ -70,13 +70,13 @@ export class StudentSelfService {
     return student;
   }
 
-  /** Own grades, newest first, with optional subject / date-range filters. */
+  /** Own grades, newest first, with optional course / date-range filters. */
   async getGrades(userId: string, query: GradesQueryDto) {
     const studentId = await this.resolveStudentId(userId);
 
     const lessonWhere: Prisma.LessonWhereInput = {};
-    if (query.subjectId) {
-      lessonWhere.group = { subjectId: query.subjectId };
+    if (query.courseId) {
+      lessonWhere.group = { courseId: query.courseId };
     }
     if (query.from || query.to) {
       lessonWhere.startsAt = {};
@@ -100,12 +100,11 @@ export class StudentSelfService {
           select: {
             id: true,
             startsAt: true,
-            topic: true,
             group: {
               select: {
                 id: true,
                 name: true,
-                subject: { select: { id: true, name: true } },
+                course: { select: { id: true, name: true } },
               },
             },
           },
@@ -134,14 +133,13 @@ export class StudentSelfService {
         id: true,
         startsAt: true,
         endsAt: true,
-        topic: true,
-        room: true,
+        room: { select: { id: true, name: true } },
         isConducted: true,
         group: {
           select: {
             id: true,
             name: true,
-            subject: { select: { id: true, name: true } },
+            course: { select: { id: true, name: true } },
           },
         },
         teacher: { select: { id: true, firstName: true, lastName: true } },
@@ -151,14 +149,15 @@ export class StudentSelfService {
   }
 
   /**
-   * Per-subject average grade + attendance counts, plus an overall summary.
-   * Grades are averaged per subject; attendance counts (present/absent/late)
-   * come from the student's Attendance rows grouped by the lesson's subject.
+   * Per-course average grade + attendance counts, plus an overall summary.
+   * Grades are averaged per course; attendance counts (present/absent/late)
+   * come from the student's Attendance rows grouped by the lesson's course
+   * (via lesson → group → course).
    */
   async getPerformance(userId: string): Promise<StudentPerformance> {
     const studentId = await this.resolveStudentId(userId);
 
-    // Pull grades with their subject (via lesson → group → subject).
+    // Pull grades with their course (via lesson → group → course).
     const grades = await this.prisma.grade.findMany({
       where: { studentId },
       select: {
@@ -166,14 +165,14 @@ export class StudentSelfService {
         lesson: {
           select: {
             group: {
-              select: { subject: { select: { id: true, name: true } } },
+              select: { course: { select: { id: true, name: true } } },
             },
           },
         },
       },
     });
 
-    // Pull attendance with the same subject linkage.
+    // Pull attendance with the same course linkage.
     const attendances = await this.prisma.attendance.findMany({
       where: { studentId },
       select: {
@@ -181,38 +180,38 @@ export class StudentSelfService {
         lesson: {
           select: {
             group: {
-              select: { subject: { select: { id: true, name: true } } },
+              select: { course: { select: { id: true, name: true } } },
             },
           },
         },
       },
     });
 
-    // Accumulate per-subject stats.
+    // Accumulate per-course stats.
     interface Acc {
-      subjectId: string;
-      subjectName: string;
+      courseId: string;
+      courseName: string;
       gradeSum: number;
       gradesCount: number;
       absences: number;
       lates: number;
       present: number;
     }
-    const bySubject = new Map<string, Acc>();
+    const byCourse = new Map<string, Acc>();
 
     const ensure = (id: string, name: string): Acc => {
-      let acc = bySubject.get(id);
+      let acc = byCourse.get(id);
       if (!acc) {
         acc = {
-          subjectId: id,
-          subjectName: name,
+          courseId: id,
+          courseName: name,
           gradeSum: 0,
           gradesCount: 0,
           absences: 0,
           lates: 0,
           present: 0,
         };
-        bySubject.set(id, acc);
+        byCourse.set(id, acc);
       }
       return acc;
     };
@@ -220,8 +219,8 @@ export class StudentSelfService {
     let gradeSumAll = 0;
     let gradesCountAll = 0;
     for (const g of grades) {
-      const subject = g.lesson.group.subject;
-      const acc = ensure(subject.id, subject.name);
+      const course = g.lesson.group.course;
+      const acc = ensure(course.id, course.name);
       acc.gradeSum += g.value;
       acc.gradesCount += 1;
       gradeSumAll += g.value;
@@ -230,8 +229,8 @@ export class StudentSelfService {
 
     let totalAbsences = 0;
     for (const a of attendances) {
-      const subject = a.lesson.group.subject;
-      const acc = ensure(subject.id, subject.name);
+      const course = a.lesson.group.course;
+      const acc = ensure(course.id, course.name);
       if (a.status === 'ABSENT') {
         acc.absences += 1;
         totalAbsences += 1;
@@ -242,10 +241,10 @@ export class StudentSelfService {
       }
     }
 
-    const rows: SubjectPerformance[] = Array.from(bySubject.values()).map(
+    const rows: CoursePerformance[] = Array.from(byCourse.values()).map(
       (acc) => ({
-        subjectId: acc.subjectId,
-        subjectName: acc.subjectName,
+        courseId: acc.courseId,
+        courseName: acc.courseName,
         averageGrade:
           acc.gradesCount > 0
             ? Number((acc.gradeSum / acc.gradesCount).toFixed(2))
@@ -258,7 +257,7 @@ export class StudentSelfService {
     );
 
     return {
-      bySubject: rows,
+      byCourse: rows,
       overall: {
         averageGrade:
           gradesCountAll > 0

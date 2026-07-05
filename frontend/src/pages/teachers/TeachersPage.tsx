@@ -1,12 +1,11 @@
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Plus, Pencil, Trash2, BookOpen, Search, X } from 'lucide-react';
+import { Plus, Pencil, Trash2, Search, X } from 'lucide-react';
 import {
   PageHeader,
   Button,
   Input,
   Select,
-  Badge,
   DataTable,
   Pagination,
   ConfirmDialog,
@@ -23,7 +22,6 @@ import {
   type TeacherListParams,
 } from '@/entities/teacher';
 import { TeacherFormModal } from './ui/TeacherFormModal';
-import { AssignSubjectsModal } from './ui/AssignSubjectsModal';
 
 const PAGE_SIZE = 20;
 
@@ -39,7 +37,6 @@ export function TeachersPage() {
   // Modal state.
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Teacher | null>(null);
-  const [assigning, setAssigning] = useState<Teacher | null>(null);
   const [pendingDelete, setPendingDelete] = useState<Teacher | null>(null);
 
   const params = useMemo<TeacherListParams>(
@@ -118,24 +115,6 @@ export function TeachersPage() {
       cell: (teacher) => branchName(teacher.branchId),
     },
     {
-      id: 'subjects',
-      header: t('fields.subjects'),
-      cell: (teacher) =>
-        teacher.subjects && teacher.subjects.length > 0 ? (
-          <div className="flex flex-wrap justify-end gap-1 sm:justify-start">
-            {teacher.subjects.map((s) => (
-              <Badge key={s.id} variant="primary">
-                {s.name}
-              </Badge>
-            ))}
-          </div>
-        ) : (
-          <span className="text-foreground-muted">
-            {t('teachers.noSubjects')}
-          </span>
-        ),
-    },
-    {
       id: 'actions',
       header: '',
       mobileLabel: t('crud.actions'),
@@ -143,16 +122,6 @@ export function TeachersPage() {
       className: 'text-right',
       cell: (teacher) => (
         <div className="flex justify-end gap-1">
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            aria-label={t('teachers.assignSubjects')}
-            title={t('teachers.assignSubjects')}
-            onClick={() => setAssigning(teacher)}
-          >
-            <BookOpen className="h-4 w-4" />
-          </Button>
           <Button
             type="button"
             variant="ghost"
@@ -233,9 +202,7 @@ export function TeachersPage() {
         data={teachers}
         rowKey={(teacher) => teacher.id}
         loading={isLoading}
-        emptyTitle={
-          isError ? t('crud.loadError') : t('teachers.empty')
-        }
+        emptyTitle={isError ? t('crud.loadError') : t('teachers.empty')}
         emptyDescription={isError ? undefined : t('teachers.emptyHint')}
       />
 
@@ -244,11 +211,7 @@ export function TeachersPage() {
           <p className="text-sm text-foreground-muted">
             {t('teachers.count', { count: total })}
           </p>
-          <Pagination
-            page={page}
-            pageCount={pageCount}
-            onPageChange={setPage}
-          />
+          <Pagination page={page} pageCount={pageCount} onPageChange={setPage} />
         </div>
       )}
 
@@ -256,12 +219,6 @@ export function TeachersPage() {
         open={formOpen}
         onClose={() => setFormOpen(false)}
         teacher={editing}
-      />
-
-      <AssignSubjectsModal
-        open={Boolean(assigning)}
-        onClose={() => setAssigning(null)}
-        teacher={assigning}
       />
 
       <ConfirmDialog
