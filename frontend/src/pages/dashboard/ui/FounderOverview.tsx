@@ -126,7 +126,7 @@ export function FounderOverview() {
 
   return (
     <section className="space-y-4">
-      <h2 className="text-sm font-semibold uppercase tracking-wide text-foreground-muted">
+      <h2 className="text-sm font-medium uppercase tracking-wide text-foreground-muted">
         {t('dashboard.founder.kpiTitle')}
       </h2>
 
@@ -136,21 +136,21 @@ export function FounderOverview() {
           label={t('dashboard.founder.totalStudents')}
           value={formatCount(students.data?.meta.total)}
           loading={students.isLoading}
-          accent="bg-brand-100 text-brand-700 dark:bg-brand-600/20 dark:text-brand-300"
+          accent="bg-primary/10 text-primary"
         />
         <KpiCard
           icon={GraduationCap}
           label={t('dashboard.founder.totalTeachers')}
           value={formatCount(teachers.data?.meta.total)}
           loading={teachers.isLoading}
-          accent="bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300"
+          accent="bg-primary/10 text-primary"
         />
         <KpiCard
           icon={Boxes}
           label={t('dashboard.founder.totalGroups')}
           value={formatCount(groups.data?.meta.total)}
           loading={groups.isLoading}
-          accent="bg-cyan-100 text-cyan-700 dark:bg-cyan-500/20 dark:text-cyan-300"
+          accent="bg-primary/10 text-primary"
         />
         <KpiCard
           icon={Banknote}
@@ -158,7 +158,7 @@ export function FounderOverview() {
           value={formatMoney(monthSummary.data?.combined.income ?? 0)}
           sub={t('dashboard.founder.thisMonth')}
           loading={monthSummary.isLoading}
-          accent="bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300"
+          accent="bg-primary/10 text-primary"
         />
         <KpiCard
           icon={AlertTriangle}
@@ -166,7 +166,7 @@ export function FounderOverview() {
           value={formatMoney(totalSummary.data?.combined.debt ?? 0)}
           sub={t('dashboard.founder.asOfToday')}
           loading={totalSummary.isLoading}
-          accent="bg-rose-100 text-rose-700 dark:bg-rose-500/20 dark:text-rose-300"
+          accent="bg-primary/10 text-primary"
         />
         <KpiCard
           icon={Wallet}
@@ -174,13 +174,13 @@ export function FounderOverview() {
           value={formatMoney(salariesPayable)}
           sub={t('dashboard.founder.pendingCount', { count: pendingCount })}
           loading={pendingSalaries.isLoading}
-          accent="bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300"
+          accent="bg-primary/10 text-primary"
         />
       </div>
 
       <Card>
         <div className="mb-4 flex flex-wrap items-baseline justify-between gap-2">
-          <h3 className="text-sm font-semibold text-foreground">
+          <h3 className="text-sm font-medium text-foreground">
             {t('dashboard.founder.chartTitle')}
           </h3>
           <span className="text-xs text-foreground-muted">

@@ -13,7 +13,7 @@ import {
 } from '@/entities/course-type';
 
 const schema = z.object({
-  name: z.string().trim().min(1, { message: 'required' }),
+  name: z.string().trim().min(1, { message: 'required' }).max(120),
   isActive: z.boolean(),
 });
 
@@ -111,6 +111,7 @@ export function CourseTypeFormModal({
         label={t('courseTypes.name')}
         placeholder={t('courseTypes.namePlaceholder')}
         error={nameError}
+        maxLength={120}
         autoFocus
         {...register('name')}
       />

@@ -29,6 +29,9 @@ export interface StudentFormModalProps {
 interface FieldErrors {
   firstName?: string;
   lastName?: string;
+  phone?: string;
+  birthDate?: string;
+  enrollmentDate?: string;
   branchId?: string;
 }
 
@@ -36,6 +39,24 @@ interface FieldErrors {
 function toDateInput(value?: string | null): string {
   if (!value) return '';
   return value.slice(0, 10);
+}
+
+/** Loose international phone check: 7–15 digits, allowing spaces / ( ) + - . */
+function isValidPhone(value: string): boolean {
+  const trimmed = value.trim();
+  const digits = trimmed.replace(/\D/g, '');
+  return (
+    /^\+?[\d\s()-]+$/.test(trimmed) &&
+    digits.length >= 7 &&
+    digits.length <= 15
+  );
+}
+
+/** Today as `YYYY-MM-DD` (local) — the latest sensible birth/enrollment date. */
+function todayInput(): string {
+  const now = new Date();
+  const offsetMs = now.getTimezoneOffset() * 60_000;
+  return new Date(now.getTime() - offsetMs).toISOString().slice(0, 10);
 }
 
 /**
@@ -98,6 +119,8 @@ export function StudentFormModal({
     setFormError(null);
   }, [open, student]);
 
+  const today = todayInput();
+
   /** Validate a parent block only when it has been filled in. */
   const validateFigure = (figure: ParentFigureDraft): ParentFigureErrors => {
     if (!isParentFigureFilled(figure)) return {};
@@ -105,6 +128,7 @@ export function StudentFormModal({
     if (!figure.lastName.trim()) next.lastName = t('form.requiredField');
     if (!figure.firstName.trim()) next.firstName = t('form.requiredField');
     if (!figure.phone.trim()) next.phone = t('form.requiredField');
+    else if (!isValidPhone(figure.phone)) next.phone = t('form.requiredField');
     return next;
   };
 
@@ -113,6 +137,14 @@ export function StudentFormModal({
     if (!firstName.trim()) next.firstName = t('form.requiredField');
     if (!lastName.trim()) next.lastName = t('form.requiredField');
     if (!branchId) next.branchId = t('form.requiredField');
+    // Optional fields: validate only when the user filled them in.
+    if (phone.trim() && !isValidPhone(phone)) next.phone = t('form.requiredField');
+    // A birth date cannot be in the future.
+    if (birthDate && birthDate > today) next.birthDate = t('form.requiredField');
+    // Enrollment cannot predate birth (future enrollment is allowed — a student
+    // may be pre-enrolled for an upcoming term).
+    if (birthDate && enrollmentDate && enrollmentDate < birthDate)
+      next.enrollmentDate = t('form.requiredField');
 
     const fErr = validateFigure(father);
     const mErr = validateFigure(mother);
@@ -203,6 +235,7 @@ export function StudentFormModal({
           value={firstName}
           onChange={(e) => setFirstName(e.target.value)}
           error={errors.firstName}
+          maxLength={100}
           disabled={submitting}
           autoFocus
         />
@@ -211,19 +244,24 @@ export function StudentFormModal({
           value={lastName}
           onChange={(e) => setLastName(e.target.value)}
           error={errors.lastName}
+          maxLength={100}
           disabled={submitting}
         />
         <Input
           label={`${t('fields.middleName')} (${t('form.optional')})`}
           value={middleName}
           onChange={(e) => setMiddleName(e.target.value)}
+          maxLength={100}
           disabled={submitting}
         />
         <Input
           label={`${t('fields.phone')} (${t('form.optional')})`}
           type="tel"
+          inputMode="tel"
           value={phone}
           onChange={(e) => setPhone(e.target.value)}
+          error={errors.phone}
+          maxLength={25}
           disabled={submitting}
         />
         <Input
@@ -231,6 +269,8 @@ export function StudentFormModal({
           type="date"
           value={birthDate}
           onChange={(e) => setBirthDate(e.target.value)}
+          error={errors.birthDate}
+          max={today}
           disabled={submitting}
         />
         <Input
@@ -238,6 +278,8 @@ export function StudentFormModal({
           type="date"
           value={enrollmentDate}
           onChange={(e) => setEnrollmentDate(e.target.value)}
+          error={errors.enrollmentDate}
+          min={birthDate || undefined}
           disabled={submitting}
         />
         <Select

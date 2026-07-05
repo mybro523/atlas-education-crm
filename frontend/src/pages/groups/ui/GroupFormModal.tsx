@@ -29,6 +29,9 @@ interface FormState {
   isActive: boolean;
 }
 
+/** Backend accepts a non-empty string; cap length client-side to keep it sane. */
+const NAME_MAX = 120;
+
 const EMPTY: FormState = {
   name: '',
   courseId: '',
@@ -151,6 +154,7 @@ export function GroupFormModal({
         value={form.name}
         onChange={(e) => setField('name', e.target.value)}
         error={errors.name}
+        maxLength={NAME_MAX}
         autoFocus
       />
 

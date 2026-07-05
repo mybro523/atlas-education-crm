@@ -49,6 +49,7 @@ export function ParentFigureFields({
           value={value.lastName}
           onChange={(e) => set({ lastName: e.target.value })}
           error={errors.lastName}
+          maxLength={100}
           disabled={disabled}
         />
         <Input
@@ -56,26 +57,31 @@ export function ParentFigureFields({
           value={value.firstName}
           onChange={(e) => set({ firstName: e.target.value })}
           error={errors.firstName}
+          maxLength={100}
           disabled={disabled}
         />
         <Input
           label={t('fields.phone')}
           type="tel"
+          inputMode="tel"
           value={value.phone}
           onChange={(e) => set({ phone: e.target.value })}
           error={errors.phone}
+          maxLength={25}
           disabled={disabled}
         />
         <Input
           label={t('fields.workplace')}
           value={value.workplace}
           onChange={(e) => set({ workplace: e.target.value })}
+          maxLength={120}
           disabled={disabled}
         />
         <Input
           label={t('fields.position')}
           value={value.position}
           onChange={(e) => set({ position: e.target.value })}
+          maxLength={120}
           disabled={disabled}
           className="sm:col-span-2"
         />

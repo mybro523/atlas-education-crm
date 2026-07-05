@@ -59,8 +59,10 @@ const config: Config = {
         '2xl': '1.25rem',
       },
       boxShadow: {
-        card: '0 1px 3px 0 rgb(0 0 0 / 0.08), 0 1px 2px -1px rgb(0 0 0 / 0.08)',
-        elevated: '0 10px 30px -12px rgb(37 99 235 / 0.35)',
+        // Subtle, neutral elevation — no colored glow (calmer, less "template").
+        card: '0 1px 2px 0 rgb(0 0 0 / 0.05)',
+        elevated:
+          '0 4px 16px -6px rgb(0 0 0 / 0.12), 0 2px 6px -3px rgb(0 0 0 / 0.08)',
       },
       keyframes: {
         'fade-in': {

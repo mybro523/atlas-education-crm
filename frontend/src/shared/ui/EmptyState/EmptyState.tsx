@@ -33,7 +33,7 @@ export function EmptyState({
         {icon ?? <Inbox className="h-6 w-6" aria-hidden />}
       </div>
       <div className="space-y-1">
-        <p className="text-sm font-semibold text-foreground">{title}</p>
+        <p className="text-sm font-medium text-foreground">{title}</p>
         {description && (
           <p className="mx-auto max-w-xs text-sm text-foreground-muted">
             {description}

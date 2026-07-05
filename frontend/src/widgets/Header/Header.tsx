@@ -71,7 +71,7 @@ export function Header({ onOpenSidebar }: HeaderProps) {
               'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
             )}
           >
-            <span className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground">
+            <span className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-xs font-medium text-primary-foreground">
               {user ? initials(user.fullName) : <UserIcon className="h-4 w-4" />}
             </span>
             <span className="hidden max-w-[10rem] flex-col items-start leading-tight sm:flex">

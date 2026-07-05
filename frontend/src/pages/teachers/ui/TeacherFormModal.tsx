@@ -20,7 +20,19 @@ export interface TeacherFormModalProps {
 interface FieldErrors {
   firstName?: string;
   lastName?: string;
+  phone?: string;
   branchId?: string;
+}
+
+/** Loose international phone check: 7–15 digits, allowing spaces / ( ) + - . */
+function isValidPhone(value: string): boolean {
+  const trimmed = value.trim();
+  const digits = trimmed.replace(/\D/g, '');
+  return (
+    /^\+?[\d\s()-]+$/.test(trimmed) &&
+    digits.length >= 7 &&
+    digits.length <= 15
+  );
 }
 
 /**
@@ -67,6 +79,8 @@ export function TeacherFormModal({
     if (!firstName.trim()) next.firstName = t('form.requiredField');
     if (!lastName.trim()) next.lastName = t('form.requiredField');
     if (!branchId) next.branchId = t('form.requiredField');
+    // Phone is optional; validate its format only when the user filled it in.
+    if (phone.trim() && !isValidPhone(phone)) next.phone = t('form.requiredField');
     setErrors(next);
     return Object.keys(next).length === 0;
   };
@@ -126,6 +140,7 @@ export function TeacherFormModal({
           value={firstName}
           onChange={(e) => setFirstName(e.target.value)}
           error={errors.firstName}
+          maxLength={100}
           disabled={submitting}
           autoFocus
         />
@@ -134,19 +149,24 @@ export function TeacherFormModal({
           value={lastName}
           onChange={(e) => setLastName(e.target.value)}
           error={errors.lastName}
+          maxLength={100}
           disabled={submitting}
         />
         <Input
           label={`${t('fields.middleName')} (${t('form.optional')})`}
           value={middleName}
           onChange={(e) => setMiddleName(e.target.value)}
+          maxLength={100}
           disabled={submitting}
         />
         <Input
           label={`${t('fields.phone')} (${t('form.optional')})`}
           type="tel"
+          inputMode="tel"
           value={phone}
           onChange={(e) => setPhone(e.target.value)}
+          error={errors.phone}
+          maxLength={25}
           disabled={submitting}
         />
       </div>

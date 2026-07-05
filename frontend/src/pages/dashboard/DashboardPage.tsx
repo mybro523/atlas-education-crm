@@ -19,11 +19,11 @@ export function DashboardPage() {
   return (
     <div className="space-y-6">
       {/* Greeting */}
-      <div className="rounded-2xl bg-gradient-to-br from-brand-600 to-brand-800 p-5 text-white shadow-elevated sm:p-7">
+      <div className="rounded-xl bg-gradient-to-br from-brand-600 to-brand-700 p-5 text-white shadow-sm sm:p-7">
         <p className="text-sm/relaxed text-white/80">
           {t('dashboard.branchNote')}
         </p>
-        <h1 className="mt-1 text-xl font-bold sm:text-2xl">
+        <h1 className="mt-1 text-xl font-semibold tracking-tight sm:text-2xl">
           {t('dashboard.welcome', { name: user?.fullName ?? '' })}
         </h1>
         {user && (
@@ -38,15 +38,15 @@ export function DashboardPage() {
 
       {/* Quick links */}
       <section className="space-y-3">
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-foreground-muted">
+        <h2 className="text-sm font-medium uppercase tracking-wide text-foreground-muted">
           {t('dashboard.quickLinks')}
         </h2>
 
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {quickLinks.map(({ to, labelKey, icon: Icon }) => (
             <Link key={to} to={to} className="group">
-              <Card className="flex h-full items-center gap-4 transition-shadow hover:shadow-elevated">
-                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-brand-100 text-primary dark:bg-brand-950">
+              <Card className="flex h-full items-center gap-4 transition-colors hover:border-primary/40">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
                   <Icon className="h-5 w-5" />
                 </span>
                 <div className="min-w-0 flex-1">

@@ -71,7 +71,7 @@ export function BranchBarChart({ data, loading }: BranchBarChartProps) {
           />
           <Tooltip
             content={<MoneyTooltip />}
-            cursor={{ fill: 'rgba(124, 58, 237, 0.06)' }}
+            cursor={{ fill: 'rgba(37, 99, 235, 0.06)' }}
           />
           <Legend wrapperStyle={{ fontSize: 12 }} />
           <Bar

@@ -27,12 +27,14 @@ export function EditPaymentModal({
 
   const [amount, setAmount] = useState('');
   const [status, setStatus] = useState<PaymentStatus>('UNPAID');
+  const [amountError, setAmountError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!open || !payment) return;
     setAmount(String(payment.amount ?? ''));
     setStatus(payment.status);
+    setAmountError(null);
     setError(null);
   }, [open, payment]);
 
@@ -44,11 +46,18 @@ export function EditPaymentModal({
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!payment) return;
-    const numeric = Number(amount);
-    if (!Number.isFinite(numeric) || numeric < 0) {
-      setError(t('finance.records.amountMin'));
+    setError(null);
+    const trimmed = amount.trim();
+    const numeric = Number(trimmed);
+    if (!trimmed) {
+      setAmountError(t('form.required'));
       return;
     }
+    if (!Number.isFinite(numeric) || numeric <= 0) {
+      setAmountError(t('finance.records.amountMin'));
+      return;
+    }
+    setAmountError(null);
     updatePayment.mutate(
       { id: payment.id, dto: { amount: numeric, status } },
       {
@@ -78,7 +87,11 @@ export function EditPaymentModal({
         min={0}
         step="0.01"
         value={amount}
-        onChange={(e) => setAmount(e.target.value)}
+        onChange={(e) => {
+          setAmount(e.target.value);
+          if (amountError) setAmountError(null);
+        }}
+        error={amountError ?? undefined}
         autoFocus
       />
       <Select

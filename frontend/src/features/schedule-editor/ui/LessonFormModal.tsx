@@ -175,10 +175,14 @@ export function LessonFormModal({
 
   const validate = (): boolean => {
     const next: Partial<Record<keyof FormState, string>> = {};
+    // A lesson's course is carried by its group, so requiring the group also
+    // enforces the course. Room stays optional (contract §8).
     if (!form.groupId) next.groupId = t('form.required');
     if (!form.date) next.date = t('form.required');
     if (!form.startTime) next.startTime = t('form.required');
-    if (form.endTime && form.startTime && form.endTime <= form.startTime) {
+    if (!form.endTime) {
+      next.endTime = t('form.required');
+    } else if (form.startTime && form.endTime <= form.startTime) {
       next.endTime = t('schedule.fields.endAfterStart');
     }
     setErrors(next);

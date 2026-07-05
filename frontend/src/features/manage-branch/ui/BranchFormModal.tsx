@@ -11,10 +11,27 @@ import {
   type Branch,
 } from '@/entities/branch';
 
+/** Loose international phone check: 7–15 digits, allowing spaces / ( ) + - . */
+function isValidPhone(value: string): boolean {
+  const trimmed = value.trim();
+  const digits = trimmed.replace(/\D/g, '');
+  return (
+    /^\+?[\d\s()-]+$/.test(trimmed) &&
+    digits.length >= 7 &&
+    digits.length <= 15
+  );
+}
+
 const schema = z.object({
-  name: z.string().trim().min(1, { message: 'required' }),
-  address: z.string().trim().optional(),
-  phone: z.string().trim().optional(),
+  name: z.string().trim().min(1, { message: 'required' }).max(120),
+  address: z.string().trim().max(200).optional(),
+  // Optional, but when filled it must look like a real phone number.
+  phone: z
+    .string()
+    .trim()
+    .max(25)
+    .optional()
+    .refine((v) => !v || isValidPhone(v), { message: 'phone' }),
 });
 
 type FormValues = z.infer<typeof schema>;
@@ -102,17 +119,23 @@ export function BranchFormModal({ open, onClose, branch }: BranchFormModalProps)
         label={t('branches.name')}
         placeholder={t('branches.namePlaceholder')}
         error={errors.name ? t('crud.required') : undefined}
+        maxLength={120}
         autoFocus
         {...register('name')}
       />
       <Input
         label={t('branches.address')}
         placeholder={t('branches.addressPlaceholder')}
+        maxLength={200}
         {...register('address')}
       />
       <Input
         label={t('branches.phone')}
         placeholder={t('branches.phonePlaceholder')}
+        type="tel"
+        inputMode="tel"
+        maxLength={25}
+        error={errors.phone ? t('form.requiredField') : undefined}
         {...register('phone')}
       />
     </FormModal>

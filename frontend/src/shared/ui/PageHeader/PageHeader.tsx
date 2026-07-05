@@ -29,7 +29,7 @@ export function PageHeader({
       )}
     >
       <div className="min-w-0 space-y-1">
-        <h1 className="truncate text-xl font-semibold text-foreground sm:text-2xl">
+        <h1 className="truncate text-lg font-semibold tracking-tight text-foreground sm:text-xl">
           {title}
         </h1>
         {description && (

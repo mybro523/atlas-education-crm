@@ -14,14 +14,17 @@ import {
 } from '@/entities/finance-record';
 import { toDateInput } from '@/shared/lib';
 
+const CATEGORY_MAX = 100;
+const DESCRIPTION_MAX = 500;
+
 const schema = z.object({
   branchId: z.string().min(1, { message: 'required' }),
   type: z.enum(['INCOME', 'EXPENSE']),
   amount: z.coerce
     .number({ invalid_type_error: 'required' })
-    .min(0, { message: 'min' }),
-  category: z.string().optional(),
-  description: z.string().optional(),
+    .positive({ message: 'min' }),
+  category: z.string().max(CATEGORY_MAX).optional(),
+  description: z.string().max(DESCRIPTION_MAX).optional(),
   occurredAt: z.string().optional(),
 });
 
@@ -185,12 +188,14 @@ export function FinanceRecordFormModal({
       <Input
         label={`${t('finance.records.category')} (${t('form.optional')})`}
         placeholder={t('finance.records.categoryPlaceholder')}
+        maxLength={CATEGORY_MAX}
         {...register('category')}
       />
 
       <Textarea
         label={`${t('finance.records.description')} (${t('form.optional')})`}
         rows={3}
+        maxLength={DESCRIPTION_MAX}
         {...register('description')}
       />
     </FormModal>

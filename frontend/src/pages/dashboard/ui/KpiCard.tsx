@@ -31,7 +31,7 @@ export function KpiCard({
     <Card className="flex items-start gap-3">
       <span
         className={cn(
-          'flex h-10 w-10 shrink-0 items-center justify-center rounded-xl',
+          'flex h-10 w-10 shrink-0 items-center justify-center rounded-lg',
           accent,
         )}
         aria-hidden

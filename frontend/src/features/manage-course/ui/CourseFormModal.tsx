@@ -17,13 +17,15 @@ import {
 
 const schema = z
   .object({
-    name: z.string().trim().min(1, { message: 'required' }),
+    name: z.string().trim().min(1, { message: 'required' }).max(120),
     courseTypeId: z.string().min(1, { message: 'required' }),
     branchId: z.string().min(1, { message: 'required' }),
-    // Coerce the numeric string from the input; must be a non-negative number.
+    // Coerce the numeric string from the input; tuition must be a positive,
+    // sanely-bounded number (empty input coerces to 0 → fails the > 0 rule).
     pricePerMonth: z.coerce
       .number({ invalid_type_error: 'required' })
-      .min(0, { message: 'min' }),
+      .gt(0, { message: 'min' })
+      .max(1_000_000, { message: 'min' }),
     // Optional term dates (empty string = not set).
     startDate: z.string().optional(),
     endDate: z.string().optional(),
@@ -168,6 +170,7 @@ export function CourseFormModal({ open, onClose, course }: CourseFormModalProps)
         label={t('courses.name')}
         placeholder={t('courses.namePlaceholder')}
         error={errors.name ? t('crud.required') : undefined}
+        maxLength={120}
         autoFocus
         {...register('name')}
       />
@@ -194,6 +197,7 @@ export function CourseFormModal({ open, onClose, course }: CourseFormModalProps)
         type="number"
         inputMode="decimal"
         min={0}
+        max={1000000}
         step="0.01"
         error={priceError}
         {...register('pricePerMonth')}

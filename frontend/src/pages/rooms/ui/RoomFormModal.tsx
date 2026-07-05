@@ -9,7 +9,7 @@ import { useBranches } from '@/entities/branch';
 import { useCreateRoom, useUpdateRoom, type Room } from '@/entities/room';
 
 const schema = z.object({
-  name: z.string().trim().min(1, { message: 'required' }),
+  name: z.string().trim().min(1, { message: 'required' }).max(120),
   // Empty string = branch-less (a room may be shared / unassigned).
   branchId: z.string(),
   isActive: z.boolean(),
@@ -111,6 +111,7 @@ export function RoomFormModal({ open, onClose, room }: RoomFormModalProps) {
         label={t('rooms.name')}
         placeholder={t('rooms.namePlaceholder')}
         error={errors.name ? t('crud.required') : undefined}
+        maxLength={120}
         autoFocus
         {...register('name')}
       />

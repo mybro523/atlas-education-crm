@@ -34,9 +34,12 @@ export function LessonRateFormModal({
   const updateRate = useUpdateLessonRate();
   const { data: groupsData } = useGroups({ pageSize: 100 });
 
+  const NAME_MAX = 100;
+
   const [name, setName] = useState('');
   const [amount, setAmount] = useState('');
   const [groupId, setGroupId] = useState('');
+  const [amountError, setAmountError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -44,6 +47,7 @@ export function LessonRateFormModal({
     setName(rate?.name ?? '');
     setAmount(rate ? String(rate.amount) : '');
     setGroupId(rate?.groupId ?? '');
+    setAmountError(null);
     setError(null);
   }, [open, rate]);
 
@@ -63,11 +67,17 @@ export function LessonRateFormModal({
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError(null);
-    const numeric = Number(amount);
-    if (!Number.isFinite(numeric) || numeric < 0) {
-      setError(t('finance.records.amountMin'));
+    const trimmed = amount.trim();
+    const numeric = Number(trimmed);
+    if (!trimmed) {
+      setAmountError(t('form.required'));
       return;
     }
+    if (!Number.isFinite(numeric) || numeric <= 0) {
+      setAmountError(t('finance.records.amountMin'));
+      return;
+    }
+    setAmountError(null);
 
     const dto = {
       name: name.trim() || undefined,
@@ -114,6 +124,7 @@ export function LessonRateFormModal({
         placeholder={t('finance.rates.namePlaceholder')}
         value={name}
         onChange={(e) => setName(e.target.value)}
+        maxLength={NAME_MAX}
         autoFocus
       />
       <Input
@@ -123,7 +134,11 @@ export function LessonRateFormModal({
         min={0}
         step="0.01"
         value={amount}
-        onChange={(e) => setAmount(e.target.value)}
+        onChange={(e) => {
+          setAmount(e.target.value);
+          if (amountError) setAmountError(null);
+        }}
+        error={amountError ?? undefined}
       />
       <Select
         label={t('finance.rates.group')}

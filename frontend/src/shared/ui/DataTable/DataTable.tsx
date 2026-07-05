@@ -64,7 +64,7 @@ export function DataTable<T>({
     return (
       <div className={cn('w-full', className)}>
         {/* Desktop skeleton */}
-        <div className="hidden overflow-hidden rounded-2xl border border-border sm:block">
+        <div className="hidden overflow-hidden rounded-xl border border-border sm:block">
           <table className="w-full border-collapse">
             <thead>
               <tr className="border-b border-border bg-surface-muted/50">
@@ -72,7 +72,7 @@ export function DataTable<T>({
                   <th
                     key={col.id}
                     className={cn(
-                      'px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-foreground-muted',
+                      'px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-foreground-muted',
                       col.headerClassName,
                       col.className,
                     )}
@@ -100,7 +100,7 @@ export function DataTable<T>({
           {Array.from({ length: skeletonRows }).map((_, r) => (
             <div
               key={r}
-              className="space-y-2 rounded-2xl border border-border bg-surface p-4"
+              className="space-y-2 rounded-xl border border-border bg-surface p-4"
             >
               {mobileColumns.map((col) => (
                 <Skeleton key={col.id} variant="text" className="h-4" />
@@ -117,7 +117,7 @@ export function DataTable<T>({
     return (
       <div
         className={cn(
-          'rounded-2xl border border-border bg-surface',
+          'rounded-xl border border-border bg-surface',
           className,
         )}
       >
@@ -136,7 +136,7 @@ export function DataTable<T>({
   return (
     <div className={cn('w-full', className)}>
       {/* Desktop table */}
-      <div className="hidden overflow-x-auto rounded-2xl border border-border sm:block">
+      <div className="hidden overflow-x-auto rounded-xl border border-border sm:block">
         <table className="w-full border-collapse text-sm">
           <thead>
             <tr className="border-b border-border bg-surface-muted/50">
@@ -145,7 +145,7 @@ export function DataTable<T>({
                   key={col.id}
                   scope="col"
                   className={cn(
-                    'whitespace-nowrap px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-foreground-muted',
+                    'whitespace-nowrap px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-foreground-muted',
                     col.headerClassName,
                     col.className,
                   )}
@@ -192,7 +192,7 @@ export function DataTable<T>({
             role={interactive ? 'button' : undefined}
             tabIndex={interactive ? 0 : undefined}
             className={cn(
-              'rounded-2xl border border-border bg-surface p-4',
+              'rounded-xl border border-border bg-surface p-4',
               interactive &&
                 'cursor-pointer transition-colors hover:bg-surface-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
             )}

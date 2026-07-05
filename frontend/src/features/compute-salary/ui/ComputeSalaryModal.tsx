@@ -71,6 +71,11 @@ export function ComputeSalaryModal({ open, onClose }: ComputeSalaryModalProps) {
       setError(t('finance.salaries.fillPeriod'));
       return;
     }
+    // Period must be a valid range: end on or after start (single-day allowed).
+    if (to < from) {
+      setError(t('schedule.fields.endAfterStart'));
+      return;
+    }
     compute.mutate(
       { teacherId, from, to },
       {
