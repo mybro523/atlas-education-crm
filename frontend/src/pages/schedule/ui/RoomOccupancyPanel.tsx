@@ -66,6 +66,7 @@ export function RoomOccupancyPanel({ initialDate }: RoomOccupancyPanelProps) {
               {t('schedule.occupancy.summary', {
                 free: freeCount,
                 occupied: occupiedCount,
+                total: freeCount + occupiedCount,
               })}
             </span>
           )}

@@ -1,4 +1,4 @@
-import { IsNumber, IsOptional, IsString, Min } from 'class-validator';
+import { IsNumber, IsOptional, IsString, Max, Min } from 'class-validator';
 
 /**
  * Partial update of a lesson-rate. All fields optional; same per-field
@@ -17,5 +17,6 @@ export class UpdateLessonRateDto {
   @IsOptional()
   @IsNumber({ maxDecimalPlaces: 2 })
   @Min(0)
+  @Max(99999999.99)
   amount?: number;
 }

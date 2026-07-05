@@ -4,6 +4,7 @@ import {
   IsNumber,
   IsOptional,
   IsString,
+  Max,
   Min,
 } from 'class-validator';
 import { SalaryBasis, SalaryStatus } from '@prisma/client';
@@ -32,6 +33,7 @@ export class CreateSalaryDto {
 
   @IsNumber({ maxDecimalPlaces: 2 })
   @Min(0)
+  @Max(99999999.99)
   amount!: number;
 
   @IsOptional()

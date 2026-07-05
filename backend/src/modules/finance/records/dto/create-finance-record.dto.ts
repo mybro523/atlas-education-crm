@@ -4,6 +4,7 @@ import {
   IsNumber,
   IsOptional,
   IsString,
+  Max,
   Min,
 } from 'class-validator';
 import { FinanceType } from '@prisma/client';
@@ -18,6 +19,7 @@ export class CreateFinanceRecordDto {
 
   @IsNumber({ maxDecimalPlaces: 2 })
   @Min(0)
+  @Max(99999999.99)
   amount!: number;
 
   @IsOptional()

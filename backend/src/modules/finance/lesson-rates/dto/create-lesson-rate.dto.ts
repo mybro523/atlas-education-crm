@@ -1,4 +1,4 @@
-import { IsNumber, IsOptional, IsString, Min } from 'class-validator';
+import { IsNumber, IsOptional, IsString, Max, Min } from 'class-validator';
 
 /**
  * Create a flexible pay rate (TJS) used as the fallback per-lesson teacher pay.
@@ -15,5 +15,6 @@ export class CreateLessonRateDto {
 
   @IsNumber({ maxDecimalPlaces: 2 })
   @Min(0)
+  @Max(99999999.99)
   amount!: number;
 }

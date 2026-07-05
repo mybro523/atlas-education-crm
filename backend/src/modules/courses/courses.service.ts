@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { Course, Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import {
@@ -65,14 +69,20 @@ export class CoursesService {
   async create(dto: CreateCourseDto): Promise<Course> {
     await this.assertRelations(dto.courseTypeId, dto.branchId);
 
+    const startDate = dto.startDate ? new Date(dto.startDate) : undefined;
+    const endDate = dto.endDate ? new Date(dto.endDate) : undefined;
+    if (startDate && endDate && endDate < startDate) {
+      throw new BadRequestException('endDate must be on or after startDate');
+    }
+
     return this.prisma.course.create({
       data: {
         name: dto.name,
         courseTypeId: dto.courseTypeId,
         branchId: dto.branchId,
         pricePerMonth: dto.pricePerMonth,
-        startDate: dto.startDate ? new Date(dto.startDate) : undefined,
-        endDate: dto.endDate ? new Date(dto.endDate) : undefined,
+        startDate,
+        endDate,
         isActive: dto.isActive,
       },
       include: courseDetailInclude,
@@ -81,7 +91,7 @@ export class CoursesService {
 
   /** Update a course (404 if missing / any provided FK is invalid). */
   async update(id: string, dto: UpdateCourseDto): Promise<Course> {
-    await this.findOne(id);
+    const existing = await this.findOne(id);
     await this.assertRelations(dto.courseTypeId, dto.branchId);
 
     const data: Prisma.CourseUpdateInput = {
@@ -100,6 +110,23 @@ export class CoursesService {
     }
     if (dto.endDate !== undefined) {
       data.endDate = dto.endDate ? new Date(dto.endDate) : null;
+    }
+
+    // Validate the effective date ordering by merging existing + incoming values.
+    const effectiveStart =
+      dto.startDate !== undefined
+        ? dto.startDate
+          ? new Date(dto.startDate)
+          : null
+        : existing.startDate;
+    const effectiveEnd =
+      dto.endDate !== undefined
+        ? dto.endDate
+          ? new Date(dto.endDate)
+          : null
+        : existing.endDate;
+    if (effectiveStart && effectiveEnd && effectiveEnd < effectiveStart) {
+      throw new BadRequestException('endDate must be on or after startDate');
     }
 
     return this.prisma.course.update({

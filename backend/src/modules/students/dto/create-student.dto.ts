@@ -9,6 +9,7 @@ import {
   IsObject,
   IsOptional,
   IsString,
+  Max,
   Min,
   ValidateNested,
 } from 'class-validator';
@@ -69,6 +70,7 @@ export class CreateStudentDto {
   @IsOptional()
   @IsNumber({ maxDecimalPlaces: 2 })
   @Min(0)
+  @Max(99999999.99)
   courseFee?: number;
 
   @IsOptional()

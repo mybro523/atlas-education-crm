@@ -125,6 +125,10 @@ export class ScheduleService {
     });
     if (!group) throw new NotFoundException(`Group ${dto.groupId} not found`);
 
+    if (dto.endsAt && new Date(dto.endsAt) <= new Date(dto.startsAt)) {
+      throw new BadRequestException('endsAt must be after startsAt');
+    }
+
     const teacherId = dto.teacherId ?? group.teacherId ?? null;
     if (teacherId) await this.assertTeacherExists(teacherId);
     if (dto.roomId) await this.assertRoomExists(dto.roomId);
@@ -157,6 +161,32 @@ export class ScheduleService {
     if (dto.teacherId) await this.assertTeacherExists(dto.teacherId);
     if (dto.roomId) await this.assertRoomExists(dto.roomId);
     if (dto.lessonRateId) await this.assertLessonRateExists(dto.lessonRateId);
+
+    // Validate time ordering against the effective (merged existing + incoming)
+    // startsAt/endsAt whenever either time field is being changed.
+    if (dto.startsAt !== undefined || dto.endsAt !== undefined) {
+      const current = await this.prisma.lesson.findUnique({
+        where: { id },
+        select: { startsAt: true, endsAt: true },
+      });
+      const effectiveStart =
+        dto.startsAt !== undefined
+          ? new Date(dto.startsAt)
+          : current?.startsAt ?? null;
+      const effectiveEnd =
+        dto.endsAt !== undefined
+          ? dto.endsAt
+            ? new Date(dto.endsAt)
+            : null
+          : current?.endsAt ?? null;
+      if (
+        effectiveStart &&
+        effectiveEnd &&
+        effectiveEnd <= effectiveStart
+      ) {
+        throw new BadRequestException('endsAt must be after startsAt');
+      }
+    }
 
     const data: Prisma.LessonUpdateInput = {};
     if (dto.groupId !== undefined)

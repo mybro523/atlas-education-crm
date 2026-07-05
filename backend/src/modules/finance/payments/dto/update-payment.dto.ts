@@ -3,6 +3,7 @@ import {
   IsEnum,
   IsNumber,
   IsOptional,
+  Max,
   Min,
 } from 'class-validator';
 import { PaymentStatus } from '@prisma/client';
@@ -12,6 +13,7 @@ export class UpdatePaymentDto {
   @IsOptional()
   @IsNumber({ maxDecimalPlaces: 2 })
   @Min(0)
+  @Max(99999999.99)
   amount?: number;
 
   @IsOptional()
