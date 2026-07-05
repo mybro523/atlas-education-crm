@@ -6,6 +6,8 @@ import {
   isValidPhone,
   isValidTelegram,
   todayInput,
+  sanitizePersonName,
+  sanitizePhone,
 } from '@/shared/lib';
 import { extractErrorMessage } from '@/shared/api';
 import { useBranches } from '@/entities/branch';
@@ -186,7 +188,7 @@ export function TeacherFormModal({
         <Input
           label={t('fields.firstName')}
           value={firstName}
-          onChange={(e) => setFirstName(e.target.value)}
+          onChange={(e) => setFirstName(sanitizePersonName(e.target.value))}
           error={errors.firstName}
           maxLength={100}
           autoFocus
@@ -194,14 +196,14 @@ export function TeacherFormModal({
         <Input
           label={t('fields.lastName')}
           value={lastName}
-          onChange={(e) => setLastName(e.target.value)}
+          onChange={(e) => setLastName(sanitizePersonName(e.target.value))}
           error={errors.lastName}
           maxLength={100}
         />
         <Input
           label={`${t('fields.middleName')} (${t('form.optional')})`}
           value={middleName}
-          onChange={(e) => setMiddleName(e.target.value)}
+          onChange={(e) => setMiddleName(sanitizePersonName(e.target.value))}
           error={errors.middleName}
           maxLength={100}
         />
@@ -210,7 +212,7 @@ export function TeacherFormModal({
           type="tel"
           inputMode="tel"
           value={phone}
-          onChange={(e) => setPhone(e.target.value)}
+          onChange={(e) => setPhone(sanitizePhone(e.target.value))}
           error={errors.phone}
           maxLength={25}
         />

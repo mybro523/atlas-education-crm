@@ -21,6 +21,8 @@ export {
   AMOUNT_REGEX,
   MONEY_MAX,
   isValidPersonName,
+  sanitizePersonName,
+  sanitizePhone,
   isNonEmpty,
   isValidPhone,
   isValidTelegram,

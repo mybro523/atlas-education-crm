@@ -5,7 +5,7 @@ import { z } from 'zod';
 import { useTranslation } from 'react-i18next';
 
 import { FormModal, Input, useToast } from '@/shared/ui';
-import { isValidPhone } from '@/shared/lib';
+import { isValidPhone, sanitizePhone } from '@/shared/lib';
 import {
   useCreateBranch,
   useUpdateBranch,
@@ -54,6 +54,10 @@ export function BranchFormModal({ open, onClose, branch }: BranchFormModalProps)
     resolver: zodResolver(schema),
     defaultValues: { name: '', address: '', phone: '' },
   });
+
+  // HARD input filter for the phone: strip letters/symbols in the DOM BEFORE
+  // react-hook-form reads the value, so garbage can never enter the field.
+  const phoneField = register('phone');
 
   // Sync form values whenever the target branch (or open state) changes.
   useEffect(() => {
@@ -122,7 +126,11 @@ export function BranchFormModal({ open, onClose, branch }: BranchFormModalProps)
         inputMode="tel"
         maxLength={25}
         error={errors.phone ? t('form.invalidPhone') : undefined}
-        {...register('phone')}
+        {...phoneField}
+        onChange={(e) => {
+          e.target.value = sanitizePhone(e.target.value);
+          void phoneField.onChange(e);
+        }}
       />
     </FormModal>
   );

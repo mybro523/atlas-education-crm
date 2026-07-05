@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Input } from '@/shared/ui';
+import { sanitizePersonName, sanitizePhone } from '@/shared/lib';
 import type { ParentFigureDraft, ParentFigureErrors } from '../model/types';
 
 export interface ParentFigureFieldsProps {
@@ -47,7 +48,7 @@ export function ParentFigureFields({
         <Input
           label={t('fields.lastName')}
           value={value.lastName}
-          onChange={(e) => set({ lastName: e.target.value })}
+          onChange={(e) => set({ lastName: sanitizePersonName(e.target.value) })}
           error={errors.lastName}
           maxLength={100}
           disabled={disabled}
@@ -55,7 +56,7 @@ export function ParentFigureFields({
         <Input
           label={t('fields.firstName')}
           value={value.firstName}
-          onChange={(e) => set({ firstName: e.target.value })}
+          onChange={(e) => set({ firstName: sanitizePersonName(e.target.value) })}
           error={errors.firstName}
           maxLength={100}
           disabled={disabled}
@@ -65,7 +66,7 @@ export function ParentFigureFields({
           type="tel"
           inputMode="tel"
           value={value.phone}
-          onChange={(e) => set({ phone: e.target.value })}
+          onChange={(e) => set({ phone: sanitizePhone(e.target.value) })}
           error={errors.phone}
           maxLength={25}
           disabled={disabled}

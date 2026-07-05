@@ -42,6 +42,25 @@ export function isValidPersonName(value: string): boolean {
   return v.length >= 2 && v.length <= 100 && NAME_REGEX.test(v);
 }
 
+/**
+ * HARD input filter for person-name fields: strips everything that is not a
+ * Unicode letter or a name separator (space, hyphen, apostrophe, dot) as the
+ * user types — digits and symbols physically cannot enter the field. Pair with
+ * {@link isValidPersonName} on submit for the length / leading-letter rules.
+ */
+export function sanitizePersonName(value: string): string {
+  return value.replace(/[^\p{L}\s'’.-]/gu, '');
+}
+
+/**
+ * HARD input filter for phone fields: keeps only digits, `+`, spaces, parens
+ * and hyphens as the user types — letters physically cannot enter the field.
+ * Pair with {@link isValidPhone} on submit for the 7–15-digit rule.
+ */
+export function sanitizePhone(value: string): string {
+  return value.replace(/[^\d\s()+-]/g, '');
+}
+
 /** Non-empty after trim → i18n `form.requiredField`. Use for required entity names/text. */
 export function isNonEmpty(value: string): boolean {
   return value.trim().length > 0;
