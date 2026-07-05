@@ -12,7 +12,7 @@ import {
   useUpdateFinanceRecord,
   type FinanceRecord,
 } from '@/entities/finance-record';
-import { toDateInput } from '@/shared/lib';
+import { isValidAmount, toDateInput } from '@/shared/lib';
 
 const CATEGORY_MAX = 100;
 const DESCRIPTION_MAX = 500;
@@ -22,7 +22,10 @@ const schema = z.object({
   type: z.enum(['INCOME', 'EXPENSE']),
   amount: z.coerce
     .number({ invalid_type_error: 'required' })
-    .positive({ message: 'min' }),
+    .positive({ message: 'min' })
+    .refine((n) => isValidAmount(String(n), { min: 0.01 }), {
+      message: 'min',
+    }),
   category: z.string().max(CATEGORY_MAX).optional(),
   description: z.string().max(DESCRIPTION_MAX).optional(),
   occurredAt: z.string().optional(),

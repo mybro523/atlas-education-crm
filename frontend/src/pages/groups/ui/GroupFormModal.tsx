@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { FormModal, Input, Select, useToast } from '@/shared/ui';
+import { isNonEmpty } from '@/shared/lib';
 import {
   useCreateGroup,
   useUpdateGroup,
@@ -102,7 +103,7 @@ export function GroupFormModal({
 
   const validate = (): boolean => {
     const next: Partial<Record<keyof FormState, string>> = {};
-    if (!form.name.trim()) next.name = t('form.required');
+    if (!isNonEmpty(form.name)) next.name = t('form.required');
     if (!form.courseId) next.courseId = t('form.required');
     if (!form.branchId) next.branchId = t('form.required');
     setErrors(next);

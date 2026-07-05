@@ -150,6 +150,8 @@
     "invalidAmount": "Enter a valid amount",
     "invalidPhone": "Enter a valid phone number",
     "invalidTelegram": "Enter a valid Telegram username",
+    "invalidName": "Letters only — no digits or symbols",
+    "invalidEmail": "Enter a valid email address",
     "notSelected": "Not selected"
   },
   "fields": {

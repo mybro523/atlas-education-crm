@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 
 import { FormModal, Input, Select, useToast } from '@/shared/ui';
 import { extractErrorMessage } from '@/shared/api';
+import { isNonEmpty, isValidAmount } from '@/shared/lib';
 import { useGroups } from '@/entities/group';
 import {
   useCreateLessonRate,
@@ -39,6 +40,7 @@ export function LessonRateFormModal({
   const [name, setName] = useState('');
   const [amount, setAmount] = useState('');
   const [groupId, setGroupId] = useState('');
+  const [nameError, setNameError] = useState<string | null>(null);
   const [amountError, setAmountError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -46,6 +48,7 @@ export function LessonRateFormModal({
     setName(rate?.name ?? '');
     setAmount(rate ? String(rate.amount) : '');
     setGroupId(rate?.groupId ?? '');
+    setNameError(null);
     setAmountError(null);
   }, [open, rate]);
 
@@ -64,21 +67,28 @@ export function LessonRateFormModal({
   // toast on error while the optimistic row rolls back.
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    const trimmedName = name.trim();
     const trimmed = amount.trim();
-    const numeric = Number(trimmed);
+
+    if (!isNonEmpty(trimmedName)) {
+      setNameError(t('form.requiredField'));
+      return;
+    }
+    setNameError(null);
+
     if (!trimmed) {
       setAmountError(t('form.required'));
       return;
     }
-    if (!Number.isFinite(numeric) || numeric <= 0) {
+    if (!isValidAmount(trimmed, { min: 0.01 })) {
       setAmountError(t('finance.records.amountMin'));
       return;
     }
     setAmountError(null);
 
     const dto = {
-      name: name.trim() || undefined,
-      amount: numeric,
+      name: trimmedName,
+      amount: Number(trimmed),
       groupId: groupId || undefined,
     };
 
@@ -111,11 +121,15 @@ export function LessonRateFormModal({
       onSubmit={handleSubmit}
     >
       <Input
-        label={`${t('finance.rates.name')} (${t('form.optional')})`}
+        label={t('finance.rates.name')}
         placeholder={t('finance.rates.namePlaceholder')}
         value={name}
-        onChange={(e) => setName(e.target.value)}
+        onChange={(e) => {
+          setName(e.target.value);
+          if (nameError) setNameError(null);
+        }}
         maxLength={NAME_MAX}
+        error={nameError ?? undefined}
         autoFocus
       />
       <Input

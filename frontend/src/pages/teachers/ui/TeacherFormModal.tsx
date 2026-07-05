@@ -1,6 +1,12 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FormModal, Input, Select, useToast } from '@/shared/ui';
+import {
+  isValidPersonName,
+  isValidPhone,
+  isValidTelegram,
+  todayInput,
+} from '@/shared/lib';
 import { extractErrorMessage } from '@/shared/api';
 import { useBranches } from '@/entities/branch';
 import {
@@ -21,6 +27,7 @@ export interface TeacherFormModalProps {
 interface FieldErrors {
   firstName?: string;
   lastName?: string;
+  middleName?: string;
   phone?: string;
   telegramUsername?: string;
   birthDate?: string;
@@ -28,36 +35,10 @@ interface FieldErrors {
   branchId?: string;
 }
 
-/** Loose international phone check: 7–15 digits, allowing spaces / ( ) + - . */
-function isValidPhone(value: string): boolean {
-  const trimmed = value.trim();
-  const digits = trimmed.replace(/\D/g, '');
-  return (
-    /^\+?[\d\s()-]+$/.test(trimmed) &&
-    digits.length >= 7 &&
-    digits.length <= 15
-  );
-}
-
-/**
- * Telegram handle: an optional leading "@" followed by 5–32 letters, digits or
- * underscores (Telegram's own rule; mirrors the backend `@Matches`).
- */
-function isValidTelegram(value: string): boolean {
-  return /^@?[A-Za-z0-9_]{5,32}$/.test(value.trim());
-}
-
 /** Trim an ISO datetime down to the `YYYY-MM-DD` a date input expects. */
 function toDateInput(value?: string | null): string {
   if (!value) return '';
   return value.slice(0, 10);
-}
-
-/** Today as `YYYY-MM-DD` (local) — the latest sensible birth date. */
-function todayInput(): string {
-  const now = new Date();
-  const offsetMs = now.getTimezoneOffset() * 60_000;
-  return new Date(now.getTime() - offsetMs).toISOString().slice(0, 10);
 }
 
 /**
@@ -115,8 +96,14 @@ export function TeacherFormModal({
 
   const validate = (): boolean => {
     const next: FieldErrors = {};
+    // Person names are letters-only (no digits): required + valid format.
     if (!firstName.trim()) next.firstName = t('form.requiredField');
+    else if (!isValidPersonName(firstName)) next.firstName = t('form.invalidName');
     if (!lastName.trim()) next.lastName = t('form.requiredField');
+    else if (!isValidPersonName(lastName)) next.lastName = t('form.invalidName');
+    // Middle name is optional — validate its format only when filled in.
+    if (middleName.trim() && !isValidPersonName(middleName))
+      next.middleName = t('form.invalidName');
     if (!branchId) next.branchId = t('form.requiredField');
     // Optional fields: validate their format only when the user filled them in.
     if (phone.trim() && !isValidPhone(phone)) next.phone = t('form.invalidPhone');
@@ -215,6 +202,7 @@ export function TeacherFormModal({
           label={`${t('fields.middleName')} (${t('form.optional')})`}
           value={middleName}
           onChange={(e) => setMiddleName(e.target.value)}
+          error={errors.middleName}
           maxLength={100}
         />
         <Input

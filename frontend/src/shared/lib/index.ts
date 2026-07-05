@@ -15,6 +15,22 @@ export {
 } from './hooks';
 export { useThemeStore, prefersDark, type ThemeMode } from './theme';
 export {
+  NAME_REGEX,
+  TELEGRAM_REGEX,
+  EMAIL_REGEX,
+  AMOUNT_REGEX,
+  MONEY_MAX,
+  isValidPersonName,
+  isNonEmpty,
+  isValidPhone,
+  isValidTelegram,
+  isValidEmail,
+  isValidAmount,
+  parseAmount,
+  todayInput,
+  isFutureDate,
+} from './validators';
+export {
   useOptimisticMutation,
   type OptimisticMutationConfig,
   type Paginated,

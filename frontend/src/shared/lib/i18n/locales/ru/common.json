@@ -152,6 +152,8 @@
     "invalidAmount": "Введите корректную сумму",
     "invalidPhone": "Введите корректный номер телефона",
     "invalidTelegram": "Введите корректный Telegram-логин",
+    "invalidName": "Только буквы, без цифр и символов",
+    "invalidEmail": "Введите корректный email",
     "notSelected": "Не выбрано"
   },
   "fields": {

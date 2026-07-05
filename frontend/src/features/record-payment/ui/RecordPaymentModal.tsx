@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 
 import { FormModal, Input, useToast } from '@/shared/ui';
 import { cn } from '@/shared/lib/cn';
+import { isValidAmount, parseAmount } from '@/shared/lib';
 import { extractErrorMessage } from '@/shared/api';
 import { useRecordPayment, type PaymentMethod } from '@/entities/student-payment';
 import type { Student } from '@/entities/student';
@@ -67,14 +68,14 @@ export function RecordPaymentModal({
     if (!student) return;
 
     const trimmed = amount.trim();
-    const numeric = Number(trimmed);
+    const numeric = parseAmount(trimmed);
     let invalid = false;
 
-    if (!trimmed || !Number.isFinite(numeric) || numeric <= 0) {
-      setAmountError(t('payments.amountMin'));
-      invalid = true;
-    } else if (numeric > MAX_AMOUNT) {
+    if (numeric != null && numeric > MAX_AMOUNT) {
       setAmountError(t('payments.amountMax'));
+      invalid = true;
+    } else if (!isValidAmount(trimmed, { min: 0.01 })) {
+      setAmountError(t('payments.amountMin'));
       invalid = true;
     } else {
       setAmountError(null);
@@ -87,7 +88,7 @@ export function RecordPaymentModal({
       setMethodError(null);
     }
 
-    if (invalid || !method) return;
+    if (invalid || numeric == null || !method) return;
 
     recordPayment.mutate(
       { studentId: student.id, amount: numeric, method },

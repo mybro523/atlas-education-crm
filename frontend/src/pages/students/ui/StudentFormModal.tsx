@@ -2,6 +2,12 @@ import { useEffect, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FormModal, Input, Select, useToast } from '@/shared/ui';
 import { extractErrorMessage } from '@/shared/api';
+import {
+  isValidPersonName,
+  isValidPhone,
+  isValidAmount,
+  isFutureDate,
+} from '@/shared/lib';
 import { useBranches } from '@/entities/branch';
 import { useCourses } from '@/entities/course';
 import {
@@ -38,20 +44,12 @@ export interface StudentFormModalProps {
 interface FieldErrors {
   firstName?: string;
   lastName?: string;
+  middleName?: string;
   phone?: string;
   birthDate?: string;
   enrollmentDate?: string;
   branchId?: string;
   courseFee?: string;
-}
-
-/**
- * A course fee is optional but, when present, must be a non-negative amount with
- * at most two decimals (matches the backend `@IsNumber({ maxDecimalPlaces: 2 })
- * @Min(0)`). Accepts a comma or dot as the decimal separator.
- */
-function isValidFee(value: string): boolean {
-  return /^\d+([.,]\d{1,2})?$/.test(value.trim());
 }
 
 /** Parse a validated fee string to a number (null when blank). */
@@ -65,17 +63,6 @@ function parseFee(value: string): number | null {
 function toDateInput(value?: string | null): string {
   if (!value) return '';
   return value.slice(0, 10);
-}
-
-/** Loose international phone check: 7–15 digits, allowing spaces / ( ) + - . */
-function isValidPhone(value: string): boolean {
-  const trimmed = value.trim();
-  const digits = trimmed.replace(/\D/g, '');
-  return (
-    /^\+?[\d\s()-]+$/.test(trimmed) &&
-    digits.length >= 7 &&
-    digits.length <= 15
-  );
 }
 
 /** Today as `YYYY-MM-DD` (local) — the latest sensible birth/enrollment date. */
@@ -159,27 +146,38 @@ export function StudentFormModal({
     if (!isParentFigureFilled(figure)) return {};
     const next: ParentFigureErrors = {};
     if (!figure.lastName.trim()) next.lastName = t('form.requiredField');
+    else if (!isValidPersonName(figure.lastName))
+      next.lastName = t('form.invalidName');
     if (!figure.firstName.trim()) next.firstName = t('form.requiredField');
+    else if (!isValidPersonName(figure.firstName))
+      next.firstName = t('form.invalidName');
     if (!figure.phone.trim()) next.phone = t('form.requiredField');
-    else if (!isValidPhone(figure.phone)) next.phone = t('form.requiredField');
+    else if (!isValidPhone(figure.phone)) next.phone = t('form.invalidPhone');
     return next;
   };
 
   const validate = (): boolean => {
     const next: FieldErrors = {};
+    // Person names: required + letters-only (no digits/symbols).
     if (!firstName.trim()) next.firstName = t('form.requiredField');
+    else if (!isValidPersonName(firstName)) next.firstName = t('form.invalidName');
     if (!lastName.trim()) next.lastName = t('form.requiredField');
+    else if (!isValidPersonName(lastName)) next.lastName = t('form.invalidName');
+    // Middle name is optional; when filled it must still be a valid person name.
+    if (middleName.trim() && !isValidPersonName(middleName))
+      next.middleName = t('form.invalidName');
     if (!branchId) next.branchId = t('form.requiredField');
     // Optional fields: validate only when the user filled them in.
-    if (phone.trim() && !isValidPhone(phone)) next.phone = t('form.requiredField');
+    if (phone.trim() && !isValidPhone(phone)) next.phone = t('form.invalidPhone');
     // A birth date cannot be in the future.
-    if (birthDate && birthDate > today) next.birthDate = t('form.requiredField');
+    if (birthDate && isFutureDate(birthDate))
+      next.birthDate = t('form.birthDateFuture');
     // Enrollment cannot predate birth (future enrollment is allowed — a student
     // may be pre-enrolled for an upcoming term).
     if (birthDate && enrollmentDate && enrollmentDate < birthDate)
       next.enrollmentDate = t('form.requiredField');
     // Course fee: optional, but when entered must be a valid non-negative amount.
-    if (courseFee.trim() && !isValidFee(courseFee))
+    if (courseFee.trim() && !isValidAmount(courseFee))
       next.courseFee = t('form.invalidAmount');
 
     const fErr = validateFigure(father);
@@ -294,6 +292,7 @@ export function StudentFormModal({
           label={`${t('fields.middleName')} (${t('form.optional')})`}
           value={middleName}
           onChange={(e) => setMiddleName(e.target.value)}
+          error={errors.middleName}
           maxLength={100}
           disabled={submitting}
         />

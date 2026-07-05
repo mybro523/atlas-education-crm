@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 
 import { FormModal, Input, Select, useToast } from '@/shared/ui';
 import { extractErrorMessage } from '@/shared/api';
+import { isValidAmount } from '@/shared/lib';
 import {
   useUpdatePayment,
   type Payment,
@@ -52,7 +53,7 @@ export function EditPaymentModal({
       setAmountError(t('form.required'));
       return;
     }
-    if (!Number.isFinite(numeric) || numeric <= 0) {
+    if (!isValidAmount(trimmed, { min: 0.01 })) {
       setAmountError(t('finance.records.amountMin'));
       return;
     }

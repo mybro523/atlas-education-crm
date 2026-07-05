@@ -5,22 +5,12 @@ import { z } from 'zod';
 import { useTranslation } from 'react-i18next';
 
 import { FormModal, Input, useToast } from '@/shared/ui';
+import { isValidPhone } from '@/shared/lib';
 import {
   useCreateBranch,
   useUpdateBranch,
   type Branch,
 } from '@/entities/branch';
-
-/** Loose international phone check: 7–15 digits, allowing spaces / ( ) + - . */
-function isValidPhone(value: string): boolean {
-  const trimmed = value.trim();
-  const digits = trimmed.replace(/\D/g, '');
-  return (
-    /^\+?[\d\s()-]+$/.test(trimmed) &&
-    digits.length >= 7 &&
-    digits.length <= 15
-  );
-}
 
 const schema = z.object({
   name: z.string().trim().min(1, { message: 'required' }).max(120),
@@ -131,7 +121,7 @@ export function BranchFormModal({ open, onClose, branch }: BranchFormModalProps)
         type="tel"
         inputMode="tel"
         maxLength={25}
-        error={errors.phone ? t('form.requiredField') : undefined}
+        error={errors.phone ? t('form.invalidPhone') : undefined}
         {...register('phone')}
       />
     </FormModal>

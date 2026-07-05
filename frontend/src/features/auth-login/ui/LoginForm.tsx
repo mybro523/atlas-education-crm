@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { AxiosError } from 'axios';
 import { Lock, Mail, Eye, EyeOff } from 'lucide-react';
 import { Button, Input } from '@/shared/ui';
+import { isValidEmail } from '@/shared/lib';
 import { extractErrorMessage } from '@/shared/api';
 import { useLogin } from '../model/useLogin';
 
@@ -52,6 +53,7 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
     e.preventDefault();
     const errors: { email?: string; password?: string } = {};
     if (!email.trim()) errors.email = t('auth.requiredEmail');
+    else if (!isValidEmail(email)) errors.email = t('form.invalidEmail');
     if (!password) errors.password = t('auth.requiredPassword');
     setFieldErrors(errors);
     if (Object.keys(errors).length > 0) return;
