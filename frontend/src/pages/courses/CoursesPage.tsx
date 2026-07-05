@@ -16,6 +16,7 @@ import {
   type DataTableColumn,
 } from '@/shared/ui';
 import { CURRENCY } from '@/shared/config';
+import { isOptimisticId } from '@/shared/lib';
 import { useDebouncedValue } from '@/shared/lib/hooks';
 import { useBranches } from '@/entities/branch';
 import { useCourseTypes } from '@/entities/course-type';
@@ -81,12 +82,17 @@ export function CoursesPage() {
     setFormOpen(true);
   };
   const openEdit = (course: Course) => {
+    if (isOptimisticId(course.id)) return;
     setEditing(course);
     setFormOpen(true);
   };
 
   const confirmDelete = () => {
     if (!deleting) return;
+    if (isOptimisticId(deleting.id)) {
+      setDeleting(null);
+      return;
+    }
     deleteCourse.mutate(deleting.id, {
       onSuccess: () => toast.success(t('crud.deleted')),
       onError: () => toast.error(t('crud.deleteError')),
@@ -210,6 +216,7 @@ export function CoursesPage() {
               variant="ghost"
               size="icon"
               aria-label={t('crud.edit')}
+              disabled={isOptimisticId(c.id)}
               onClick={() => openEdit(c)}
             >
               <Pencil className="h-4 w-4" />
@@ -218,6 +225,7 @@ export function CoursesPage() {
               variant="ghost"
               size="icon"
               aria-label={t('crud.delete')}
+              disabled={isOptimisticId(c.id)}
               onClick={() => setDeleting(c)}
             >
               <Trash2 className="h-4 w-4 text-danger" />

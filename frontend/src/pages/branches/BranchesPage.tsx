@@ -11,6 +11,7 @@ import {
   useToast,
   type DataTableColumn,
 } from '@/shared/ui';
+import { isOptimisticId } from '@/shared/lib';
 import { useBranches, useDeleteBranch, type Branch } from '@/entities/branch';
 import { BranchFormModal } from '@/features/manage-branch';
 
@@ -31,6 +32,7 @@ export function BranchesPage() {
     setFormOpen(true);
   };
   const openEdit = (branch: Branch) => {
+    if (isOptimisticId(branch.id)) return;
     setEditing(branch);
     setFormOpen(true);
   };
@@ -38,6 +40,10 @@ export function BranchesPage() {
   const confirmDelete = () => {
     if (!deleting) return;
     const target = deleting;
+    if (isOptimisticId(target.id)) {
+      setDeleting(null);
+      return;
+    }
     deleteBranch.mutate(target.id, {
       onSuccess: () => toast.success(t('crud.deleted')),
       onError: () => toast.error(t('crud.deleteError')),
@@ -89,6 +95,7 @@ export function BranchesPage() {
               variant="ghost"
               size="icon"
               aria-label={t('crud.edit')}
+              disabled={isOptimisticId(b.id)}
               onClick={() => openEdit(b)}
             >
               <Pencil className="h-4 w-4" />
@@ -97,6 +104,7 @@ export function BranchesPage() {
               variant="ghost"
               size="icon"
               aria-label={t('crud.delete')}
+              disabled={isOptimisticId(b.id)}
               onClick={() => setDeleting(b)}
             >
               <Trash2 className="h-4 w-4 text-danger" />

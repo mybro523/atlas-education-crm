@@ -7,7 +7,9 @@ import {
 import {
   createQueryKeys,
   insertIntoListCache,
+  makeOptimisticId,
   removeFromListCache,
+  replaceInListCache,
   updateInListCache,
   useOptimisticMutation,
 } from '@/shared/lib/query';
@@ -84,13 +86,14 @@ export function useAvailableStudents(
 }
 
 export function useCreateGroup() {
-  return useOptimisticMutation<Group, CreateGroupDto>({
+  return useOptimisticMutation<Group, CreateGroupDto, { tempId: string }>({
     mutationFn: (dto) => groupApi.create(dto),
     keysToCancel: [groupKeys.lists()],
     keysToInvalidate: [groupKeys.lists()],
     optimisticUpdate: (dto, qc) => {
+      const tempId = makeOptimisticId();
       const optimistic: Group = {
-        id: `optimistic-${Date.now()}`,
+        id: tempId,
         name: dto.name,
         courseId: dto.courseId,
         teacherId: dto.teacherId ?? null,
@@ -103,6 +106,14 @@ export function useCreateGroup() {
       qc.setQueriesData(
         { queryKey: groupKeys.lists() },
         insertIntoListCache(optimistic),
+      );
+      return { tempId };
+    },
+    onServerData: (created, _vars, qc, extra) => {
+      if (!extra?.tempId) return;
+      qc.setQueriesData(
+        { queryKey: groupKeys.lists() },
+        replaceInListCache(extra.tempId, created),
       );
     },
   });
@@ -120,6 +131,16 @@ export function useUpdateGroup() {
       );
       qc.setQueryData<Group>(groupKeys.detail(id), (old) =>
         old ? { ...old, ...dto } : old,
+      );
+    },
+    onServerData: (row, vars, qc) => {
+      qc.setQueriesData(
+        { queryKey: groupKeys.lists() },
+        updateInListCache<Group>(vars.id, row),
+      );
+      // Merge (not replace) so detail-only populated fields survive until refetch.
+      qc.setQueryData<Group>(groupKeys.detail(vars.id), (old) =>
+        old ? { ...old, ...row } : row,
       );
     },
   });
@@ -189,7 +210,8 @@ export function useAddGroupStudent() {
         lastName: string;
         phone?: string | null;
       };
-    }
+    },
+    { tempId: string }
   >({
     mutationFn: ({ groupId, dto }) => groupApi.addStudent(groupId, dto),
     keysToCancel: (v) => [
@@ -206,28 +228,37 @@ export function useAddGroupStudent() {
     optimisticUpdate: ({ groupId, student }, qc) => {
       adjustStudentsCount(qc, groupId, +1);
       // Instantly insert the new member into the group's member list cache.
-      if (student) {
-        qc.setQueriesData<GroupStudent[]>(
-          { queryKey: groupKeys.studentsAll(groupId) },
-          (old) => {
-            if (old?.some((m) => m.studentId === student.id)) return old;
-            const optimistic: GroupStudent = {
-              id: `optimistic-${student.id}`,
-              groupId,
-              studentId: student.id,
-              joinedAt: new Date().toISOString(),
-              leftAt: null,
-              student: {
-                id: student.id,
-                firstName: student.firstName,
-                lastName: student.lastName,
-                phone: student.phone ?? null,
-              },
-            };
-            return old ? [...old, optimistic] : [optimistic];
-          },
-        );
-      }
+      if (!student) return;
+      const tempId = makeOptimisticId();
+      qc.setQueriesData<GroupStudent[]>(
+        { queryKey: groupKeys.studentsAll(groupId) },
+        (old) => {
+          if (old?.some((m) => m.studentId === student.id)) return old;
+          const optimistic: GroupStudent = {
+            id: tempId,
+            groupId,
+            studentId: student.id,
+            joinedAt: new Date().toISOString(),
+            leftAt: null,
+            student: {
+              id: student.id,
+              firstName: student.firstName,
+              lastName: student.lastName,
+              phone: student.phone ?? null,
+            },
+          };
+          return old ? [...old, optimistic] : [optimistic];
+        },
+      );
+      return { tempId };
+    },
+    onServerData: (created, vars, qc, extra) => {
+      if (!extra?.tempId) return;
+      // Members live under studentsAll (NOT lists()) — swap on the same key.
+      qc.setQueriesData(
+        { queryKey: groupKeys.studentsAll(vars.groupId) },
+        replaceInListCache(extra.tempId, created),
+      );
     },
   });
 }

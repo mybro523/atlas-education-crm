@@ -25,7 +25,7 @@ import {
 } from '@/entities/finance-record';
 import { FinanceRecordFormModal } from '@/features/manage-finance-record';
 import { DateRangeFilter, type DateRange } from './DateRangeFilter';
-import { formatMoney, formatDate } from '@/shared/lib';
+import { formatMoney, formatDate, isOptimisticId } from '@/shared/lib';
 
 const PAGE_SIZE = 20;
 
@@ -82,6 +82,10 @@ export function RecordsView() {
 
   const confirmDelete = () => {
     if (!pendingDelete) return;
+    if (isOptimisticId(pendingDelete.id)) {
+      setPendingDelete(null);
+      return;
+    }
     deleteRecord.mutate(pendingDelete.id, {
       onSuccess: () => toast.success(t('finance.records.deleted')),
       onError: (err) =>
@@ -158,7 +162,9 @@ export function RecordsView() {
             variant="ghost"
             size="icon"
             aria-label={t('actions.edit')}
+            disabled={isOptimisticId(r.id)}
             onClick={() => {
+              if (isOptimisticId(r.id)) return;
               setEditing(r);
               setFormOpen(true);
             }}
@@ -170,7 +176,11 @@ export function RecordsView() {
             variant="ghost"
             size="icon"
             aria-label={t('actions.delete')}
-            onClick={() => setPendingDelete(r)}
+            disabled={isOptimisticId(r.id)}
+            onClick={() => {
+              if (isOptimisticId(r.id)) return;
+              setPendingDelete(r);
+            }}
             className="text-danger hover:bg-danger/10"
           >
             <Trash2 className="h-4 w-4" />

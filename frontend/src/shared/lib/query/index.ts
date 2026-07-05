@@ -3,6 +3,10 @@ export {
   insertIntoListCache,
   updateInListCache,
   removeFromListCache,
+  replaceInListCache,
+  makeOptimisticId,
+  isOptimisticId,
+  OPTIMISTIC_ID_PREFIX,
   type OptimisticMutationConfig,
 } from './useOptimisticMutation';
 export {

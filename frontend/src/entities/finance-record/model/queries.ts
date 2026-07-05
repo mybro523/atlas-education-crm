@@ -7,7 +7,9 @@ import {
 import {
   createQueryKeys,
   insertIntoListCache,
+  makeOptimisticId,
   removeFromListCache,
+  replaceInListCache,
   updateInListCache,
   useOptimisticMutation,
 } from '@/shared/lib/query';
@@ -61,13 +63,18 @@ function bumpAnalytics(
 }
 
 export function useCreateFinanceRecord() {
-  return useOptimisticMutation<FinanceRecord, CreateFinanceRecordDto>({
+  return useOptimisticMutation<
+    FinanceRecord,
+    CreateFinanceRecordDto,
+    { tempId: string }
+  >({
     mutationFn: (dto) => financeRecordApi.create(dto),
     keysToCancel: [financeRecordKeys.lists()],
     keysToInvalidate: [financeRecordKeys.lists(), ANALYTICS_KEY],
     optimisticUpdate: (dto, qc) => {
+      const tempId = makeOptimisticId();
       const optimistic: FinanceRecord = {
-        id: `optimistic-${Date.now()}`,
+        id: tempId,
         branchId: dto.branchId,
         type: dto.type,
         amount: dto.amount,
@@ -82,6 +89,14 @@ export function useCreateFinanceRecord() {
         insertIntoListCache(optimistic),
       );
       bumpAnalytics(qc, dto.type, dto.amount, 1);
+      return { tempId };
+    },
+    onServerData: (created, _dto, qc, extra) => {
+      if (!extra?.tempId) return;
+      qc.setQueriesData(
+        { queryKey: financeRecordKeys.lists() },
+        replaceInListCache(extra.tempId, created),
+      );
     },
   });
 }
@@ -106,6 +121,13 @@ export function useUpdateFinanceRecord() {
       qc.setQueryData<FinanceRecord>(financeRecordKeys.detail(id), (old) =>
         old ? { ...old, ...dto } : old,
       );
+    },
+    onServerData: (row, { id }, qc) => {
+      qc.setQueriesData(
+        { queryKey: financeRecordKeys.lists() },
+        updateInListCache<FinanceRecord>(id, row),
+      );
+      qc.setQueryData<FinanceRecord>(financeRecordKeys.detail(id), row);
     },
   });
 }

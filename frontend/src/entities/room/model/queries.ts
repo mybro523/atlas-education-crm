@@ -3,7 +3,9 @@ import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import {
   createQueryKeys,
   insertIntoListCache,
+  makeOptimisticId,
   removeFromListCache,
+  replaceInListCache,
   updateInListCache,
   useOptimisticMutation,
 } from '@/shared/lib/query';
@@ -34,13 +36,14 @@ export function useRoom(id: string | undefined) {
 }
 
 export function useCreateRoom() {
-  return useOptimisticMutation<Room, CreateRoomDto>({
+  return useOptimisticMutation<Room, CreateRoomDto, { tempId: string }>({
     mutationFn: (dto) => roomApi.create(dto),
     keysToCancel: [roomKeys.lists()],
     keysToInvalidate: [roomKeys.lists()],
     optimisticUpdate: (dto, qc) => {
+      const tempId = makeOptimisticId();
       const optimistic: Room = {
-        id: `optimistic-${Date.now()}`,
+        id: tempId,
         name: dto.name,
         branchId: dto.branchId ?? null,
         isActive: dto.isActive ?? true,
@@ -50,6 +53,14 @@ export function useCreateRoom() {
       qc.setQueriesData(
         { queryKey: roomKeys.lists() },
         insertIntoListCache(optimistic),
+      );
+      return { tempId };
+    },
+    onServerData: (created, _vars, qc, extra) => {
+      if (!extra?.tempId) return;
+      qc.setQueriesData(
+        { queryKey: roomKeys.lists() },
+        replaceInListCache(extra.tempId, created),
       );
     },
   });
@@ -68,6 +79,13 @@ export function useUpdateRoom() {
       qc.setQueryData<Room>(roomKeys.detail(id), (old) =>
         old ? { ...old, ...dto } : old,
       );
+    },
+    onServerData: (row, vars, qc) => {
+      qc.setQueriesData(
+        { queryKey: roomKeys.lists() },
+        updateInListCache<Room>(vars.id, row),
+      );
+      qc.setQueryData(roomKeys.detail(vars.id), row);
     },
   });
 }

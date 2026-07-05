@@ -3,6 +3,8 @@ import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import {
   createQueryKeys,
   insertIntoListCache,
+  makeOptimisticId,
+  replaceInListCache,
   useOptimisticMutation,
 } from '@/shared/lib/query';
 import { broadcastApi } from '../api';
@@ -34,13 +36,14 @@ export function useBroadcast(id: string | undefined) {
  * invalidation reconciles with the real record + delivery status.
  */
 export function useCreateBroadcast() {
-  return useOptimisticMutation<Broadcast, CreateBroadcastDto>({
+  return useOptimisticMutation<Broadcast, CreateBroadcastDto, { tempId: string }>({
     mutationFn: (dto) => broadcastApi.create(dto),
     keysToCancel: [broadcastKeys.lists()],
     keysToInvalidate: [broadcastKeys.lists()],
     optimisticUpdate: (dto, qc) => {
+      const tempId = makeOptimisticId();
       const optimistic: Broadcast = {
-        id: `optimistic-${Date.now()}`,
+        id: tempId,
         title: dto.title ?? null,
         text: dto.text,
         audience: dto.audience,
@@ -54,6 +57,14 @@ export function useCreateBroadcast() {
       qc.setQueriesData(
         { queryKey: broadcastKeys.lists() },
         insertIntoListCache(optimistic),
+      );
+      return { tempId };
+    },
+    onServerData: (created, _vars, qc, extra) => {
+      if (!extra?.tempId) return;
+      qc.setQueriesData(
+        { queryKey: broadcastKeys.lists() },
+        replaceInListCache(extra.tempId, created),
       );
     },
   });

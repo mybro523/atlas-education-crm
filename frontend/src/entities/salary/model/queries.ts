@@ -3,7 +3,9 @@ import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import {
   createQueryKeys,
   insertIntoListCache,
+  makeOptimisticId,
   removeFromListCache,
+  replaceInListCache,
   updateInListCache,
   useOptimisticMutation,
 } from '@/shared/lib/query';
@@ -48,13 +50,14 @@ export function useComputeSalary() {
 }
 
 export function useCreateSalary() {
-  return useOptimisticMutation<Salary, CreateSalaryDto>({
+  return useOptimisticMutation<Salary, CreateSalaryDto, { tempId: string }>({
     mutationFn: (dto) => salaryApi.create(dto),
     keysToCancel: [salaryKeys.lists()],
     keysToInvalidate: [salaryKeys.lists()],
     optimisticUpdate: (dto, qc) => {
+      const tempId = makeOptimisticId();
       const optimistic: Salary = {
-        id: `optimistic-${Date.now()}`,
+        id: tempId,
         teacherId: dto.teacherId ?? null,
         employeeId: dto.employeeId ?? null,
         basis: dto.basis,
@@ -68,6 +71,14 @@ export function useCreateSalary() {
       qc.setQueriesData(
         { queryKey: salaryKeys.lists() },
         insertIntoListCache(optimistic),
+      );
+      return { tempId };
+    },
+    onServerData: (created, _vars, qc, extra) => {
+      if (!extra?.tempId) return;
+      qc.setQueriesData(
+        { queryKey: salaryKeys.lists() },
+        replaceInListCache(extra.tempId, created),
       );
     },
   });
@@ -89,6 +100,13 @@ export function usePaySalary() {
         old ? { ...old, status: 'PAID', paidAt } : old,
       );
     },
+    onServerData: (row, vars, qc) => {
+      qc.setQueriesData(
+        { queryKey: salaryKeys.lists() },
+        updateInListCache<Salary>(vars.id, row),
+      );
+      qc.setQueryData(salaryKeys.detail(vars.id), row);
+    },
   });
 }
 
@@ -105,6 +123,13 @@ export function useUpdateSalary() {
       qc.setQueryData<Salary>(salaryKeys.detail(id), (old) =>
         old ? { ...old, ...dto } : old,
       );
+    },
+    onServerData: (row, vars, qc) => {
+      qc.setQueriesData(
+        { queryKey: salaryKeys.lists() },
+        updateInListCache<Salary>(vars.id, row),
+      );
+      qc.setQueryData(salaryKeys.detail(vars.id), row);
     },
   });
 }

@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { MessageSquare, Trash2, X } from 'lucide-react';
 
 import { cn } from '@/shared/lib/cn';
+import { isOptimisticId } from '@/shared/lib';
 import { Modal, Button, Textarea, Spinner, useToast } from '@/shared/ui';
 import type { AttendanceStatus, JournalCell } from '@/entities/grade';
 import { useGradeEntry, GRADE_VALUES } from '@/features/grade-entry';
@@ -84,6 +85,12 @@ export function CellEditor({ open, onClose, canEdit, context }: CellEditorProps)
       onSuccess: () => setRemarkText(''),
       onError,
     });
+  };
+
+  const handleRemoveRemark = (remarkId: string) => {
+    // Optimistically created remarks carry a temp id the API doesn't know yet.
+    if (isOptimisticId(remarkId)) return;
+    remarkEntry.removeRemark(remarkId, { onError });
   };
 
   return (
@@ -190,12 +197,11 @@ export function CellEditor({ open, onClose, canEdit, context }: CellEditorProps)
                 {canEdit && (
                   <button
                     type="button"
-                    onClick={() =>
-                      remarkEntry.removeRemark(remark.id, { onError })
-                    }
+                    disabled={isOptimisticId(remark.id)}
+                    onClick={() => handleRemoveRemark(remark.id)}
                     aria-label={t('common.delete')}
                     title={t('common.delete')}
-                    className="shrink-0 rounded-md p-1 text-foreground-muted transition-colors hover:bg-danger/10 hover:text-danger focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    className="shrink-0 rounded-md p-1 text-foreground-muted transition-colors hover:bg-danger/10 hover:text-danger focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     <Trash2 className="h-3.5 w-3.5" />
                   </button>

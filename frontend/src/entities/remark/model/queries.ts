@@ -3,7 +3,9 @@ import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import {
   createQueryKeys,
   insertIntoListCache,
+  makeOptimisticId,
   removeFromListCache,
+  replaceInListCache,
   useOptimisticMutation,
 } from '@/shared/lib/query';
 import { remarkApi } from '../api';
@@ -20,13 +22,14 @@ export function useRemarks(params?: RemarkListParams) {
 }
 
 export function useCreateRemark() {
-  return useOptimisticMutation<Remark, CreateRemarkDto>({
+  return useOptimisticMutation<Remark, CreateRemarkDto, { tempId: string }>({
     mutationFn: (dto) => remarkApi.create(dto),
     keysToCancel: [remarkKeys.lists()],
     keysToInvalidate: [remarkKeys.lists()],
     optimisticUpdate: (dto, qc) => {
+      const tempId = makeOptimisticId();
       const optimistic: Remark = {
-        id: `optimistic-${Date.now()}`,
+        id: tempId,
         studentId: dto.studentId,
         lessonId: dto.lessonId ?? null,
         text: dto.text,
@@ -36,6 +39,14 @@ export function useCreateRemark() {
       qc.setQueriesData(
         { queryKey: remarkKeys.lists() },
         insertIntoListCache(optimistic),
+      );
+      return { tempId };
+    },
+    onServerData: (created, _vars, qc, extra) => {
+      if (!extra?.tempId) return;
+      qc.setQueriesData(
+        { queryKey: remarkKeys.lists() },
+        replaceInListCache(extra.tempId, created),
       );
     },
   });

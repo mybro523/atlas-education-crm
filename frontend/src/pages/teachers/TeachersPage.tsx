@@ -13,6 +13,7 @@ import {
   type DataTableColumn,
 } from '@/shared/ui';
 import { useDebouncedValue } from '@/shared/lib/hooks';
+import { isOptimisticId } from '@/shared/lib';
 import { extractErrorMessage } from '@/shared/api';
 import { useBranches } from '@/entities/branch';
 import {
@@ -65,13 +66,23 @@ export function TeachersPage() {
     setFormOpen(true);
   };
   const openEdit = (teacher: Teacher) => {
+    if (isOptimisticId(teacher.id)) return;
     setEditing(teacher);
     setFormOpen(true);
+  };
+
+  const requestDelete = (teacher: Teacher) => {
+    if (isOptimisticId(teacher.id)) return;
+    setPendingDelete(teacher);
   };
 
   const confirmDelete = () => {
     if (!pendingDelete) return;
     const teacher = pendingDelete;
+    if (isOptimisticId(teacher.id)) {
+      setPendingDelete(null);
+      return;
+    }
     deleteTeacher.mutate(teacher.id, {
       onSuccess: () => toast.success(t('teachers.deleted')),
       onError: (err) =>
@@ -127,6 +138,7 @@ export function TeachersPage() {
             variant="ghost"
             size="icon"
             aria-label={t('actions.edit')}
+            disabled={isOptimisticId(teacher.id)}
             onClick={() => openEdit(teacher)}
           >
             <Pencil className="h-4 w-4" />
@@ -136,7 +148,8 @@ export function TeachersPage() {
             variant="ghost"
             size="icon"
             aria-label={t('actions.delete')}
-            onClick={() => setPendingDelete(teacher)}
+            disabled={isOptimisticId(teacher.id)}
+            onClick={() => requestDelete(teacher)}
             className="text-danger hover:bg-danger/10"
           >
             <Trash2 className="h-4 w-4" />

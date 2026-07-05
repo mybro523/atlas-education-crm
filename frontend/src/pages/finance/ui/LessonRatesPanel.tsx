@@ -21,7 +21,7 @@ import {
   type LessonRate,
 } from '@/entities/lesson-rate';
 import { LessonRateFormModal } from '@/features/compute-salary';
-import { formatMoney } from '@/shared/lib';
+import { formatMoney, isOptimisticId } from '@/shared/lib';
 
 /**
  * Lesson pay-rate dictionary (API_CONTRACT §14.2). Global or per-group rates
@@ -47,6 +47,7 @@ export function LessonRatesPanel() {
 
   const confirmDelete = () => {
     if (!pendingDelete) return;
+    if (isOptimisticId(pendingDelete.id)) return;
     deleteRate.mutate(pendingDelete.id, {
       onSuccess: () => toast.success(t('finance.rates.deleted')),
       onError: (err) =>
@@ -99,7 +100,9 @@ export function LessonRatesPanel() {
             variant="ghost"
             size="icon"
             aria-label={t('actions.edit')}
+            disabled={isOptimisticId(r.id)}
             onClick={() => {
+              if (isOptimisticId(r.id)) return;
               setEditing(r);
               setFormOpen(true);
             }}
@@ -111,7 +114,11 @@ export function LessonRatesPanel() {
             variant="ghost"
             size="icon"
             aria-label={t('actions.delete')}
-            onClick={() => setPendingDelete(r)}
+            disabled={isOptimisticId(r.id)}
+            onClick={() => {
+              if (isOptimisticId(r.id)) return;
+              setPendingDelete(r);
+            }}
             className="text-danger hover:bg-danger/10"
           >
             <Trash2 className="h-4 w-4" />

@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next';
 import { Check, Clock, MapPin, Pencil, Trash2, Undo2, User } from 'lucide-react';
 
 import { cn } from '@/shared/lib/cn';
+import { isOptimisticId } from '@/shared/lib';
 import { Badge } from '@/shared/ui';
 import type { Lesson } from '@/entities/lesson';
 import type { LessonView } from '@/features/schedule-editor';
@@ -30,6 +31,9 @@ export function LessonCard({
   onDelete,
 }: LessonCardProps) {
   const { t } = useTranslation();
+  // Row still carries a temp optimistic id — block id-carrying actions until
+  // the real server row lands (prevents 404s + rollbacks).
+  const isPending = isOptimisticId(lesson.id);
 
   return (
     <div
@@ -83,6 +87,7 @@ export function LessonCard({
             <>
               <button
                 type="button"
+                disabled={isPending}
                 onClick={() => onConduct(lesson)}
                 aria-label={
                   lesson.isConducted
@@ -109,6 +114,7 @@ export function LessonCard({
               </button>
               <button
                 type="button"
+                disabled={isPending}
                 onClick={() => onEdit(lesson)}
                 aria-label={t('common.edit')}
                 title={t('common.edit')}
@@ -121,6 +127,7 @@ export function LessonCard({
           {canDelete && (
             <button
               type="button"
+              disabled={isPending}
               onClick={() => onDelete(lesson)}
               aria-label={t('common.delete')}
               title={t('common.delete')}

@@ -15,6 +15,7 @@ import {
   type DataTableColumn,
 } from '@/shared/ui';
 import { ROLES } from '@/shared/config';
+import { isOptimisticId } from '@/shared/lib';
 import { useSessionStore, selectRole } from '@/entities/session';
 import { useBranches } from '@/entities/branch';
 import {
@@ -59,12 +60,14 @@ export function RoomsPage() {
     setFormOpen(true);
   };
   const openEdit = (room: Room) => {
+    if (isOptimisticId(room.id)) return;
     setEditing(room);
     setFormOpen(true);
   };
 
   const confirmDelete = () => {
     if (!deleting) return;
+    if (isOptimisticId(deleting.id)) return;
     deleteRoom.mutate(deleting.id, {
       onSuccess: () => toast.success(t('crud.deleted')),
       onError: () => toast.error(t('crud.deleteError')),
@@ -134,6 +137,7 @@ export function RoomsPage() {
               variant="ghost"
               size="icon"
               aria-label={t('crud.edit')}
+              disabled={isOptimisticId(r.id)}
               onClick={() => openEdit(r)}
             >
               <Pencil className="h-4 w-4" />
@@ -142,6 +146,7 @@ export function RoomsPage() {
               variant="ghost"
               size="icon"
               aria-label={t('crud.delete')}
+              disabled={isOptimisticId(r.id)}
               onClick={() => setDeleting(r)}
             >
               <Trash2 className="h-4 w-4 text-danger" />

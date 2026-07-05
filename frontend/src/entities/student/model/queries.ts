@@ -3,7 +3,9 @@ import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import {
   createQueryKeys,
   insertIntoListCache,
+  makeOptimisticId,
   removeFromListCache,
+  replaceInListCache,
   updateInListCache,
   useOptimisticMutation,
 } from '@/shared/lib/query';
@@ -49,13 +51,14 @@ export function useStudentParents(studentId: string | undefined) {
 }
 
 export function useCreateStudent() {
-  return useOptimisticMutation<Student, CreateStudentDto>({
+  return useOptimisticMutation<Student, CreateStudentDto, { tempId: string }>({
     mutationFn: (dto) => studentApi.create(dto),
     keysToCancel: [studentKeys.lists()],
     keysToInvalidate: [studentKeys.lists()],
     optimisticUpdate: (dto, qc) => {
+      const tempId = makeOptimisticId();
       const optimistic: Student = {
-        id: `optimistic-${Date.now()}`,
+        id: tempId,
         firstName: dto.firstName,
         lastName: dto.lastName,
         middleName: dto.middleName ?? null,
@@ -77,6 +80,14 @@ export function useCreateStudent() {
         { queryKey: studentKeys.lists() },
         insertIntoListCache(optimistic),
       );
+      return { tempId };
+    },
+    onServerData: (created, _vars, qc, extra) => {
+      if (!extra?.tempId) return;
+      qc.setQueriesData(
+        { queryKey: studentKeys.lists() },
+        replaceInListCache(extra.tempId, created),
+      );
     },
   });
 }
@@ -94,6 +105,13 @@ export function useUpdateStudent() {
       qc.setQueryData<Student>(studentKeys.detail(id), (old) =>
         old ? { ...old, ...dto } : old,
       );
+    },
+    onServerData: (row, vars, qc) => {
+      qc.setQueriesData(
+        { queryKey: studentKeys.lists() },
+        updateInListCache<Student>(vars.id, row),
+      );
+      qc.setQueryData<Student>(studentKeys.detail(vars.id), row);
     },
   });
 }
@@ -117,7 +135,8 @@ export function useDeleteStudent() {
 export function useAddParent() {
   return useOptimisticMutation<
     Parent,
-    { studentId: string; dto: CreateParentDto }
+    { studentId: string; dto: CreateParentDto },
+    { tempId: string }
   >({
     mutationFn: ({ studentId, dto }) => studentApi.addParent(studentId, dto),
     keysToCancel: (v) => [studentKeys.parents(v.studentId)],
@@ -126,8 +145,9 @@ export function useAddParent() {
       studentKeys.detail(v.studentId),
     ],
     optimisticUpdate: ({ studentId, dto }, qc) => {
+      const tempId = makeOptimisticId();
       const optimistic: Parent = {
-        id: `optimistic-${Date.now()}`,
+        id: tempId,
         studentId,
         firstName: dto.firstName,
         lastName: dto.lastName,
@@ -138,6 +158,13 @@ export function useAddParent() {
       };
       qc.setQueryData<Parent[]>(studentKeys.parents(studentId), (old) =>
         old ? [...old, optimistic] : [optimistic],
+      );
+      return { tempId };
+    },
+    onServerData: (created, vars, qc, extra) => {
+      if (!extra?.tempId) return;
+      qc.setQueryData<Parent[]>(studentKeys.parents(vars.studentId), (old) =>
+        old?.map((p) => (p.id === extra.tempId ? created : p)),
       );
     },
   });
@@ -158,6 +185,11 @@ export function useUpdateParent() {
     optimisticUpdate: ({ studentId, parentId, dto }, qc) => {
       qc.setQueryData<Parent[]>(studentKeys.parents(studentId), (old) =>
         old?.map((p) => (p.id === parentId ? { ...p, ...dto } : p)),
+      );
+    },
+    onServerData: (row, vars, qc) => {
+      qc.setQueryData<Parent[]>(studentKeys.parents(vars.studentId), (old) =>
+        old?.map((p) => (p.id === vars.parentId ? row : p)),
       );
     },
   });

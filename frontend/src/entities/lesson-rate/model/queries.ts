@@ -3,7 +3,9 @@ import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import {
   createQueryKeys,
   insertIntoListCache,
+  makeOptimisticId,
   removeFromListCache,
+  replaceInListCache,
   updateInListCache,
   useOptimisticMutation,
 } from '@/shared/lib/query';
@@ -34,13 +36,18 @@ export function useLessonRate(id: string | undefined) {
 }
 
 export function useCreateLessonRate() {
-  return useOptimisticMutation<LessonRate, CreateLessonRateDto>({
+  return useOptimisticMutation<
+    LessonRate,
+    CreateLessonRateDto,
+    { tempId: string }
+  >({
     mutationFn: (dto) => lessonRateApi.create(dto),
     keysToCancel: [lessonRateKeys.lists()],
     keysToInvalidate: [lessonRateKeys.lists()],
     optimisticUpdate: (dto, qc) => {
+      const tempId = makeOptimisticId();
       const optimistic: LessonRate = {
-        id: `optimistic-${Date.now()}`,
+        id: tempId,
         groupId: dto.groupId ?? null,
         name: dto.name ?? null,
         amount: dto.amount,
@@ -50,6 +57,14 @@ export function useCreateLessonRate() {
       qc.setQueriesData(
         { queryKey: lessonRateKeys.lists() },
         insertIntoListCache(optimistic),
+      );
+      return { tempId };
+    },
+    onServerData: (created, _vars, qc, extra) => {
+      if (!extra?.tempId) return;
+      qc.setQueriesData(
+        { queryKey: lessonRateKeys.lists() },
+        replaceInListCache(extra.tempId, created),
       );
     },
   });
@@ -71,6 +86,13 @@ export function useUpdateLessonRate() {
       qc.setQueryData<LessonRate>(lessonRateKeys.detail(id), (old) =>
         old ? { ...old, ...dto } : old,
       );
+    },
+    onServerData: (row, vars, qc) => {
+      qc.setQueriesData(
+        { queryKey: lessonRateKeys.lists() },
+        updateInListCache<LessonRate>(vars.id, row),
+      );
+      qc.setQueryData(lessonRateKeys.detail(vars.id), row);
     },
   });
 }

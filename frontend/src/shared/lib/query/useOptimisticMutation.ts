@@ -38,6 +38,20 @@ export interface OptimisticMutationConfig<TData, TVars, TContext = unknown> {
     variables: TVars,
     queryClient: ReturnType<typeof useQueryClient>,
   ) => TContext | void;
+  /**
+   * Reconcile the cache with the REAL server response the moment the mutation
+   * succeeds — before the `keysToInvalidate` refetch lands. The critical use is
+   * replacing a temporary `optimistic-*` row with the server row (real id) so
+   * follow-up actions (edit / delete / pay) never send a fake id to the API,
+   * no matter how fast the user clicks. Receives the `optimisticUpdate` return
+   * value (e.g. the temp id) as `extra`.
+   */
+  onServerData?: (
+    data: TData,
+    variables: TVars,
+    queryClient: ReturnType<typeof useQueryClient>,
+    extra: TContext | undefined,
+  ) => void;
   /** Extra options forwarded to `useMutation` (onSuccess, etc.). */
   options?: Omit<
     UseMutationOptions<TData, unknown, TVars, OptimisticContext>,
@@ -65,6 +79,7 @@ export function useOptimisticMutation<TData, TVars, TContext = unknown>(
   const queryClient = useQueryClient();
 
   return useMutation<TData, unknown, TVars, OptimisticContext>({
+    ...config.options,
     mutationFn: config.mutationFn,
     onMutate: async (variables) => {
       const cancelKeys = resolveKeys(config.keysToCancel, variables);
@@ -88,6 +103,19 @@ export function useOptimisticMutation<TData, TVars, TContext = unknown>(
 
       return { snapshots, extra: extra ?? undefined };
     },
+    onSuccess: (...args) => {
+      // Reconcile the cache with server truth IMMEDIATELY (e.g. swap the temp
+      // `optimistic-*` row for the real one) so rapid follow-up actions always
+      // operate on a real id — then forward to any caller-provided onSuccess.
+      const [data, variables, context] = args;
+      config.onServerData?.(
+        data,
+        variables,
+        queryClient,
+        context?.extra as TContext | undefined,
+      );
+      config.options?.onSuccess?.(...args);
+    },
     onError: (_error, _variables, context) => {
       // Roll every snapshot back to its pre-mutation value.
       context?.snapshots.forEach(([key, data]) => {
@@ -100,7 +128,6 @@ export function useOptimisticMutation<TData, TVars, TContext = unknown>(
         void queryClient.invalidateQueries({ queryKey: key });
       });
     },
-    ...config.options,
   });
 }
 
@@ -115,6 +142,30 @@ export function useOptimisticMutation<TData, TVars, TContext = unknown>(
  *     qc.setQueriesData({ queryKey: studentKeys.lists() },
  *       insertIntoListCache(optimisticStudent)),
  * ------------------------------------------------------------------ */
+
+/* ------------------------------------------------------------------ *
+ * Temporary optimistic ids.
+ *
+ * A row inserted optimistically carries a fake id until the server row
+ * replaces it (via `onServerData` + `replaceInListCache`). Actions that hit
+ * the API with an id (edit / delete / pay / navigate) MUST NOT fire while a
+ * row is still optimistic — gate them with `isOptimisticId`.
+ * ------------------------------------------------------------------ */
+
+export const OPTIMISTIC_ID_PREFIX = 'optimistic-';
+
+let optimisticSeq = 0;
+
+/** Unique temp id — a per-session counter avoids same-millisecond collisions. */
+export function makeOptimisticId(): string {
+  optimisticSeq += 1;
+  return `${OPTIMISTIC_ID_PREFIX}${Date.now()}-${optimisticSeq}`;
+}
+
+/** True when `id` is a not-yet-persisted optimistic placeholder. */
+export function isOptimisticId(id: string | null | undefined): boolean {
+  return typeof id === 'string' && id.startsWith(OPTIMISTIC_ID_PREFIX);
+}
 
 type ListEnvelope<T> = { items: T[] } & Record<string, unknown>;
 
@@ -159,5 +210,21 @@ export function removeFromListCache<T extends object>(
   return (current: unknown): unknown =>
     mapListCache<T>(current, (items) =>
       items.filter((item) => item[idField] !== id),
+    );
+}
+
+/**
+ * Swap the temporary optimistic row for the REAL server row (same position).
+ * Wire it via `onServerData` on create mutations so the fake id disappears the
+ * moment the server responds — not seconds later when the refetch lands.
+ */
+export function replaceInListCache<T extends object>(
+  tempId: string,
+  serverItem: T,
+  idField: keyof T = 'id' as keyof T,
+) {
+  return (current: unknown): unknown =>
+    mapListCache<T>(current, (items) =>
+      items.map((item) => (item[idField] === tempId ? serverItem : item)),
     );
 }

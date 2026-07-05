@@ -24,7 +24,7 @@ import {
 } from '@/entities/salary';
 import { ComputeSalaryModal } from '@/features/compute-salary';
 import { LessonRatesPanel } from './LessonRatesPanel';
-import { formatMoney, formatPeriod } from '@/shared/lib';
+import { formatMoney, formatPeriod, isOptimisticId } from '@/shared/lib';
 
 const PAGE_SIZE = 20;
 
@@ -78,6 +78,7 @@ export function SalariesView() {
   const resetPage = () => setPage(1);
 
   const handlePay = (salary: Salary) => {
+    if (isOptimisticId(salary.id)) return;
     paySalary.mutate(
       { id: salary.id },
       {
@@ -90,6 +91,7 @@ export function SalariesView() {
 
   const confirmDelete = () => {
     if (!pendingDelete) return;
+    if (isOptimisticId(pendingDelete.id)) return;
     deleteSalary.mutate(pendingDelete.id, {
       onSuccess: () => toast.success(t('finance.salaries.deleted')),
       onError: (err) =>
@@ -163,6 +165,7 @@ export function SalariesView() {
               size="icon"
               aria-label={t('finance.salaries.markPaid')}
               title={t('finance.salaries.markPaid')}
+              disabled={isOptimisticId(s.id)}
               onClick={() => handlePay(s)}
               className="text-success hover:bg-success/10"
             >
@@ -174,6 +177,7 @@ export function SalariesView() {
             variant="ghost"
             size="icon"
             aria-label={t('actions.delete')}
+            disabled={isOptimisticId(s.id)}
             onClick={() => setPendingDelete(s)}
             className="text-danger hover:bg-danger/10"
           >

@@ -3,7 +3,9 @@ import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import {
   createQueryKeys,
   insertIntoListCache,
+  makeOptimisticId,
   removeFromListCache,
+  replaceInListCache,
   updateInListCache,
   useOptimisticMutation,
 } from '@/shared/lib/query';
@@ -34,13 +36,14 @@ export function useTeacher(id: string | undefined) {
 }
 
 export function useCreateTeacher() {
-  return useOptimisticMutation<Teacher, CreateTeacherDto>({
+  return useOptimisticMutation<Teacher, CreateTeacherDto, { tempId: string }>({
     mutationFn: (dto) => teacherApi.create(dto),
     keysToCancel: [teacherKeys.lists()],
     keysToInvalidate: [teacherKeys.lists()],
     optimisticUpdate: (dto, qc) => {
+      const tempId = makeOptimisticId();
       const optimistic: Teacher = {
-        id: `optimistic-${Date.now()}`,
+        id: tempId,
         firstName: dto.firstName,
         lastName: dto.lastName,
         middleName: dto.middleName ?? null,
@@ -59,6 +62,14 @@ export function useCreateTeacher() {
         { queryKey: teacherKeys.lists() },
         insertIntoListCache(optimistic),
       );
+      return { tempId };
+    },
+    onServerData: (created, _vars, qc, extra) => {
+      if (!extra?.tempId) return;
+      qc.setQueriesData(
+        { queryKey: teacherKeys.lists() },
+        replaceInListCache(extra.tempId, created),
+      );
     },
   });
 }
@@ -76,6 +87,13 @@ export function useUpdateTeacher() {
       qc.setQueryData<Teacher>(teacherKeys.detail(id), (old) =>
         old ? { ...old, ...dto } : old,
       );
+    },
+    onServerData: (row, vars, qc) => {
+      qc.setQueriesData(
+        { queryKey: teacherKeys.lists() },
+        updateInListCache<Teacher>(vars.id, row),
+      );
+      qc.setQueryData(teacherKeys.detail(vars.id), row);
     },
   });
 }

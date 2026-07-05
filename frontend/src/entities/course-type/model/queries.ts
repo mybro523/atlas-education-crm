@@ -3,7 +3,9 @@ import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import {
   createQueryKeys,
   insertIntoListCache,
+  makeOptimisticId,
   removeFromListCache,
+  replaceInListCache,
   updateInListCache,
   useOptimisticMutation,
 } from '@/shared/lib/query';
@@ -34,13 +36,18 @@ export function useCourseType(id: string | undefined) {
 }
 
 export function useCreateCourseType() {
-  return useOptimisticMutation<CourseType, CreateCourseTypeDto>({
+  return useOptimisticMutation<
+    CourseType,
+    CreateCourseTypeDto,
+    { tempId: string }
+  >({
     mutationFn: (dto) => courseTypeApi.create(dto),
     keysToCancel: [courseTypeKeys.lists()],
     keysToInvalidate: [courseTypeKeys.lists()],
     optimisticUpdate: (dto, qc) => {
+      const tempId = makeOptimisticId();
       const optimistic: CourseType = {
-        id: `optimistic-${Date.now()}`,
+        id: tempId,
         name: dto.name,
         isActive: dto.isActive ?? true,
         createdAt: new Date().toISOString(),
@@ -49,6 +56,14 @@ export function useCreateCourseType() {
       qc.setQueriesData(
         { queryKey: courseTypeKeys.lists() },
         insertIntoListCache(optimistic),
+      );
+      return { tempId };
+    },
+    onServerData: (created, _vars, qc, extra) => {
+      if (!extra?.tempId) return;
+      qc.setQueriesData(
+        { queryKey: courseTypeKeys.lists() },
+        replaceInListCache(extra.tempId, created),
       );
     },
   });
@@ -70,6 +85,13 @@ export function useUpdateCourseType() {
       qc.setQueryData<CourseType>(courseTypeKeys.detail(id), (old) =>
         old ? { ...old, ...dto } : old,
       );
+    },
+    onServerData: (row, vars, qc) => {
+      qc.setQueriesData(
+        { queryKey: courseTypeKeys.lists() },
+        updateInListCache<CourseType>(vars.id, row),
+      );
+      qc.setQueryData(courseTypeKeys.detail(vars.id), row);
     },
   });
 }

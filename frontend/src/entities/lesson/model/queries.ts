@@ -3,7 +3,9 @@ import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import {
   createQueryKeys,
   insertIntoListCache,
+  makeOptimisticId,
   removeFromListCache,
+  replaceInListCache,
   updateInListCache,
   useOptimisticMutation,
 } from '@/shared/lib/query';
@@ -40,13 +42,14 @@ export function useLesson(id: string | undefined) {
 }
 
 export function useCreateLesson() {
-  return useOptimisticMutation<Lesson, CreateLessonDto>({
+  return useOptimisticMutation<Lesson, CreateLessonDto, { tempId: string }>({
     mutationFn: (dto) => lessonApi.create(dto),
     keysToCancel: [lessonKeys.lists()],
     keysToInvalidate: [lessonKeys.lists()],
     optimisticUpdate: (dto, qc) => {
+      const tempId = makeOptimisticId();
       const optimistic: Lesson = {
-        id: `optimistic-${Date.now()}`,
+        id: tempId,
         groupId: dto.groupId,
         teacherId: dto.teacherId ?? null,
         roomId: dto.roomId ?? null,
@@ -61,6 +64,14 @@ export function useCreateLesson() {
       qc.setQueriesData(
         { queryKey: lessonKeys.lists() },
         insertIntoListCache(optimistic),
+      );
+      return { tempId };
+    },
+    onServerData: (created, _vars, qc, extra) => {
+      if (!extra?.tempId) return;
+      qc.setQueriesData(
+        { queryKey: lessonKeys.lists() },
+        replaceInListCache(extra.tempId, created),
       );
     },
   });
@@ -79,6 +90,13 @@ export function useUpdateLesson() {
       qc.setQueryData<Lesson>(lessonKeys.detail(id), (old) =>
         old ? { ...old, ...dto } : old,
       );
+    },
+    onServerData: (row, vars, qc) => {
+      qc.setQueriesData(
+        { queryKey: lessonKeys.lists() },
+        updateInListCache<Lesson>(vars.id, row),
+      );
+      qc.setQueryData(lessonKeys.detail(vars.id), row);
     },
   });
 }
@@ -111,6 +129,13 @@ export function useConductLesson() {
       qc.setQueryData<Lesson>(lessonKeys.detail(id), (old) =>
         old ? { ...old, isConducted: dto.isConducted } : old,
       );
+    },
+    onServerData: (row, vars, qc) => {
+      qc.setQueriesData(
+        { queryKey: lessonKeys.lists() },
+        updateInListCache<Lesson>(vars.id, row),
+      );
+      qc.setQueryData(lessonKeys.detail(vars.id), row);
     },
   });
 }

@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next';
 import { Plus } from 'lucide-react';
 
 import { cn } from '@/shared/lib/cn';
+import { isOptimisticId } from '@/shared/lib';
 import type { Lesson } from '@/entities/lesson';
 import {
   isSameDay,
@@ -123,6 +124,7 @@ export function MonthGrid({
                     <button
                       key={lesson.id}
                       type="button"
+                      disabled={isOptimisticId(lesson.id)}
                       onClick={() => onEditLesson(lesson)}
                       title={`${view.timeLabel} · ${view.courseName}`}
                       className={cn(

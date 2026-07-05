@@ -13,6 +13,7 @@ import {
   type DataTableColumn,
 } from '@/shared/ui';
 import { useDebouncedValue } from '@/shared/lib/hooks';
+import { isOptimisticId } from '@/shared/lib';
 import { extractErrorMessage } from '@/shared/api';
 import { useBranches } from '@/entities/branch';
 import {
@@ -83,12 +84,14 @@ export function StudentsPage() {
     setFormOpen(true);
   };
   const openEdit = (student: Student) => {
+    if (isOptimisticId(student.id)) return;
     setEditing(student);
     setFormOpen(true);
   };
 
   const confirmDelete = () => {
     if (!pendingDelete) return;
+    if (isOptimisticId(pendingDelete.id)) return;
     deleteStudent.mutate(pendingDelete.id, {
       onSuccess: () => toast.success(t('students.deleted')),
       onError: (err) =>
@@ -185,8 +188,10 @@ export function StudentsPage() {
             variant="ghost"
             size="icon"
             aria-label={t('payments.record')}
+            disabled={isOptimisticId(student.id)}
             onClick={(e) => {
               e.stopPropagation();
+              if (isOptimisticId(student.id)) return;
               setPayingStudent(student);
             }}
           >
@@ -197,6 +202,7 @@ export function StudentsPage() {
             variant="ghost"
             size="icon"
             aria-label={t('actions.edit')}
+            disabled={isOptimisticId(student.id)}
             onClick={(e) => {
               e.stopPropagation();
               openEdit(student);
@@ -209,8 +215,10 @@ export function StudentsPage() {
             variant="ghost"
             size="icon"
             aria-label={t('actions.delete')}
+            disabled={isOptimisticId(student.id)}
             onClick={(e) => {
               e.stopPropagation();
+              if (isOptimisticId(student.id)) return;
               setPendingDelete(student);
             }}
             className="text-danger hover:bg-danger/10"

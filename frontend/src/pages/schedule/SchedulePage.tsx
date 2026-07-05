@@ -19,6 +19,7 @@ import {
   useToast,
 } from '@/shared/ui';
 import { cn } from '@/shared/lib/cn';
+import { isOptimisticId } from '@/shared/lib';
 import {
   useConductLesson,
   useDeleteLesson,
@@ -185,11 +186,13 @@ export function SchedulePage() {
     setFormOpen(true);
   };
   const openEdit = (lesson: Lesson) => {
+    if (isOptimisticId(lesson.id)) return;
     setEditing(lesson);
     setFormOpen(true);
   };
 
   const handleConduct = (lesson: Lesson) => {
+    if (isOptimisticId(lesson.id)) return;
     const next = !lesson.isConducted;
     conductLesson.mutate(
       { id: lesson.id, dto: { isConducted: next } },
@@ -207,6 +210,7 @@ export function SchedulePage() {
 
   const handleDelete = () => {
     if (!deleting) return;
+    if (isOptimisticId(deleting.id)) return;
     deleteLesson.mutate(deleting.id, {
       onSuccess: () => toast.success(t('schedule.deletedToast')),
       onError: () => toast.error(t('schedule.saveError')),

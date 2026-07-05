@@ -21,6 +21,7 @@ import {
   type CourseTypeListParams,
 } from '@/entities/course-type';
 import { CourseTypeFormModal } from '@/features/manage-course-type';
+import { isOptimisticId } from '@/shared/lib';
 
 type ActiveFilter = 'all' | 'active' | 'inactive';
 
@@ -47,12 +48,14 @@ export function CourseTypesPage() {
     setFormOpen(true);
   };
   const openEdit = (ct: CourseType) => {
+    if (isOptimisticId(ct.id)) return;
     setEditing(ct);
     setFormOpen(true);
   };
 
   const confirmDelete = () => {
     if (!deleting) return;
+    if (isOptimisticId(deleting.id)) return;
     deleteCourseType.mutate(deleting.id, {
       onSuccess: () => toast.success(t('crud.deleted')),
       onError: () => toast.error(t('crud.deleteError')),
@@ -96,6 +99,7 @@ export function CourseTypesPage() {
               variant="ghost"
               size="icon"
               aria-label={t('crud.edit')}
+              disabled={isOptimisticId(ct.id)}
               onClick={() => openEdit(ct)}
             >
               <Pencil className="h-4 w-4" />
@@ -104,6 +108,7 @@ export function CourseTypesPage() {
               variant="ghost"
               size="icon"
               aria-label={t('crud.delete')}
+              disabled={isOptimisticId(ct.id)}
               onClick={() => setDeleting(ct)}
             >
               <Trash2 className="h-4 w-4 text-danger" />

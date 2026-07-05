@@ -3,7 +3,9 @@ import { useQuery } from '@tanstack/react-query';
 import {
   createQueryKeys,
   insertIntoListCache,
+  makeOptimisticId,
   removeFromListCache,
+  replaceInListCache,
   updateInListCache,
   useOptimisticMutation,
 } from '@/shared/lib/query';
@@ -28,13 +30,14 @@ export function useBranch(id: string | undefined) {
 }
 
 export function useCreateBranch() {
-  return useOptimisticMutation<Branch, CreateBranchDto>({
+  return useOptimisticMutation<Branch, CreateBranchDto, { tempId: string }>({
     mutationFn: (dto) => branchApi.create(dto),
     keysToCancel: [branchKeys.lists()],
     keysToInvalidate: [branchKeys.lists()],
     optimisticUpdate: (dto, qc) => {
+      const tempId = makeOptimisticId();
       const optimistic: Branch = {
-        id: `optimistic-${Date.now()}`,
+        id: tempId,
         name: dto.name,
         address: dto.address ?? null,
         phone: dto.phone ?? null,
@@ -44,6 +47,14 @@ export function useCreateBranch() {
       qc.setQueriesData(
         { queryKey: branchKeys.lists() },
         insertIntoListCache(optimistic),
+      );
+      return { tempId };
+    },
+    onServerData: (created, _vars, qc, extra) => {
+      if (!extra?.tempId) return;
+      qc.setQueriesData(
+        { queryKey: branchKeys.lists() },
+        replaceInListCache(extra.tempId, created),
       );
     },
   });
@@ -62,6 +73,13 @@ export function useUpdateBranch() {
       qc.setQueryData<Branch>(branchKeys.detail(id), (old) =>
         old ? { ...old, ...dto } : old,
       );
+    },
+    onServerData: (row, vars, qc) => {
+      qc.setQueriesData(
+        { queryKey: branchKeys.lists() },
+        updateInListCache<Branch>(vars.id, row),
+      );
+      qc.setQueryData(branchKeys.detail(vars.id), row);
     },
   });
 }

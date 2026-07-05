@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { Plus, Search, Pencil, Trash2, Boxes } from 'lucide-react';
 
 import { ROUTES } from '@/shared/config';
+import { isOptimisticId } from '@/shared/lib';
 import { useDebouncedValue } from '@/shared/lib/hooks';
 import {
   PageHeader,
@@ -100,6 +101,7 @@ export function GroupsPage() {
     setFormOpen(true);
   };
   const openEdit = (group: Group) => {
+    if (isOptimisticId(group.id)) return;
     setEditing(group);
     setFormOpen(true);
   };
@@ -107,6 +109,10 @@ export function GroupsPage() {
   const handleDelete = () => {
     if (!deleting) return;
     const target = deleting;
+    if (isOptimisticId(target.id)) {
+      setDeleting(null);
+      return;
+    }
     deleteGroup.mutate(target.id, {
       onSuccess: () => toast.success(t('groups.deletedToast')),
       onError: () => toast.error(t('groups.saveError')),
@@ -175,6 +181,7 @@ export function GroupsPage() {
                   variant="ghost"
                   size="icon"
                   aria-label={t('common.edit')}
+                  disabled={isOptimisticId(g.id)}
                   onClick={() => openEdit(g)}
                 >
                   <Pencil className="h-4 w-4" />
@@ -184,6 +191,7 @@ export function GroupsPage() {
                   variant="ghost"
                   size="icon"
                   aria-label={t('common.delete')}
+                  disabled={isOptimisticId(g.id)}
                   onClick={() => setDeleting(g)}
                 >
                   <Trash2 className="h-4 w-4 text-danger" />
@@ -256,7 +264,10 @@ export function GroupsPage() {
         data={groups}
         rowKey={(g) => g.id}
         loading={isLoading}
-        onRowClick={(g) => navigate(`${ROUTES.groups}/${g.id}`)}
+        onRowClick={(g) => {
+          if (isOptimisticId(g.id)) return;
+          navigate(`${ROUTES.groups}/${g.id}`);
+        }}
         emptyTitle={isError ? t('form.loadError') : t('groups.empty')}
         emptyDescription={isError ? undefined : t('groups.emptyHint')}
         emptyIcon={<Boxes className="h-6 w-6" aria-hidden />}

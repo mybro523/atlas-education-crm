@@ -34,6 +34,9 @@ export {
 } from './validators';
 export {
   useOptimisticMutation,
+  makeOptimisticId,
+  isOptimisticId,
+  OPTIMISTIC_ID_PREFIX,
   type OptimisticMutationConfig,
   type Paginated,
   type PaginationMeta,
