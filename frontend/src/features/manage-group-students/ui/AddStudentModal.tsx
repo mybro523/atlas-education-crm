@@ -70,18 +70,23 @@ export function AddStudentModal({
   const total = data?.meta.total ?? 0;
   const hasMore = total > (data?.items.length ?? 0);
 
-  const handleAdd = (studentId: string) => {
+  const handleAdd = (student: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    phone?: string | null;
+  }) => {
     // Hide the candidate instantly (optimistic). Restore it if the add fails.
-    setAddedIds((prev) => new Set(prev).add(studentId));
+    setAddedIds((prev) => new Set(prev).add(student.id));
     addStudent.mutate(
-      { groupId, dto: { studentId } },
+      { groupId, dto: { studentId: student.id }, student },
       {
         onSuccess: () => toast.success(t('groups.detail.addedToast')),
         onError: () => {
           toast.error(t('groups.saveError'));
           setAddedIds((prev) => {
             const next = new Set(prev);
-            next.delete(studentId);
+            next.delete(student.id);
             return next;
           });
         },
@@ -142,7 +147,7 @@ export function AddStudentModal({
                     type="button"
                     size="sm"
                     variant="primary"
-                    onClick={() => handleAdd(student.id)}
+                    onClick={() => handleAdd(student)}
                     className="shrink-0"
                   >
                     {t('groups.addStudentModal.add')}

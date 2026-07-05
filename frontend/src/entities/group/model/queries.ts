@@ -179,7 +179,17 @@ function adjustStudentsCount(
 export function useAddGroupStudent() {
   return useOptimisticMutation<
     GroupStudent,
-    { groupId: string; dto: AddGroupStudentDto }
+    {
+      groupId: string;
+      dto: AddGroupStudentDto;
+      /** Optional student projection so the member list updates INSTANTLY. */
+      student?: {
+        id: string;
+        firstName: string;
+        lastName: string;
+        phone?: string | null;
+      };
+    }
   >({
     mutationFn: ({ groupId, dto }) => groupApi.addStudent(groupId, dto),
     keysToCancel: (v) => [
@@ -193,8 +203,31 @@ export function useAddGroupStudent() {
       groupKeys.detail(v.groupId),
       groupKeys.lists(),
     ],
-    optimisticUpdate: ({ groupId }, qc) => {
+    optimisticUpdate: ({ groupId, student }, qc) => {
       adjustStudentsCount(qc, groupId, +1);
+      // Instantly insert the new member into the group's member list cache.
+      if (student) {
+        qc.setQueriesData<GroupStudent[]>(
+          { queryKey: groupKeys.studentsAll(groupId) },
+          (old) => {
+            if (old?.some((m) => m.studentId === student.id)) return old;
+            const optimistic: GroupStudent = {
+              id: `optimistic-${student.id}`,
+              groupId,
+              studentId: student.id,
+              joinedAt: new Date().toISOString(),
+              leftAt: null,
+              student: {
+                id: student.id,
+                firstName: student.firstName,
+                lastName: student.lastName,
+                phone: student.phone ?? null,
+              },
+            };
+            return old ? [...old, optimistic] : [optimistic];
+          },
+        );
+      }
     },
   });
 }
