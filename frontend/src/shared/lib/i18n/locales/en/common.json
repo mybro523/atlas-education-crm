@@ -73,7 +73,8 @@
     "broadcast": "SMS Broadcast",
     "studentCabinet": "My cabinet",
     "teacherCabinet": "My cabinet",
-    "settings": "Settings"
+    "settings": "Settings",
+    "studentPayments": "Payment history"
   },
   "header": {
     "openMenu": "Open menu",
@@ -930,5 +931,45 @@
   "settings": {
     "title": "Settings",
     "subtitle": "Manage your account and integrations"
+  },
+  "payments": {
+    "record": "Record payment",
+    "recordTitle": "Subscription payment",
+    "forStudent": "Student: {{name}}",
+    "amount": "Amount",
+    "amountMin": "Enter an amount greater than zero",
+    "amountMax": "Amount is too large",
+    "methodLabel": "Payment method",
+    "methodRequired": "Select a payment method",
+    "submit": "Record payment",
+    "recorded": "Payment recorded",
+    "method": {
+      "CASH": "Cash",
+      "CARD": "Card"
+    }
+  },
+  "studentPayments": {
+    "title": "Payment history",
+    "subtitle": "Student subscription payments",
+    "empty": "No payments yet",
+    "emptyHint": "Recorded payments will appear here",
+    "count_one": "{{count}} payment",
+    "count_other": "{{count}} payments",
+    "columns": {
+      "student": "Student",
+      "group": "Group",
+      "amount": "Amount",
+      "method": "Method",
+      "date": "Date",
+      "branch": "Branch"
+    },
+    "filters": {
+      "allMethods": "All methods",
+      "clear": "Clear",
+      "from": "From",
+      "to": "To",
+      "search": "Search",
+      "searchPlaceholder": "Student name…"
+    }
   }
 }

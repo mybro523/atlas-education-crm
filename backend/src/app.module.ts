@@ -28,6 +28,7 @@ import { GroupsModule } from './modules/groups/groups.module';
 import { ScheduleModule } from './modules/schedule/schedule.module';
 import { JournalModule } from './modules/journal/journal.module';
 import { FinanceModule } from './modules/finance/finance.module';
+import { PaymentsModule } from './modules/payments/payments.module';
 import { ChatsModule } from './modules/chats/chats.module';
 import { BroadcastsModule } from './modules/broadcasts/broadcasts.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
@@ -79,6 +80,7 @@ import { AutomationModule } from './modules/automation/automation.module';
     ScheduleModule,
     JournalModule,
     FinanceModule,
+    PaymentsModule,
     ChatsModule,
     BroadcastsModule,
     NotificationsModule,

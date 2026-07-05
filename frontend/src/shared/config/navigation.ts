@@ -10,6 +10,7 @@ import {
   CalendarDays,
   ClipboardList,
   Wallet,
+  Receipt,
   MessagesSquare,
   Megaphone,
   UserCircle,
@@ -121,6 +122,12 @@ export const NAV_ITEMS: NavItem[] = [
     labelKey: 'nav.finance',
     icon: Wallet,
     roles: [ROLES.FOUNDER],
+  },
+  {
+    to: ROUTES.studentPayments,
+    labelKey: 'nav.studentPayments',
+    icon: Receipt,
+    roles: [ROLES.FOUNDER, ROLES.ADMIN],
   },
   {
     to: ROUTES.chats,

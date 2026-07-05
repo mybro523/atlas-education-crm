@@ -15,6 +15,7 @@ import { CourseTypesPage } from '@/pages/course-types';
 import { SchedulePage } from '@/pages/schedule';
 import { JournalPage } from '@/pages/journal';
 import { FinancePage } from '@/pages/finance';
+import { StudentPaymentsPage } from '@/pages/student-payments';
 import { StudentCabinetPage } from '@/pages/student-cabinet';
 import { TeacherCabinetPage } from '@/pages/teacher-cabinet';
 import { ChatsPage } from '@/pages/chats';
@@ -132,6 +133,14 @@ export function AppRouter() {
             {/* Broadcast (SMS): founder + admin */}
             <Route element={<RoleRoute allow={[ROLES.FOUNDER, ROLES.ADMIN]} />}>
               <Route path={ROUTES.broadcast} element={<BroadcastPage />} />
+            </Route>
+
+            {/* Student payments history: founder + admin */}
+            <Route element={<RoleRoute allow={[ROLES.FOUNDER, ROLES.ADMIN]} />}>
+              <Route
+                path={ROUTES.studentPayments}
+                element={<StudentPaymentsPage />}
+              />
             </Route>
 
             {/* Settings: any authenticated user (hosts Telegram linking) */}

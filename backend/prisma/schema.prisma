@@ -35,6 +35,11 @@ enum PaymentStatus {
   UNPAID
 }
 
+enum PaymentMethod {
+  CASH
+  CARD
+}
+
 enum FinanceType {
   INCOME
   EXPENSE
@@ -503,18 +508,20 @@ model Remark {
 // ==========================================================================
 
 model Payment {
-  id                String        @id @default(cuid())
+  id                String         @id @default(cuid())
   studentId         String
   groupId           String?
   branchId          String
-  amount            Decimal       @db.Decimal(10, 2)
+  amount            Decimal        @db.Decimal(10, 2)
   // Billing month anchored to the student's enrollment date (start of the period).
-  billingMonthStart DateTime
-  billingMonthEnd   DateTime
-  status            PaymentStatus @default(UNPAID)
+  // Nullable — ad-hoc subscription payments have no billing month.
+  billingMonthStart DateTime?
+  billingMonthEnd   DateTime?
+  method            PaymentMethod?
+  status            PaymentStatus  @default(UNPAID)
   paidAt            DateTime?
-  createdAt         DateTime      @default(now())
-  updatedAt         DateTime      @updatedAt
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
 
   student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
   group   Group?  @relation(fields: [groupId], references: [id], onDelete: SetNull)

@@ -35,6 +35,7 @@ export const ROUTES = {
   schedule: '/schedule',
   journal: '/journal',
   finance: '/finance',
+  studentPayments: '/student-payments',
   studentCabinet: '/my',
   teacherCabinet: '/my-teaching',
   chats: '/chats',

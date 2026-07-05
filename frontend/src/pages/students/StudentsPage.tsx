@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Plus, Pencil, Trash2, Users } from 'lucide-react';
+import { Plus, Pencil, Trash2, Users, Wallet } from 'lucide-react';
 import {
   PageHeader,
   Button,
@@ -22,6 +22,7 @@ import {
   type StudentListParams,
 } from '@/entities/student';
 import { StudentSearch } from '@/features/search-students';
+import { RecordPaymentModal } from '@/features/record-payment';
 import { StudentFormModal } from './ui/StudentFormModal';
 import { StudentDetailModal } from './ui/StudentDetailModal';
 
@@ -47,6 +48,7 @@ export function StudentsPage() {
   const [editing, setEditing] = useState<Student | null>(null);
   const [pendingDelete, setPendingDelete] = useState<Student | null>(null);
   const [detailStudent, setDetailStudent] = useState<Student | null>(null);
+  const [payingStudent, setPayingStudent] = useState<Student | null>(null);
 
   const params = useMemo<StudentListParams>(
     () => ({
@@ -182,6 +184,18 @@ export function StudentsPage() {
             type="button"
             variant="ghost"
             size="icon"
+            aria-label={t('payments.record')}
+            onClick={(e) => {
+              e.stopPropagation();
+              setPayingStudent(student);
+            }}
+          >
+            <Wallet className="h-4 w-4" />
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
             aria-label={t('actions.edit')}
             onClick={(e) => {
               e.stopPropagation();
@@ -274,6 +288,12 @@ export function StudentsPage() {
         open={Boolean(detailStudent)}
         onClose={() => setDetailStudent(null)}
         student={detailStudentLive}
+      />
+
+      <RecordPaymentModal
+        open={Boolean(payingStudent)}
+        onClose={() => setPayingStudent(null)}
+        student={payingStudent}
       />
 
       <ConfirmDialog

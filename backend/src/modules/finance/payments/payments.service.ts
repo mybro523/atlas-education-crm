@@ -219,6 +219,7 @@ export class PaymentsService {
     let totalDebt = 0;
 
     for (const row of rows) {
+      if (!row.billingMonthStart || !row.billingMonthEnd) continue;
       const amount = Number(row.amount);
       totalDebt += amount;
 

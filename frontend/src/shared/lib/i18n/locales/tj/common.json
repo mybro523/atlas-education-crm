@@ -73,7 +73,8 @@
     "courseTypes": "Намудҳои курс",
     "studentCabinet": "Кабинети ман",
     "teacherCabinet": "Кабинети ман",
-    "settings": "Танзимот"
+    "settings": "Танзимот",
+    "studentPayments": "Таърихи пардохтҳо"
   },
   "header": {
     "openMenu": "Кушодани меню",
@@ -960,5 +961,45 @@
   "settings": {
     "title": "Танзимот",
     "subtitle": "Идоракунии ҳисоб ва интегратсияҳо"
+  },
+  "payments": {
+    "record": "Пардохти обуна",
+    "recordTitle": "Пардохти обуна",
+    "forStudent": "Донишҷӯ: {{name}}",
+    "amount": "Маблағ",
+    "amountMin": "Маблағи аз сифр зиёдро ворид кунед",
+    "amountMax": "Маблағ хеле калон аст",
+    "methodLabel": "Тарзи пардохт",
+    "methodRequired": "Тарзи пардохтро интихоб кунед",
+    "submit": "Сабти пардохт",
+    "recorded": "Пардохт сабт шуд",
+    "method": {
+      "CASH": "Нақдӣ",
+      "CARD": "Бо корт"
+    }
+  },
+  "studentPayments": {
+    "title": "Таърихи пардохтҳо",
+    "subtitle": "Пардохтҳои обунаи донишҷӯён",
+    "empty": "Ҳоло пардохт нест",
+    "emptyHint": "Пардохтҳои сабтшуда дар ин ҷо намоён мешаванд",
+    "count_one": "{{count}} пардохт",
+    "count_other": "{{count}} пардохт",
+    "columns": {
+      "student": "Донишҷӯ",
+      "group": "Гурӯҳ",
+      "amount": "Маблағ",
+      "method": "Тарз",
+      "date": "Сана",
+      "branch": "Филиал"
+    },
+    "filters": {
+      "allMethods": "Ҳама тарзҳо",
+      "clear": "Тоза кардан",
+      "from": "Аз",
+      "to": "То",
+      "search": "Ҷустуҷӯ",
+      "searchPlaceholder": "Номи донишҷӯ…"
+    }
   }
 }

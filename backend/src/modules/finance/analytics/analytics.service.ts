@@ -215,6 +215,7 @@ export class AnalyticsService {
         select: { branchId: true, amount: true, billingMonthEnd: true },
       });
       for (const d of debts) {
+        if (!d.billingMonthEnd) continue;
         bump(d.branchId, d.billingMonthEnd, 'debt', Number(d.amount));
       }
     }

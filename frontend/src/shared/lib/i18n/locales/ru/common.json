@@ -73,7 +73,8 @@
     "broadcast": "SMS-рассылка",
     "studentCabinet": "Мой кабинет",
     "teacherCabinet": "Мой кабинет",
-    "settings": "Настройки"
+    "settings": "Настройки",
+    "studentPayments": "История оплат"
   },
   "header": {
     "openMenu": "Открыть меню",
@@ -960,5 +961,47 @@
   "settings": {
     "title": "Настройки",
     "subtitle": "Управление аккаунтом и интеграциями"
+  },
+  "payments": {
+    "record": "Оплата абонемента",
+    "recordTitle": "Оплата абонемента",
+    "forStudent": "Студент: {{name}}",
+    "amount": "Сумма",
+    "amountMin": "Введите сумму больше нуля",
+    "amountMax": "Сумма слишком большая",
+    "methodLabel": "Способ оплаты",
+    "methodRequired": "Выберите способ оплаты",
+    "submit": "Записать оплату",
+    "recorded": "Оплата записана",
+    "method": {
+      "CASH": "Наличными",
+      "CARD": "Картой"
+    }
+  },
+  "studentPayments": {
+    "title": "История оплат",
+    "subtitle": "Оплаты абонементов студентов",
+    "empty": "Оплат пока нет",
+    "emptyHint": "Записанные оплаты появятся здесь",
+    "count_one": "{{count}} оплата",
+    "count_few": "{{count}} оплаты",
+    "count_many": "{{count}} оплат",
+    "count_other": "{{count}} оплат",
+    "columns": {
+      "student": "Студент",
+      "group": "Группа",
+      "amount": "Сумма",
+      "method": "Способ",
+      "date": "Дата",
+      "branch": "Филиал"
+    },
+    "filters": {
+      "allMethods": "Все способы",
+      "clear": "Сбросить",
+      "from": "С",
+      "to": "По",
+      "search": "Поиск",
+      "searchPlaceholder": "Имя студента…"
+    }
   }
 }
