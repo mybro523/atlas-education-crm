@@ -44,7 +44,18 @@
     "invalidCredentials": "Неверная почта или пароль",
     "genericError": "Не удалось войти. Попробуйте ещё раз.",
     "requiredEmail": "Укажите электронную почту",
-    "requiredPassword": "Укажите пароль"
+    "requiredPassword": "Укажите пароль",
+    "demoTitle": "Демо-доступы",
+    "demoHint": "Пароль у всех: {{password}}. Нажмите роль, чтобы войти.",
+    "showPassword": "Показать пароль",
+    "hidePassword": "Скрыть пароль",
+    "roles": {
+      "founder": "Основатель",
+      "admin": "Администратор",
+      "manager": "Менеджер продаж",
+      "teacher": "Учитель",
+      "student": "Студент"
+    }
   },
   "nav": {
     "dashboard": "Дашборд",

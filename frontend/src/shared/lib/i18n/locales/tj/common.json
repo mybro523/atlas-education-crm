@@ -44,7 +44,18 @@
     "invalidCredentials": "Почта ё рамз нодуруст аст",
     "genericError": "Ворид нашуд. Дубора кӯшиш кунед.",
     "requiredEmail": "Почтаи электрониро ворид кунед",
-    "requiredPassword": "Рамзро ворид кунед"
+    "requiredPassword": "Рамзро ворид кунед",
+    "demoTitle": "Ҳисобҳои намоишӣ",
+    "demoHint": "Парол барои ҳама: {{password}}. Барои воридшавӣ ролро зер кунед.",
+    "showPassword": "Нишон додани парол",
+    "hidePassword": "Пинҳон кардани парол",
+    "roles": {
+      "founder": "Муассис",
+      "admin": "Маъмур",
+      "manager": "Менеҷери фурӯш",
+      "teacher": "Муаллим",
+      "student": "Донишҷӯ"
+    }
   },
   "nav": {
     "dashboard": "Дашборд",

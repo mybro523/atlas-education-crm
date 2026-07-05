@@ -6,10 +6,12 @@ export interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   error?: string;
   /** Element rendered inside the field on the leading edge (e.g. an icon). */
   leftIcon?: ReactNode;
+  /** Element rendered inside the field on the trailing edge (e.g. a toggle button). */
+  rightIcon?: ReactNode;
 }
 
 export const Input = forwardRef<HTMLInputElement, InputProps>(
-  ({ className, label, error, leftIcon, id, ...props }, ref) => {
+  ({ className, label, error, leftIcon, rightIcon, id, ...props }, ref) => {
     const reactId = useId();
     const inputId = id ?? reactId;
     const errorId = `${inputId}-error`;
@@ -44,11 +46,17 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
               'transition-colors focus:outline-none focus:ring-2 focus:ring-ring',
               'disabled:cursor-not-allowed disabled:opacity-60',
               leftIcon && 'pl-10',
+              rightIcon && 'pr-10',
               error ? 'border-danger focus:ring-danger/40' : 'border-border',
               className,
             )}
             {...props}
           />
+          {rightIcon && (
+            <span className="absolute inset-y-0 right-0 flex items-center pr-2 text-foreground-muted">
+              {rightIcon}
+            </span>
+          )}
         </div>
         {error && (
           <p id={errorId} className="mt-1.5 text-sm text-danger">

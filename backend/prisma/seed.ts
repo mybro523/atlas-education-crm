@@ -36,6 +36,51 @@ async function main() {
     },
   });
 
+  // --- Demo users for every role (same password: Atlas12345!) --------------
+  const demoUsers: Array<{ email: string; role: Role }> = [
+    { email: 'admin@atlas.local', role: Role.ADMIN },
+    { email: 'manager@atlas.local', role: Role.SALES_MANAGER },
+    { email: 'teacher@atlas.local', role: Role.TEACHER },
+    { email: 'student@atlas.local', role: Role.STUDENT },
+  ];
+  const userIdByEmail: Record<string, string> = {};
+  for (const u of demoUsers) {
+    const user = await prisma.user.upsert({
+      where: { email: u.email },
+      update: {},
+      create: {
+        email: u.email,
+        passwordHash,
+        role: u.role,
+        language: 'ru',
+        branchId: branches[0].id,
+      },
+    });
+    userIdByEmail[u.email] = user.id;
+  }
+
+  // Linked profiles so the teacher/student cabinets have data to resolve.
+  await prisma.teacher.upsert({
+    where: { userId: userIdByEmail['teacher@atlas.local'] },
+    update: {},
+    create: {
+      userId: userIdByEmail['teacher@atlas.local'],
+      branchId: branches[0].id,
+      firstName: 'Демо',
+      lastName: 'Учитель',
+    },
+  });
+  await prisma.student.upsert({
+    where: { userId: userIdByEmail['student@atlas.local'] },
+    update: {},
+    create: {
+      userId: userIdByEmail['student@atlas.local'],
+      branchId: branches[0].id,
+      firstName: 'Демо',
+      lastName: 'Студент',
+    },
+  });
+
   // --- Course types (flexible dictionary) ----------------------------------
   const courseTypes = ['Стандарт', 'ВИП', 'Интенсив', 'Детский', 'Для рабочих'];
   for (const name of courseTypes) {
@@ -63,6 +108,8 @@ async function main() {
   console.log(`  Branches: ${branches.length}`);
   // eslint-disable-next-line no-console
   console.log(`  Founder login: ${founderEmail} / Atlas12345!`);
+  // eslint-disable-next-line no-console
+  console.log('  Demo logins (pw Atlas12345!): admin@, manager@, teacher@, student@ atlas.local');
   // eslint-disable-next-line no-console
   console.log(`  Course types: ${courseTypes.join(', ')}`);
   // eslint-disable-next-line no-console

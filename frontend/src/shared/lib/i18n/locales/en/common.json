@@ -44,7 +44,18 @@
     "invalidCredentials": "Invalid email or password",
     "genericError": "Sign in failed. Please try again.",
     "requiredEmail": "Please enter your email",
-    "requiredPassword": "Please enter your password"
+    "requiredPassword": "Please enter your password",
+    "demoTitle": "Demo accounts",
+    "demoHint": "Password for all: {{password}}. Click a role to sign in.",
+    "showPassword": "Show password",
+    "hidePassword": "Hide password",
+    "roles": {
+      "founder": "Founder",
+      "admin": "Administrator",
+      "manager": "Sales manager",
+      "teacher": "Teacher",
+      "student": "Student"
+    }
   },
   "nav": {
     "dashboard": "Dashboard",
