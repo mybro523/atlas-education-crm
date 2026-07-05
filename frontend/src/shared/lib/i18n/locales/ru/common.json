@@ -196,6 +196,11 @@
     "updated": "Данные учителя обновлены",
     "deleted": "Учитель удалён",
     "subjectsUpdated": "Предметы обновлены",
+    "education": {
+      "NONE": "Без образования",
+      "SECONDARY": "Среднее",
+      "HIGHER": "Высшее"
+    },
     "count_one": "{{count}} учитель",
     "count_few": "{{count}} учителя",
     "count_many": "{{count}} учителей",
@@ -255,7 +260,16 @@
       "OTHER": "Другое"
     },
     "subscription": "Абонемент",
-    "owedShort": "Долг"
+    "owedShort": "Долг",
+    "filters": {
+      "group": "Группа",
+      "debt": "Задолженность",
+      "allCourses": "Все курсы",
+      "allGroups": "Все группы",
+      "debtAll": "Все по оплате",
+      "debtOnly": "Должники",
+      "debtNone": "Без долга"
+    }
   },
   "pages": {
     "students": "Студенты",
@@ -1004,6 +1018,17 @@
       "to": "По",
       "search": "Поиск",
       "searchPlaceholder": "Имя студента…"
+    },
+    "upcoming": {
+      "title": "Скоро оплата",
+      "hint": "Абонемент заканчивается в ближайшие 3 дня — этим студентам пора оплатить следующий месяц.",
+      "endsAt": "Окончание",
+      "overdue": "Просрочено",
+      "today": "Сегодня",
+      "daysLeft_one": "Остался {{count}} день",
+      "daysLeft_few": "Осталось {{count}} дня",
+      "daysLeft_many": "Осталось {{count}} дней",
+      "daysLeft_other": "Осталось {{count}} дней"
     }
   }
 }

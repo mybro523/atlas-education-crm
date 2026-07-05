@@ -195,7 +195,12 @@
     "deleted": "Teacher deleted",
     "subjectsUpdated": "Subjects updated",
     "count_one": "{{count}} teacher",
-    "count_other": "{{count}} teachers"
+    "count_other": "{{count}} teachers",
+    "education": {
+      "NONE": "No formal education",
+      "SECONDARY": "Secondary",
+      "HIGHER": "Higher"
+    }
   },
   "students": {
     "title": "Students",
@@ -247,7 +252,16 @@
       "OTHER": "Other"
     },
     "subscription": "Subscription",
-    "owedShort": "Owed"
+    "owedShort": "Owed",
+    "filters": {
+      "group": "Group",
+      "debt": "Debt",
+      "allCourses": "All courses",
+      "allGroups": "All groups",
+      "debtAll": "Any payment status",
+      "debtOnly": "Debtors",
+      "debtNone": "No debt"
+    }
   },
   "pages": {
     "students": "Students",
@@ -972,6 +986,15 @@
       "to": "To",
       "search": "Search",
       "searchPlaceholder": "Student name…"
+    },
+    "upcoming": {
+      "title": "Payment due soon",
+      "hint": "Subscription ends within 3 days — these students should pay for the next month.",
+      "endsAt": "Ends",
+      "overdue": "Overdue",
+      "today": "Today",
+      "daysLeft_one": "{{count}} day left",
+      "daysLeft_other": "{{count}} days left"
     }
   }
 }

@@ -88,6 +88,9 @@ export interface Student {
 export interface StudentListParams extends PaginationParams {
   branchId?: string;
   groupId?: string;
+  courseId?: string;
+  /** 'with' → only debtors (owedAmount > 0); 'without' → only fully paid. */
+  debt?: 'with' | 'without';
   /**
    * Matches student firstName OR lastName OR any parent workplace OR any parent
    * position/должность (contract §6, spec §4.4).

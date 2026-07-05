@@ -26,6 +26,9 @@ export interface TeacherFormModalProps {
   teacher?: Teacher | null;
 }
 
+/** Education level dictionary — stored as stable codes, localized for display. */
+const EDUCATION_LEVELS = ['NONE', 'SECONDARY', 'HIGHER'] as const;
+
 interface FieldErrors {
   firstName?: string;
   lastName?: string;
@@ -222,11 +225,25 @@ export function TeacherFormModal({
           onChange={(e) => setSpecialty(e.target.value)}
           maxLength={120}
         />
-        <Input
+        <Select
           label={`${t('fields.educationLevel')} (${t('form.optional')})`}
           value={educationLevel}
           onChange={(e) => setEducationLevel(e.target.value)}
-          maxLength={120}
+          options={[
+            { value: '', label: t('form.notSelected') },
+            ...EDUCATION_LEVELS.map((lvl) => ({
+              value: lvl,
+              label: t(`teachers.education.${lvl}`),
+            })),
+            // Keep a legacy free-text value selectable so editing an older
+            // teacher does not silently drop it.
+            ...(educationLevel &&
+            !EDUCATION_LEVELS.includes(
+              educationLevel as (typeof EDUCATION_LEVELS)[number],
+            )
+              ? [{ value: educationLevel, label: educationLevel }]
+              : []),
+          ]}
         />
         <Input
           label={`${t('fields.telegram')} (${t('form.optional')})`}

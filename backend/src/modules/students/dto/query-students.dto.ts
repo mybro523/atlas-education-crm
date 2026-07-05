@@ -1,4 +1,4 @@
-import { IsOptional, IsString } from 'class-validator';
+import { IsIn, IsOptional, IsString } from 'class-validator';
 import { PaginationQueryDto } from '../../../common/dto/pagination.dto';
 
 /**
@@ -15,6 +15,19 @@ export class QueryStudentsDto extends PaginationQueryDto {
   @IsOptional()
   @IsString()
   groupId?: string;
+
+  @IsOptional()
+  @IsString()
+  courseId?: string;
+
+  /**
+   * Subscription-debt filter: 'with' → only debtors (owedAmount > 0),
+   * 'without' → only fully-paid students. Computed post-query because the owed
+   * figure derives from courseFee/course price minus PAID payments.
+   */
+  @IsOptional()
+  @IsIn(['with', 'without'])
+  debt?: 'with' | 'without';
 
   @IsOptional()
   @IsString()

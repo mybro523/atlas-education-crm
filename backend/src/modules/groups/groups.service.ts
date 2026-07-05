@@ -22,6 +22,7 @@ import { ListAvailableStudentsQueryDto } from './dto/list-available-students.que
 const groupDetailInclude = {
   course: true,
   teacher: true,
+  branch: true,
   _count: { select: { students: { where: { leftAt: null } } } },
 } satisfies Prisma.GroupInclude;
 

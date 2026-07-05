@@ -199,7 +199,12 @@
     "count_one": "{{count}} муаллим",
     "count_few": "{{count}} муаллим",
     "count_many": "{{count}} муаллим",
-    "count_other": "{{count}} муаллим"
+    "count_other": "{{count}} муаллим",
+    "education": {
+      "NONE": "Бе маълумот",
+      "SECONDARY": "Миёна",
+      "HIGHER": "Олӣ"
+    }
   },
   "students": {
     "title": "Донишҷӯён",
@@ -255,7 +260,16 @@
       "OTHER": "Дигар"
     },
     "subscription": "Обунавӣ",
-    "owedShort": "Қарз"
+    "owedShort": "Қарз",
+    "filters": {
+      "group": "Гурӯҳ",
+      "debt": "Қарздорӣ",
+      "allCourses": "Ҳамаи курсҳо",
+      "allGroups": "Ҳамаи гурӯҳҳо",
+      "debtAll": "Ҳама аз рӯи пардохт",
+      "debtOnly": "Қарздорон",
+      "debtNone": "Бе қарз"
+    }
   },
   "pages": {
     "students": "Донишҷӯён",
@@ -1002,6 +1016,15 @@
       "to": "То",
       "search": "Ҷустуҷӯ",
       "searchPlaceholder": "Номи донишҷӯ…"
+    },
+    "upcoming": {
+      "title": "Пардохт наздик аст",
+      "hint": "Абонемент дар 3 рӯзи наздик ба охир мерасад — ин донишҷӯён бояд барои моҳи оянда пардохт кунанд.",
+      "endsAt": "Анҷом",
+      "overdue": "Гузашта",
+      "today": "Имрӯз",
+      "daysLeft_one": "{{count}} рӯз монд",
+      "daysLeft_other": "{{count}} рӯз монд"
     }
   }
 }

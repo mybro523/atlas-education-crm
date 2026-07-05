@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Receipt, X } from 'lucide-react';
+import { AlarmClock, Receipt, X } from 'lucide-react';
 
 import {
   PageHeader,
@@ -15,7 +15,11 @@ import {
 import { useDebouncedValue } from '@/shared/lib/hooks';
 import { formatMoney, formatDate } from '@/shared/lib';
 import { useBranches } from '@/entities/branch';
-import { useStudentPayments } from '@/entities/student-payment';
+import {
+  useStudentPayments,
+  useUpcomingPayments,
+  type UpcomingPayment,
+} from '@/entities/student-payment';
 
 const PAGE_SIZE = 20;
 
@@ -61,6 +65,9 @@ export function StudentPaymentsPage() {
   );
 
   const { data, isLoading, isError } = useStudentPayments(params);
+  // Subscriptions running out within 3 days (incl. already-expired) — shown
+  // on top so the admin immediately sees who must pay for the next month.
+  const { data: upcoming } = useUpcomingPayments(3);
 
   const payments = data?.items ?? [];
   const pageCount = data?.meta.pageCount ?? 1;
@@ -129,12 +136,72 @@ export function StudentPaymentsPage() {
     ...(branches ?? []).map((b) => ({ value: b.id, label: b.name })),
   ];
 
+  const upcomingName = (u: UpcomingPayment) =>
+    `${u.student.lastName} ${u.student.firstName}`;
+
   return (
     <div>
       <PageHeader
         title={t('studentPayments.title')}
         description={t('studentPayments.subtitle')}
       />
+
+      {/* "Subscription ending soon" — who must pay for the next month. */}
+      {(upcoming?.length ?? 0) > 0 && (
+        <section className="mb-5 rounded-xl border border-danger/30 bg-danger/5 p-4">
+          <h2 className="flex items-center gap-2 text-sm font-semibold text-foreground">
+            <AlarmClock className="h-4 w-4 text-danger" aria-hidden />
+            {t('studentPayments.upcoming.title')}
+            <span className="font-normal text-foreground-muted">
+              ({upcoming!.length})
+            </span>
+          </h2>
+          <p className="mt-0.5 text-xs text-foreground-muted">
+            {t('studentPayments.upcoming.hint')}
+          </p>
+          <ul className="mt-3 divide-y divide-border/60">
+            {upcoming!.map((u) => (
+              <li
+                key={u.student.id}
+                className="flex flex-col gap-1 py-2 sm:flex-row sm:items-center sm:justify-between"
+              >
+                <div className="min-w-0">
+                  <span className="font-medium text-foreground">
+                    {upcomingName(u)}
+                  </span>
+                  {u.branch && (
+                    <span className="ml-2 text-xs text-foreground-muted">
+                      {u.branch.name}
+                    </span>
+                  )}
+                </div>
+                <div className="flex flex-wrap items-center gap-2 text-sm">
+                  <span className="text-foreground-muted">
+                    {t('studentPayments.upcoming.endsAt')}:{' '}
+                    {formatDate(u.endsAt)}
+                  </span>
+                  <span className="tabular-nums text-foreground-muted">
+                    {formatMoney(u.monthlyFee)}
+                  </span>
+                  {u.overdue ? (
+                    <Badge variant="danger" dot>
+                      {t('studentPayments.upcoming.overdue')}
+                    </Badge>
+                  ) : (
+                    <Badge variant="warning" dot>
+                      {u.daysLeft === 0
+                        ? t('studentPayments.upcoming.today')
+                        : t('studentPayments.upcoming.daysLeft', {
+                            count: u.daysLeft,
+                          })}
+                    </Badge>
+                  )}
+                </div>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       {/* Filters: search + branch + method + date range */}
       <div className="mb-4 flex flex-col gap-3">

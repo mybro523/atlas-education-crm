@@ -155,6 +155,9 @@ export class StudentsService {
         groupLinks: { some: { leftAt: null, groupId: query.groupId } },
       });
     }
+    if (query.courseId) {
+      and.push({ courseId: query.courseId });
+    }
     if (query.search) {
       // Search: student name OR any parent workplace OR any parent position
       // (должность) — spec §4.4, e.g. 'доктор' finds students by a parent's job.
@@ -183,6 +186,29 @@ export class StudentsService {
     }
 
     const where: Prisma.StudentWhereInput = and.length > 0 ? { AND: and } : {};
+
+    // The debt filter works on the COMPUTED owedAmount (courseFee/course price
+    // minus PAID payments), which does not exist as a DB column — so fetch the
+    // full filtered set, serialize, filter, and paginate in memory. Center-scale
+    // datasets (hundreds of students) make this perfectly cheap.
+    if (query.debt) {
+      const rows = await this.prisma.student.findMany({
+        where,
+        include: studentListInclude,
+        orderBy: [{ lastName: 'asc' }, { firstName: 'asc' }],
+      });
+      const filtered = rows
+        .map(serializeStudent)
+        .filter((s) =>
+          query.debt === 'with' ? s.owedAmount > 0 : s.owedAmount <= 0,
+        );
+      return buildPaginatedResult(
+        filtered.slice(skip, skip + take),
+        filtered.length,
+        page,
+        pageSize,
+      );
+    }
 
     const [items, total] = await this.prisma.$transaction([
       this.prisma.student.findMany({

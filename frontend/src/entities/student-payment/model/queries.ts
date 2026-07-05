@@ -58,6 +58,14 @@ export function useStudentPayments(params?: StudentPaymentListParams) {
   });
 }
 
+/** Subscriptions ending within `days` days (default 3) — soonest first. */
+export function useUpcomingPayments(days = 3) {
+  return useQuery({
+    queryKey: [...studentPaymentKeys.all, 'upcoming', days] as const,
+    queryFn: () => studentPaymentApi.upcoming(days),
+  });
+}
+
 /**
  * Record a subscription payment. OPTIMISTIC: immediately bumps the paying
  * student's `paidAmount` (+amount) and `owedAmount` (max(0, owed-amount)) in the
@@ -68,7 +76,13 @@ export function useRecordPayment() {
   return useOptimisticMutation<StudentPayment, RecordPaymentDto>({
     mutationFn: (dto) => studentPaymentApi.record(dto),
     keysToCancel: [STUDENTS_KEY],
-    keysToInvalidate: [STUDENTS_KEY, studentPaymentKeys.lists()],
+    keysToInvalidate: [
+      STUDENTS_KEY,
+      studentPaymentKeys.lists(),
+      // A payment moves the student's covered-until date, so the "ending soon"
+      // panel must recompute too.
+      [...studentPaymentKeys.all, 'upcoming'],
+    ],
     optimisticUpdate: (dto, qc) => {
       qc.setQueriesData(
         { queryKey: STUDENTS_KEY },

@@ -16,6 +16,8 @@ import { useDebouncedValue } from '@/shared/lib/hooks';
 import { isOptimisticId } from '@/shared/lib';
 import { extractErrorMessage } from '@/shared/api';
 import { useBranches } from '@/entities/branch';
+import { useCourses } from '@/entities/course';
+import { useGroups } from '@/entities/group';
 import {
   useStudents,
   useDeleteStudent,
@@ -43,7 +45,10 @@ export function StudentsPage() {
   const [page, setPage] = useState(1);
   const [searchInput, setSearchInput] = useState('');
   const [branchId, setBranchId] = useState('');
-  const search = useDebouncedValue(searchInput.trim(), 350);
+  const [courseId, setCourseId] = useState('');
+  const [groupId, setGroupId] = useState('');
+  const [debt, setDebt] = useState<'' | 'with' | 'without'>('');
+  const search = useDebouncedValue(searchInput.trim(), 250);
 
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Student | null>(null);
@@ -57,15 +62,43 @@ export function StudentsPage() {
       pageSize: PAGE_SIZE,
       search: search || undefined,
       branchId: branchId || undefined,
+      courseId: courseId || undefined,
+      groupId: groupId || undefined,
+      debt: debt || undefined,
     }),
-    [page, search, branchId],
+    [page, search, branchId, courseId, groupId, debt],
   );
 
-  const { data, isLoading, isError } = useStudents(params);
+  const { data, isLoading, isError, isPlaceholderData } = useStudents(params);
   const { data: branches } = useBranches();
+  const { data: coursesData } = useCourses({ pageSize: 100 });
+  const { data: groupsData } = useGroups({ pageSize: 100 });
   const deleteStudent = useDeleteStudent();
 
-  const students = data?.items ?? [];
+  const serverStudents = data?.items ?? [];
+
+  // INSTANT search: while the debounce/server round-trip is still pending, the
+  // previous rows stay visible (keepPreviousData) — narrow them locally by the
+  // same fields the server matches (name + parent workplace/position) so every
+  // keystroke reacts immediately; the server response then reconciles.
+  const pendingSearch = searchInput.trim();
+  const searchLagging =
+    pendingSearch.length > 0 && (pendingSearch !== search || isPlaceholderData);
+  const students = useMemo(() => {
+    if (!searchLagging) return serverStudents;
+    const q = pendingSearch.toLowerCase();
+    return serverStudents.filter((s) => {
+      const name =
+        `${s.lastName} ${s.firstName} ${s.middleName ?? ''}`.toLowerCase();
+      if (name.includes(q)) return true;
+      return (s.parents ?? []).some(
+        (p) =>
+          (p.workplace ?? '').toLowerCase().includes(q) ||
+          (p.position ?? '').toLowerCase().includes(q),
+      );
+    });
+  }, [serverStudents, searchLagging, pendingSearch]);
+
   const pageCount = data?.meta.pageCount ?? 1;
   const total = data?.meta.total ?? 0;
 
@@ -106,6 +139,18 @@ export function StudentsPage() {
   };
   const onBranchChange = (v: string) => {
     setBranchId(v);
+    setPage(1);
+  };
+  const onCourseChange = (v: string) => {
+    setCourseId(v);
+    setPage(1);
+  };
+  const onGroupChange = (v: string) => {
+    setGroupId(v);
+    setPage(1);
+  };
+  const onDebtChange = (v: '' | 'with' | 'without') => {
+    setDebt(v);
     setPage(1);
   };
 
@@ -243,14 +288,16 @@ export function StudentsPage() {
         }
       />
 
-      {/* Filters: single search box (name OR parent workplace OR position) + branch. */}
+      {/* Filters: search (name OR parent workplace OR position) + branch +
+          course + group + subscription debt. */}
       <div className="mb-4">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-          <StudentSearch value={searchInput} onChange={onSearchChange} />
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-6">
+          <div className="sm:col-span-2 lg:col-span-2">
+            <StudentSearch value={searchInput} onChange={onSearchChange} />
+          </div>
           <Select
             value={branchId}
             onChange={(e) => onBranchChange(e.target.value)}
-            className="w-full sm:w-56"
             aria-label={t('fields.branch')}
           >
             <option value="">{t('crud.allBranches')}</option>
@@ -259,6 +306,41 @@ export function StudentsPage() {
                 {b.name}
               </option>
             ))}
+          </Select>
+          <Select
+            value={courseId}
+            onChange={(e) => onCourseChange(e.target.value)}
+            aria-label={t('fields.course')}
+          >
+            <option value="">{t('students.filters.allCourses')}</option>
+            {(coursesData?.items ?? []).map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+          </Select>
+          <Select
+            value={groupId}
+            onChange={(e) => onGroupChange(e.target.value)}
+            aria-label={t('students.filters.group')}
+          >
+            <option value="">{t('students.filters.allGroups')}</option>
+            {(groupsData?.items ?? []).map((g) => (
+              <option key={g.id} value={g.id}>
+                {g.name}
+              </option>
+            ))}
+          </Select>
+          <Select
+            value={debt}
+            onChange={(e) =>
+              onDebtChange(e.target.value as '' | 'with' | 'without')
+            }
+            aria-label={t('students.filters.debt')}
+          >
+            <option value="">{t('students.filters.debtAll')}</option>
+            <option value="with">{t('students.filters.debtOnly')}</option>
+            <option value="without">{t('students.filters.debtNone')}</option>
           </Select>
         </div>
         <p className="mt-2 text-xs text-foreground-muted">

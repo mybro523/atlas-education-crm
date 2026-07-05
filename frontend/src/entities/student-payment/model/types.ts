@@ -40,3 +40,26 @@ export interface StudentPaymentListParams extends PaginationParams {
   from?: string;
   to?: string;
 }
+
+/**
+ * One row of the "subscription ending soon" panel (GET /student-payments/upcoming):
+ * a student whose paid-for period (anchored to enrollmentDate) runs out within
+ * the look-ahead window, or has already run out.
+ */
+export interface UpcomingPayment {
+  student: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    middleName: string | null;
+    phone: string | null;
+  };
+  branch: { id: string; name: string } | null;
+  monthlyFee: number;
+  paidAmount: number;
+  monthsCovered: number;
+  endsAt: string;
+  /** Days until endsAt (negative = overdue). */
+  daysLeft: number;
+  overdue: boolean;
+}

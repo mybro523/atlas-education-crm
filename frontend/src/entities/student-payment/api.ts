@@ -4,6 +4,7 @@ import type {
   StudentPayment,
   StudentPaymentListParams,
   RecordPaymentDto,
+  UpcomingPayment,
 } from './model/types';
 
 /**
@@ -26,6 +27,15 @@ export const studentPaymentApi = {
     const { data } = await axiosClient.post<StudentPayment>(
       '/student-payments',
       dto,
+    );
+    return data;
+  },
+
+  /** GET /student-payments/upcoming — subscriptions ending within `days` days. */
+  async upcoming(days?: number): Promise<UpcomingPayment[]> {
+    const { data } = await axiosClient.get<UpcomingPayment[]>(
+      '/student-payments/upcoming',
+      { params: days != null ? { days } : undefined },
     );
     return data;
   },
