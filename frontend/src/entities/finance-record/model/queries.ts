@@ -1,4 +1,8 @@
-import { keepPreviousData, useQuery } from '@tanstack/react-query';
+import {
+  keepPreviousData,
+  useQuery,
+  type QueryClient,
+} from '@tanstack/react-query';
 
 import {
   createQueryKeys,
@@ -33,11 +37,34 @@ export function useFinanceRecord(id: string | undefined) {
   });
 }
 
+/** Analytics summary cache prefix (kept raw to avoid a cross-entity import). */
+const ANALYTICS_KEY = ['analytics'] as const;
+
+/** Instantly nudge the analytics Overview totals so a new income/expense shows
+ * without a page refresh; a refetch (invalidation) then reconciles the exact
+ * figures (branch breakdown, series, date-range filtering). */
+function bumpAnalytics(
+  qc: QueryClient,
+  type: 'INCOME' | 'EXPENSE',
+  amount: number,
+  sign: 1 | -1,
+) {
+  const delta = (Number(amount) || 0) * sign;
+  qc.setQueriesData<{
+    combined?: { income: number; expense: number; net: number; debt: number };
+  }>({ queryKey: [...ANALYTICS_KEY, 'summary'] }, (old) => {
+    if (!old?.combined) return old;
+    const income = old.combined.income + (type === 'INCOME' ? delta : 0);
+    const expense = old.combined.expense + (type === 'EXPENSE' ? delta : 0);
+    return { ...old, combined: { ...old.combined, income, expense, net: income - expense } };
+  });
+}
+
 export function useCreateFinanceRecord() {
   return useOptimisticMutation<FinanceRecord, CreateFinanceRecordDto>({
     mutationFn: (dto) => financeRecordApi.create(dto),
     keysToCancel: [financeRecordKeys.lists()],
-    keysToInvalidate: [financeRecordKeys.lists()],
+    keysToInvalidate: [financeRecordKeys.lists(), ANALYTICS_KEY],
     optimisticUpdate: (dto, qc) => {
       const optimistic: FinanceRecord = {
         id: `optimistic-${Date.now()}`,
@@ -54,6 +81,7 @@ export function useCreateFinanceRecord() {
         { queryKey: financeRecordKeys.lists() },
         insertIntoListCache(optimistic),
       );
+      bumpAnalytics(qc, dto.type, dto.amount, 1);
     },
   });
 }
@@ -65,7 +93,11 @@ export function useUpdateFinanceRecord() {
   >({
     mutationFn: ({ id, dto }) => financeRecordApi.update(id, dto),
     keysToCancel: [financeRecordKeys.lists(), financeRecordKeys.details()],
-    keysToInvalidate: [financeRecordKeys.lists(), financeRecordKeys.details()],
+    keysToInvalidate: [
+      financeRecordKeys.lists(),
+      financeRecordKeys.details(),
+      ANALYTICS_KEY,
+    ],
     optimisticUpdate: ({ id, dto }, qc) => {
       qc.setQueriesData(
         { queryKey: financeRecordKeys.lists() },
@@ -82,7 +114,7 @@ export function useDeleteFinanceRecord() {
   return useOptimisticMutation<void, string>({
     mutationFn: (id) => financeRecordApi.remove(id),
     keysToCancel: [financeRecordKeys.lists()],
-    keysToInvalidate: [financeRecordKeys.lists()],
+    keysToInvalidate: [financeRecordKeys.lists(), ANALYTICS_KEY],
     optimisticUpdate: (id, qc) => {
       qc.setQueriesData(
         { queryKey: financeRecordKeys.lists() },

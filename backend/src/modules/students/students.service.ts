@@ -5,7 +5,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { Parent, ParentRelation, Prisma } from '@prisma/client';
+import { Parent, ParentRelation, PaymentStatus, Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import {
   buildPaginatedResult,
@@ -26,11 +26,17 @@ export interface CallerContext {
   role: Role | string;
 }
 
-// Detail include: parents, branch, course, and active group links with the group.
+// Only PAID payments are needed to compute how much a student has paid.
+const paidPaymentsInclude = {
+  payments: { where: { status: PaymentStatus.PAID }, select: { amount: true } },
+} satisfies Prisma.StudentInclude;
+
+// Detail include: parents, branch, course (+ price), paid payments, group links.
 const studentDetailInclude = {
   parents: { orderBy: { lastName: 'asc' } },
   branch: true,
-  course: { select: { id: true, name: true } },
+  course: { select: { id: true, name: true, pricePerMonth: true } },
+  ...paidPaymentsInclude,
   groupLinks: {
     include: {
       group: { select: { id: true, name: true, teacherId: true } },
@@ -39,12 +45,45 @@ const studentDetailInclude = {
   },
 } satisfies Prisma.StudentInclude;
 
-// List include: parents + branch + course (no group links for a lighter payload).
+// List include: parents + branch + course (+ price) + paid payments.
 const studentListInclude = {
   parents: { orderBy: { lastName: 'asc' } },
   branch: true,
-  course: { select: { id: true, name: true } },
+  course: { select: { id: true, name: true, pricePerMonth: true } },
+  ...paidPaymentsInclude,
 } satisfies Prisma.StudentInclude;
+
+/**
+ * Enrich a student payload with the "subscription" (абонемент) figures the UI
+ * shows: how much they must pay (from the student's courseFee, or the course
+ * price), how much they have paid, and what they still owe. Strips the raw
+ * payments array from the response.
+ */
+function serializeStudent<
+  T extends {
+    payments?: { amount: Prisma.Decimal }[];
+    courseFee?: Prisma.Decimal | null;
+    course?: { pricePerMonth?: Prisma.Decimal | null } | null;
+  },
+>(student: T) {
+  const paidAmount = (student.payments ?? []).reduce(
+    (sum, p) => sum + Number(p.amount),
+    0,
+  );
+  const dueAmount =
+    student.courseFee != null
+      ? Number(student.courseFee)
+      : student.course?.pricePerMonth != null
+        ? Number(student.course.pricePerMonth)
+        : 0;
+  const { payments: _payments, ...rest } = student;
+  return {
+    ...rest,
+    paidAmount,
+    dueAmount,
+    owedAmount: Math.max(0, dueAmount - paidAmount),
+  };
+}
 
 @Injectable()
 export class StudentsService {
@@ -103,10 +142,7 @@ export class StudentsService {
   }
 
   /** Paginated list/search of students (API contract §6). */
-  async findAll(
-    query: QueryStudentsDto,
-    caller: CallerContext,
-  ): Promise<PaginatedResult<Prisma.StudentGetPayload<{ include: typeof studentListInclude }>>> {
+  async findAll(query: QueryStudentsDto, caller: CallerContext) {
     const { skip, take, page, pageSize } = toSkipTake(query);
 
     const and: Prisma.StudentWhereInput[] = [];
@@ -159,7 +195,12 @@ export class StudentsService {
       this.prisma.student.count({ where }),
     ]);
 
-    return buildPaginatedResult(items, total, page, pageSize);
+    return buildPaginatedResult(
+      items.map(serializeStudent),
+      total,
+      page,
+      pageSize,
+    );
   }
 
   /**
@@ -187,7 +228,7 @@ export class StudentsService {
       }
     }
 
-    return student;
+    return serializeStudent(student);
   }
 
   /** Create a student, optionally with father/mother slots and/or parents[]. */

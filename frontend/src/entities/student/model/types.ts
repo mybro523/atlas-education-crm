@@ -19,6 +19,8 @@ export type ReferralSource =
 export interface StudentCourseRef {
   id: string;
   name: string;
+  /** Monthly price of the course (TJS) — used to derive what a student owes. */
+  pricePerMonth?: number | null;
 }
 
 /**
@@ -66,6 +68,10 @@ export interface Student {
   referralSource?: ReferralSource | null;
   /** Sum the student must pay for the course (TJS). */
   courseFee?: number | null;
+  /** Subscription (абонемент) figures computed server-side (TJS). */
+  paidAmount?: number;
+  dueAmount?: number;
+  owedAmount?: number;
   /** Billing anchor (period counts from here). */
   enrollmentDate: string;
   isActive: boolean;

@@ -141,6 +141,36 @@ export function StudentsPage() {
       cell: (student) => formatDate(student.enrollmentDate),
     },
     {
+      id: 'subscription',
+      header: t('students.subscription'),
+      mobileLabel: t('students.subscription'),
+      cell: (student) => {
+        const due =
+          student.dueAmount ??
+          student.courseFee ??
+          student.course?.pricePerMonth ??
+          0;
+        const paid = student.paidAmount ?? 0;
+        const owed = student.owedAmount ?? Math.max(0, due - paid);
+        if (!due && !paid)
+          return <span className="text-foreground-muted">—</span>;
+        const fmt = (n: number) =>
+          `${new Intl.NumberFormat('ru-RU').format(n)} TJS`;
+        return (
+          <div className="text-sm leading-tight">
+            <div className="text-foreground">
+              {fmt(paid)} / {fmt(due)}
+            </div>
+            {owed > 0 && (
+              <div className="text-xs text-danger">
+                {t('students.owedShort')}: {fmt(owed)}
+              </div>
+            )}
+          </div>
+        );
+      },
+    },
+    {
       id: 'actions',
       header: '',
       mobileLabel: t('crud.actions'),

@@ -242,7 +242,9 @@
       "ADS": "Advertising",
       "SELF": "Found us directly",
       "OTHER": "Other"
-    }
+    },
+    "subscription": "Subscription",
+    "owedShort": "Owed"
   },
   "pages": {
     "students": "Students",
@@ -697,7 +699,12 @@
     "noLessonsHint": "Create lessons in the schedule to grade students.",
     "saveError": "Could not save changes",
     "loadError": "Could not load the journal",
-    "loadErrorHint": "Try refreshing the page."
+    "loadErrorHint": "Try refreshing the page.",
+    "attendance": {
+      "PRESENT": "Present",
+      "LATE": "Late",
+      "ABSENT": "Absent"
+    }
   },
   "studentCabinet": {
     "title": "My cabinet",
