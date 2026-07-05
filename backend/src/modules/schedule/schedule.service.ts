@@ -73,13 +73,14 @@ export class ScheduleService {
       if (query.to) where.startsAt.lt = new Date(query.to);
     }
 
-    // Teacher scoping: an explicit ?teacherId wins; otherwise a TEACHER caller
-    // is limited to their own lessons.
-    if (query.teacherId) {
-      where.teacherId = query.teacherId;
-    } else if (user.role === Role.TEACHER) {
+    // Teacher scoping: a TEACHER caller is ALWAYS limited to their own lessons —
+    // an arbitrary ?teacherId is ignored so a teacher can't enumerate another
+    // teacher's schedule. Other staff may optionally filter by ?teacherId.
+    if (user.role === Role.TEACHER) {
       const teacher = await this.resolveTeacher(user);
       where.teacherId = teacher.id;
+    } else if (query.teacherId) {
+      where.teacherId = query.teacherId;
     }
 
     const [items, total] = await this.prisma.$transaction([
@@ -96,12 +97,19 @@ export class ScheduleService {
     return buildPaginatedResult(items, total, page, pageSize);
   }
 
-  async findOne(id: string) {
+  async findOne(id: string, user: AuthUser) {
     const lesson = await this.prisma.lesson.findUnique({
       where: { id },
       include: lessonDetailInclude,
     });
     if (!lesson) throw new NotFoundException(`Lesson ${id} not found`);
+    // A TEACHER may only read their OWN lessons.
+    if (user.role === Role.TEACHER) {
+      const teacher = await this.resolveTeacher(user);
+      if (lesson.teacherId !== teacher.id) {
+        throw new ForbiddenException('You can only view your own lessons');
+      }
+    }
     return lesson;
   }
 
@@ -184,7 +192,11 @@ export class ScheduleService {
   }
 
   async remove(id: string): Promise<{ id: string }> {
-    await this.findOne(id);
+    const exists = await this.prisma.lesson.findUnique({
+      where: { id },
+      select: { id: true },
+    });
+    if (!exists) throw new NotFoundException(`Lesson ${id} not found`);
     await this.prisma.lesson.delete({ where: { id } });
     return { id };
   }

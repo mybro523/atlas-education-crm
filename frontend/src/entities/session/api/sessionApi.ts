@@ -1,8 +1,8 @@
 import { axiosClient } from '@/shared/api';
-import type { AuthTokens, User } from '@/shared/types';
-import type { LoginCredentials, LoginResponse } from '../model/types';
+import type { User } from '@/shared/types';
+import type { AuthResponse, LoginCredentials, LoginResponse } from '../model/types';
 
-/** POST /auth/login — exchange credentials for tokens + user. */
+/** POST /auth/login — exchange credentials for an access token + user. */
 export async function login(
   credentials: LoginCredentials,
 ): Promise<LoginResponse> {
@@ -13,11 +13,13 @@ export async function login(
   return data;
 }
 
-/** POST /auth/refresh — rotate the token pair. */
-export async function refresh(refreshToken: string): Promise<AuthTokens> {
-  const { data } = await axiosClient.post<AuthTokens>('/auth/refresh', {
-    refreshToken,
-  });
+/**
+ * POST /auth/refresh — mint a fresh access token from the httpOnly refresh
+ * cookie. No body/token is sent; the cookie travels via withCredentials.
+ * Returns the new access token plus the current user (used by the bootstrap).
+ */
+export async function refresh(): Promise<AuthResponse> {
+  const { data } = await axiosClient.post<AuthResponse>('/auth/refresh', {});
   return data;
 }
 
@@ -27,7 +29,7 @@ export async function me(): Promise<User> {
   return data;
 }
 
-/** POST /auth/logout — best-effort server-side refresh-token revocation. */
+/** POST /auth/logout — clears the refresh cookie server-side. Best-effort. */
 export async function logout(): Promise<void> {
   await axiosClient.post('/auth/logout').catch(() => {
     // Ignore network/401 errors: local logout must always succeed.

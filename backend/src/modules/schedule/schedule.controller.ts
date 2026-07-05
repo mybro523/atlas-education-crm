@@ -45,8 +45,8 @@ export class ScheduleController {
 
   @Get(':id')
   @Roles(Role.FOUNDER, Role.ADMIN, Role.SALES_MANAGER, Role.TEACHER)
-  findOne(@Param('id') id: string) {
-    return this.scheduleService.findOne(id);
+  findOne(@Param('id') id: string, @CurrentUser() user: AuthUser) {
+    return this.scheduleService.findOne(id, user);
   }
 
   // ---- Write --------------------------------------------------------------

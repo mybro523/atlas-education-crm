@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { JwtModule } from '@nestjs/jwt';
 import { ChatsService } from './chats.service';
 import { ChatsController } from './chats.controller';
 import { ChatsWebhookController } from './chats-webhook.controller';
@@ -18,6 +19,7 @@ import { MetaGraphService } from './meta-graph.service';
  * ConfigModule) so they are injectable here without re-importing.
  */
 @Module({
+  imports: [JwtModule.register({})],
   controllers: [ChatsController, ChatsWebhookController],
   providers: [ChatsService, MetaGraphService, ChatsGateway],
   exports: [ChatsService],

@@ -6,7 +6,6 @@ import axios, {
 } from 'axios';
 
 import { API_URL } from '@/shared/config';
-import type { AuthTokens } from '@/shared/types';
 import { getTokenBridge } from './tokenStore';
 
 /** Requests we retried after a refresh get flagged to avoid infinite loops. */
@@ -14,14 +13,20 @@ interface RetriableConfig extends InternalAxiosRequestConfig {
   _retry?: boolean;
 }
 
+/** Shape of the /auth/refresh response — a fresh access token (user ignored here). */
+interface RefreshResponse {
+  accessToken: string;
+}
+
 export const axiosClient: AxiosInstance = axios.create({
   baseURL: API_URL,
   headers: { 'Content-Type': 'application/json' },
-  // Refresh cookie support if the backend ever moves refresh to httpOnly cookie.
-  withCredentials: false,
+  // Send/receive the httpOnly refresh cookie on every request (login, refresh,
+  // logout and normal calls all rely on it).
+  withCredentials: true,
 });
 
-// --- Request interceptor: attach the access token. ---
+// --- Request interceptor: attach the in-memory access token. ---
 axiosClient.interceptors.request.use((config) => {
   const token = getTokenBridge()?.getAccessToken();
   if (token) {
@@ -33,16 +38,20 @@ axiosClient.interceptors.request.use((config) => {
 // --- Response interceptor: transparent 401 -> refresh -> retry. ---
 
 /** Single in-flight refresh shared by all queued 401s. */
-let refreshPromise: Promise<AuthTokens> | null = null;
+let refreshPromise: Promise<string> | null = null;
 
-async function performRefresh(refreshToken: string): Promise<AuthTokens> {
-  // Bare axios (not axiosClient) so we don't re-enter these interceptors.
-  const { data } = await axios.post<AuthTokens>(
+/**
+ * Ask the backend for a new access token. The refresh token travels in the
+ * httpOnly cookie (withCredentials), so there is no body to send. Uses bare
+ * axios so we don't re-enter these interceptors.
+ */
+async function performRefresh(): Promise<string> {
+  const { data } = await axios.post<RefreshResponse>(
     `${API_URL}/auth/refresh`,
-    { refreshToken },
-    { headers: { 'Content-Type': 'application/json' } },
+    {},
+    { withCredentials: true, headers: { 'Content-Type': 'application/json' } },
   );
-  return data;
+  return data.accessToken;
 }
 
 axiosClient.interceptors.response.use(
@@ -52,16 +61,14 @@ axiosClient.interceptors.response.use(
     const original = error.config as RetriableConfig | undefined;
 
     const isUnauthorized = error.response?.status === 401;
-    const refreshToken = bridge?.getRefreshToken();
 
-    // Don't try to refresh the refresh call itself, or when we have no config,
-    // already retried, or have no refresh token. Explicit guards (rather than a
-    // combined boolean) so TypeScript narrows `original`/`refreshToken`.
+    // Don't try to refresh the refresh call itself, or when we have no config
+    // or already retried. Explicit guards (rather than a combined boolean) so
+    // TypeScript narrows `original`.
     if (
       !isUnauthorized ||
       !original ||
       original._retry ||
-      !refreshToken ||
       original.url?.includes('/auth/refresh')
     ) {
       return Promise.reject(error);
@@ -71,14 +78,14 @@ axiosClient.interceptors.response.use(
 
     try {
       if (!refreshPromise) {
-        refreshPromise = performRefresh(refreshToken).finally(() => {
+        refreshPromise = performRefresh().finally(() => {
           refreshPromise = null;
         });
       }
-      const tokens = await refreshPromise;
-      bridge?.setTokens(tokens);
+      const accessToken = await refreshPromise;
+      bridge?.setAccessToken(accessToken);
 
-      original.headers.set('Authorization', `Bearer ${tokens.accessToken}`);
+      original.headers.set('Authorization', `Bearer ${accessToken}`);
       return axiosClient(original as AxiosRequestConfig);
     } catch (refreshError) {
       bridge?.onAuthCleared();

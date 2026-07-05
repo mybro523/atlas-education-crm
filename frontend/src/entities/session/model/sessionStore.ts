@@ -1,106 +1,57 @@
 import { create } from 'zustand';
-import { STORAGE_KEYS } from '@/shared/config';
 import { registerTokenBridge } from '@/shared/api';
-import type { AuthTokens, User } from '@/shared/types';
+import type { User } from '@/shared/types';
 
-interface PersistedAuth {
+/**
+ * Session state lives in memory ONLY. The access token is never written to
+ * localStorage/sessionStorage; on a full page reload it is restored by the
+ * auth-bootstrap, which calls POST /auth/refresh using the httpOnly refresh
+ * cookie. This keeps tokens out of any JS-persistent storage (XSS-exfiltration
+ * surface) while still surviving reloads.
+ */
+interface SessionState {
   accessToken: string | null;
-  refreshToken: string | null;
   user: User | null;
-}
-
-interface SessionState extends PersistedAuth {
-  /** True once we've read localStorage — guards initial route flicker. */
-  hydrated: boolean;
   isAuthenticated: boolean;
-  setSession: (payload: { tokens: AuthTokens; user: User }) => void;
-  setTokens: (tokens: AuthTokens) => void;
+  /**
+   * False until the initial refresh attempt has settled. Route guards must wait
+   * for this before redirecting, otherwise a hard refresh would bounce a
+   * logged-in user to /login before the cookie-based restore completes.
+   */
+  authReady: boolean;
+  setSession: (payload: { accessToken: string; user: User }) => void;
+  setAccessToken: (accessToken: string) => void;
   setUser: (user: User) => void;
+  setAuthReady: (ready: boolean) => void;
   clear: () => void;
 }
 
-const EMPTY: PersistedAuth = {
+export const useSessionStore = create<SessionState>((set) => ({
   accessToken: null,
-  refreshToken: null,
   user: null,
-};
+  isAuthenticated: false,
+  authReady: false,
 
-function readPersisted(): PersistedAuth {
-  if (typeof window === 'undefined') return EMPTY;
-  try {
-    const raw = window.localStorage.getItem(STORAGE_KEYS.auth);
-    if (!raw) return EMPTY;
-    const parsed = JSON.parse(raw) as Partial<PersistedAuth>;
-    return {
-      accessToken: parsed.accessToken ?? null,
-      refreshToken: parsed.refreshToken ?? null,
-      user: parsed.user ?? null,
-    };
-  } catch {
-    return EMPTY;
-  }
-}
+  setSession: ({ accessToken, user }) =>
+    set({ accessToken, user, isAuthenticated: true }),
 
-function persist(state: PersistedAuth): void {
-  if (typeof window === 'undefined') return;
-  if (!state.accessToken && !state.refreshToken) {
-    window.localStorage.removeItem(STORAGE_KEYS.auth);
-    return;
-  }
-  window.localStorage.setItem(STORAGE_KEYS.auth, JSON.stringify(state));
-}
+  setAccessToken: (accessToken) =>
+    set({ accessToken, isAuthenticated: true }),
 
-const initial = readPersisted();
+  setUser: (user) => set({ user }),
 
-export const useSessionStore = create<SessionState>((set, get) => ({
-  ...initial,
-  hydrated: true,
-  isAuthenticated: !!initial.accessToken,
+  setAuthReady: (authReady) => set({ authReady }),
 
-  setSession: ({ tokens, user }) => {
-    const next: PersistedAuth = {
-      accessToken: tokens.accessToken,
-      refreshToken: tokens.refreshToken,
-      user,
-    };
-    persist(next);
-    set({ ...next, isAuthenticated: true });
-  },
-
-  setTokens: (tokens) => {
-    const next: PersistedAuth = {
-      accessToken: tokens.accessToken,
-      refreshToken: tokens.refreshToken,
-      user: get().user,
-    };
-    persist(next);
-    set({
-      accessToken: next.accessToken,
-      refreshToken: next.refreshToken,
-      isAuthenticated: true,
-    });
-  },
-
-  setUser: (user) => {
-    set({ user });
-    persist({
-      accessToken: get().accessToken,
-      refreshToken: get().refreshToken,
-      user,
-    });
-  },
-
-  clear: () => {
-    persist(EMPTY);
-    set({ ...EMPTY, isAuthenticated: false });
-  },
+  // Clearing keeps authReady untouched: once the bootstrap has run we still
+  // know the session is settled, we just have no user anymore.
+  clear: () =>
+    set({ accessToken: null, user: null, isAuthenticated: false }),
 }));
 
 // --- Bridge the store to the axios interceptors (no circular import). ---
 registerTokenBridge({
   getAccessToken: () => useSessionStore.getState().accessToken,
-  getRefreshToken: () => useSessionStore.getState().refreshToken,
-  setTokens: (tokens) => useSessionStore.getState().setTokens(tokens),
+  setAccessToken: (token) => useSessionStore.getState().setAccessToken(token),
   onAuthCleared: () => useSessionStore.getState().clear(),
 });
 
@@ -108,3 +59,4 @@ registerTokenBridge({
 export const selectUser = (s: SessionState) => s.user;
 export const selectRole = (s: SessionState) => s.user?.role;
 export const selectIsAuthenticated = (s: SessionState) => s.isAuthenticated;
+export const selectAuthReady = (s: SessionState) => s.authReady;

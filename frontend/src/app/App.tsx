@@ -10,6 +10,17 @@ import { QueryProvider } from '@/app/providers/QueryProvider';
 import { AppRouter } from '@/app/router';
 import { AppErrorBoundary } from '@/app/AppErrorBoundary';
 import { ToastProvider } from '@/shared/ui';
+import { useAuthBootstrap } from '@/entities/session';
+
+/**
+ * Restores the in-memory session from the httpOnly refresh cookie on startup,
+ * then renders the router. Kept as an inner component so the bootstrap effect
+ * runs inside the app tree (and the route guards observe `authReady`).
+ */
+function AppShell() {
+  useAuthBootstrap();
+  return <AppRouter />;
+}
 
 /**
  * Application root. Provider order:
@@ -23,7 +34,7 @@ export function App() {
         <QueryProvider>
           <ToastProvider>
             <AppErrorBoundary>
-              <AppRouter />
+              <AppShell />
             </AppErrorBoundary>
           </ToastProvider>
         </QueryProvider>

@@ -6,8 +6,10 @@ import {
   type LoginResponse,
 } from '@/entities/session';
 /**
- * Login mutation. On success it writes the session (tokens + user) into the
- * Zustand store, which persists to localStorage and unlocks protected routes.
+ * Login mutation. On success it writes the session (access token + user) into
+ * the in-memory Zustand store, which unlocks protected routes. No token is
+ * persisted to localStorage — the refresh token lives in an httpOnly cookie
+ * set by the backend on this same request.
  */
 export function useLogin() {
   const setSession = useSessionStore((s) => s.setSession);
@@ -15,13 +17,7 @@ export function useLogin() {
   return useMutation<LoginResponse, unknown, LoginCredentials>({
     mutationFn: (credentials) => loginRequest(credentials),
     onSuccess: (data) => {
-      setSession({
-        tokens: {
-          accessToken: data.accessToken,
-          refreshToken: data.refreshToken,
-        },
-        user: data.user,
-      });
+      setSession({ accessToken: data.accessToken, user: data.user });
     },
   });
 }
