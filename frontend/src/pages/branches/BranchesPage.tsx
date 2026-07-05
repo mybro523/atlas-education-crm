@@ -116,7 +116,7 @@ export function BranchesPage() {
         actions={
           <Button onClick={openCreate}>
             <Plus className="h-4 w-4" />
-            {t('crud.add')}
+            {t('branches.add')}
           </Button>
         }
       />

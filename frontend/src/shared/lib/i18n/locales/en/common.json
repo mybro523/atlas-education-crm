@@ -301,7 +301,8 @@
     "phone": "Phone",
     "phonePlaceholder": "+992 XX XXX XX XX",
     "empty": "No branches yet",
-    "emptyHint": "Add the network's first branch."
+    "emptyHint": "Add the network's first branch.",
+    "add": "Add branch"
   },
   "subjects": {
     "title": "Subjects",
@@ -324,7 +325,8 @@
     "isActive": "Active",
     "duplicate": "A course type with this name already exists",
     "empty": "No course types yet",
-    "emptyHint": "Add the first course type."
+    "emptyHint": "Add the first course type.",
+    "add": "Add course type"
   },
   "rooms": {
     "title": "Rooms",
@@ -337,7 +339,8 @@
     "empty": "No rooms yet",
     "emptyHint": "Add the first room",
     "addTitle": "New room",
-    "editTitle": "Edit room"
+    "editTitle": "Edit room",
+    "add": "Add room"
   },
   "courses": {
     "title": "Courses",
@@ -361,7 +364,8 @@
     "endDate": "End date",
     "dateRange": "Course term",
     "empty": "No courses yet",
-    "emptyHint": "Add the first course."
+    "emptyHint": "Add the first course.",
+    "add": "Add course"
   },
   "groups": {
     "title": "Groups",

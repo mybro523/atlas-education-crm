@@ -123,7 +123,7 @@ export function CourseTypesPage() {
         actions={
           <Button onClick={openCreate}>
             <Plus className="h-4 w-4" />
-            {t('crud.add')}
+            {t('courseTypes.add')}
           </Button>
         }
       />

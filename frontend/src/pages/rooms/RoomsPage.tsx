@@ -161,7 +161,7 @@ export function RoomsPage() {
           canManage ? (
             <Button onClick={openCreate}>
               <Plus className="h-4 w-4" />
-              {t('crud.add')}
+              {t('rooms.add')}
             </Button>
           ) : undefined
         }
