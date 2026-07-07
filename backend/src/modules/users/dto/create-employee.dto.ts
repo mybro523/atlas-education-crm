@@ -1,4 +1,5 @@
 import {
+  IsBoolean,
   IsEmail,
   IsEnum,
   IsIn,
@@ -56,5 +57,9 @@ export class ResetPasswordDto {
 }
 
 export class BlockUserDto {
+  // @IsBoolean is REQUIRED: the global ValidationPipe runs with whitelist:true,
+  // which strips undecorated properties — without it `blocked` always arrived
+  // as undefined and blocking silently never engaged.
+  @IsBoolean()
   blocked!: boolean;
 }
