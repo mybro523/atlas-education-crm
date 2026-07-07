@@ -1,4 +1,10 @@
-import { IsBoolean, IsNotEmpty, IsOptional, IsString } from 'class-validator';
+import {
+  IsBoolean,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  Matches,
+} from 'class-validator';
 
 /**
  * Body for creating a Room / kabinet. `name` is free text (no uniqueness).
@@ -15,6 +21,12 @@ export class CreateRoomDto {
   @IsString()
   @IsNotEmpty()
   branchId?: string;
+
+  /** Display color (hex, e.g. #2563EB) used to tint schedule cards. */
+  @IsOptional()
+  @IsString()
+  @Matches(/^#[0-9a-fA-F]{6}$/, { message: 'color must be a #RRGGBB hex value' })
+  color?: string;
 
   @IsOptional()
   @IsBoolean()

@@ -31,6 +31,13 @@ export class SalariesController {
   }
 
   // Static routes before ':id'.
+
+  /** Automatic per-period salary overview for ALL staff (teachers + admin). */
+  @Get('overview')
+  overview(@Query('from') from: string, @Query('to') to: string) {
+    return this.service.overview(from, to);
+  }
+
   @Post('compute')
   compute(@Body() dto: ComputeSalaryDto) {
     return this.service.compute(dto);

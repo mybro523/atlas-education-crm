@@ -129,22 +129,26 @@ export function GroupsPage() {
     {
       id: 'name',
       header: t('groups.table.name'),
+      sortValue: (g) => g.name,
       cell: (g) => <span className="font-medium text-foreground">{g.name}</span>,
     },
     {
       id: 'course',
       header: t('groups.table.course'),
+      sortValue: (g) => g.course?.name ?? null,
       cell: (g) => g.course?.name ?? '—',
       hideOnMobile: true,
     },
     {
       id: 'teacher',
       header: t('groups.table.teacher'),
+      sortValue: teacherLabel,
       cell: teacherLabel,
     },
     {
       id: 'branch',
       header: t('groups.table.branch'),
+      sortValue: (g) => g.branch?.name ?? null,
       cell: (g) => g.branch?.name ?? '—',
       hideOnMobile: true,
     },
@@ -152,11 +156,13 @@ export function GroupsPage() {
       id: 'students',
       header: t('groups.table.students'),
       className: 'text-right',
+      sortValue: (g) => g.studentsCount ?? 0,
       cell: (g) => g.studentsCount ?? 0,
     },
     {
       id: 'status',
       header: t('groups.table.status'),
+      sortValue: (g) => (g.isActive ? 1 : 0),
       cell: (g) => (
         <Badge variant={g.isActive ? 'success' : 'muted'} dot>
           {g.isActive

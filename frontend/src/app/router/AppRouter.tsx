@@ -16,6 +16,8 @@ import { SchedulePage } from '@/pages/schedule';
 import { JournalPage } from '@/pages/journal';
 import { FinancePage } from '@/pages/finance';
 import { StudentPaymentsPage } from '@/pages/student-payments';
+import { EmployeesPage } from '@/pages/employees';
+import { SalariesPage } from '@/pages/salaries';
 import { StudentCabinetPage } from '@/pages/student-cabinet';
 import { TeacherCabinetPage } from '@/pages/teacher-cabinet';
 import { ChatsPage } from '@/pages/chats';
@@ -116,9 +118,11 @@ export function AppRouter() {
               />
             </Route>
 
-            {/* Finance: founder only */}
+            {/* Finance + staff management + salaries: founder only */}
             <Route element={<RoleRoute allow={[ROLES.FOUNDER]} />}>
               <Route path={ROUTES.finance} element={<FinancePage />} />
+              <Route path={ROUTES.employees} element={<EmployeesPage />} />
+              <Route path={ROUTES.salaries} element={<SalariesPage />} />
             </Route>
 
             {/* Chats: sales manager + founder (admin excluded) */}

@@ -1,8 +1,10 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
-import { FormModal, Input, Select, useToast } from '@/shared/ui';
+import { Eye, EyeOff } from 'lucide-react';
+import { FormModal, Input, Select, Textarea, useToast } from '@/shared/ui';
 import { extractErrorMessage } from '@/shared/api';
 import {
+  isValidEmail,
   isValidPersonName,
   isValidPhone,
   isValidAmount,
@@ -52,7 +54,20 @@ interface FieldErrors {
   enrollmentDate?: string;
   branchId?: string;
   courseFee?: string;
+  credEmail?: string;
+  credPassword?: string;
 }
+
+/**
+ * Edit payload with null-clears: the backend treats an explicit `null` as
+ * "clear this field", which the shared UpdateStudentDto only models for `note`.
+ * Widened locally so emptied inputs erase the stored middle name / phone
+ * instead of silently keeping the old value (the "отчество вернулось" bug).
+ */
+type UpdateStudentPayload = Omit<UpdateStudentDto, 'middleName' | 'phone'> & {
+  middleName?: string | null;
+  phone?: string | null;
+};
 
 /** Parse a validated fee string to a number (null when blank). */
 function parseFee(value: string): number | null {
@@ -105,6 +120,10 @@ export function StudentFormModal({
   const [level, setLevel] = useState<StudentLevel | ''>('');
   const [referralSource, setReferralSource] = useState<ReferralSource | ''>('');
   const [courseFee, setCourseFee] = useState('');
+  const [note, setNote] = useState('');
+  const [cabEmail, setCabEmail] = useState('');
+  const [cabPassword, setCabPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [isActive, setIsActive] = useState(true);
   const [father, setFather] = useState<ParentFigureDraft>(figureFromParent());
   const [mother, setMother] = useState<ParentFigureDraft>(figureFromParent());
@@ -125,6 +144,10 @@ export function StudentFormModal({
     setLevel(student?.level ?? '');
     setReferralSource(student?.referralSource ?? '');
     setCourseFee(student?.courseFee != null ? String(student.courseFee) : '');
+    setNote(student?.note ?? '');
+    setCabEmail(student?.user?.email ?? '');
+    setCabPassword('');
+    setShowPassword(false);
     setIsActive(student?.isActive ?? true);
     setFather(
       figureFromParent(
@@ -142,6 +165,17 @@ export function StudentFormModal({
   }, [open, student]);
 
   const today = todayInput();
+
+  // Cabinet credentials. On create both fields are required. On edit they are
+  // "untouched" (nothing sent) while the password stays empty and the login is
+  // either blank or still the student's current one — typing a new password, or
+  // a different/first-time login, switches the section into "issue/change
+  // access" mode, which then requires a valid email + password (>= 4 chars).
+  const originalCabEmail = student?.user?.email ?? '';
+  const credsUntouched =
+    isEdit &&
+    cabPassword.length === 0 &&
+    (cabEmail.trim() === '' || cabEmail.trim() === originalCabEmail);
 
   /** Validate a parent block only when it has been filled in. */
   const validateFigure = (figure: ParentFigureDraft): ParentFigureErrors => {
@@ -181,6 +215,16 @@ export function StudentFormModal({
     // Course fee: optional, but when entered must be a valid non-negative amount.
     if (courseFee.trim() && !isValidAmount(courseFee))
       next.courseFee = t('form.invalidAmount');
+    // Cabinet credentials: always validated on create; on edit only when the
+    // user is actually issuing / changing access.
+    if (!credsUntouched) {
+      const email = cabEmail.trim();
+      if (!email) next.credEmail = t('form.requiredField');
+      else if (!isValidEmail(email)) next.credEmail = t('form.invalidEmail');
+      if (!cabPassword) next.credPassword = t('form.requiredField');
+      else if (cabPassword.length < 4)
+        next.credPassword = t('form.passwordMin');
+    }
 
     const fErr = validateFigure(father);
     const mErr = validateFigure(mother);
@@ -213,21 +257,30 @@ export function StudentFormModal({
     };
 
     if (isEdit && student) {
-      const dto: UpdateStudentDto = {
+      const dto: UpdateStudentPayload = {
         firstName: firstName.trim(),
         lastName: lastName.trim(),
-        middleName: middleName.trim() || undefined,
-        phone: phone.trim() || undefined,
+        // CLEAR-ON-EMPTY: explicit null erases the stored value server-side —
+        // `undefined` would drop the key and silently keep the old value.
+        middleName: middleName.trim() || null,
+        phone: phone.trim() || null,
+        note: note.trim() || null,
         birthDate: birthDate || undefined,
         enrollmentDate: enrollmentDate || undefined,
         branchId,
         isActive,
         ...shared,
+        // Credentials travel only when access is being issued or changed.
+        credentials: credsUntouched
+          ? undefined
+          : { email: cabEmail.trim(), password: cabPassword },
         father: fatherDto,
         mother: motherDto,
       };
       updateStudent.mutate(
-        { id: student.id, dto },
+        // Safe: UpdateStudentPayload only widens middleName/phone with `null`,
+        // which the backend update DTO accepts as "clear field".
+        { id: student.id, dto: dto as UpdateStudentDto },
         {
           onSuccess: () => toast.success(t('students.updated')),
           onError: (err) =>
@@ -240,11 +293,14 @@ export function StudentFormModal({
         lastName: lastName.trim(),
         middleName: middleName.trim() || undefined,
         phone: phone.trim() || undefined,
+        note: note.trim() || undefined,
         birthDate: birthDate || undefined,
         enrollmentDate: enrollmentDate || undefined,
         branchId,
         isActive,
         ...shared,
+        // Required on create — validate() guarantees both fields are filled.
+        credentials: { email: cabEmail.trim(), password: cabPassword },
         father: fatherDto,
         mother: motherDto,
       };
@@ -412,6 +468,75 @@ export function StudentFormModal({
           error={errors.courseFee}
           disabled={submitting}
         />
+
+        {/* Free-form remark — searchable from the students list. */}
+        <div className="sm:col-span-2">
+          <Textarea
+            label={`${t('fields.note')} (${t('form.optional')})`}
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            placeholder={t('students.notePlaceholder')}
+            maxLength={500}
+            rows={3}
+            disabled={submitting}
+          />
+        </div>
+      </div>
+
+      {/* Personal-cabinet access: login + password issued to the student. */}
+      <div className="space-y-3 border-t border-border pt-4">
+        <div>
+          <h3 className="text-sm font-semibold text-foreground">
+            {t('students.credentialsTitle')}
+          </h3>
+          <p className="mt-0.5 text-xs text-foreground-muted">
+            {t('students.credentialsHint')}
+          </p>
+        </div>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <Input
+            label={t('fields.login')}
+            type="email"
+            inputMode="email"
+            autoComplete="off"
+            value={cabEmail}
+            onChange={(e) => setCabEmail(e.target.value)}
+            error={errors.credEmail}
+            maxLength={254}
+            disabled={submitting}
+          />
+          <Input
+            label={t('fields.password')}
+            type={showPassword ? 'text' : 'password'}
+            autoComplete="new-password"
+            placeholder={isEdit ? t('form.changePassword') : undefined}
+            value={cabPassword}
+            onChange={(e) => setCabPassword(e.target.value)}
+            error={errors.credPassword}
+            maxLength={100}
+            disabled={submitting}
+            rightIcon={
+              <button
+                type="button"
+                tabIndex={-1}
+                onClick={() => setShowPassword((v) => !v)}
+                aria-label={
+                  showPassword ? t('auth.hidePassword') : t('auth.showPassword')
+                }
+                title={
+                  showPassword ? t('auth.hidePassword') : t('auth.showPassword')
+                }
+                className="flex h-8 w-8 items-center justify-center rounded-md text-foreground-muted transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                {showPassword ? (
+                  <EyeOff className="h-5 w-5" />
+                ) : (
+                  <Eye className="h-5 w-5" />
+                )}
+              </button>
+            }
+          />
+        </div>
       </div>
 
       {/* Explicit parent blocks: father + mother (both optional). */}

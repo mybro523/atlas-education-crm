@@ -33,16 +33,126 @@ export interface SalaryComputation {
   lessons: SalaryLessonLine[];
 }
 
+/** One row of the automatic staff-salary overview. */
+export interface SalaryOverviewRow {
+  kind: 'teacher' | 'employee';
+  id: string;
+  firstName: string;
+  lastName: string;
+  branch: { id: string; name: string } | null;
+  /** Teacher hourly rate (TJS/hour), when set. */
+  hourlyRate: number | null;
+  /** Conducted lessons within the period (teachers only). */
+  lessonsCount: number;
+  /** Total conducted hours within the period (teachers only). */
+  hoursTotal: number;
+  /** Auto-computed amount for the period. */
+  amount: number;
+}
+
 /**
  * Salaries. Teacher pay is FLEXIBLE per conducted lesson (§0.6):
  *   salary = Σ payRate(lesson) over the teacher's conducted lessons in [from,to]
- *   payRate(lesson) = lesson.teacherPayRate ?? lesson.lessonRate.amount ?? 0
+ *   payRate(lesson) = lesson.teacherPayRate ?? lesson.lessonRate.amount
+ *                     ?? teacher.hourlyRate × lessonHours
  * Admin staff salary is fixed (Employee.baseSalary, basis=FIXED).
  * FOUNDER-only (guarded at the controller).
  */
 @Injectable()
 export class SalariesService {
   constructor(private readonly prisma: PrismaService) {}
+
+  /**
+   * Automatic salary overview for ALL staff over [from, to]:
+   * every teacher's pay is computed from their conducted lessons
+   * (per-lesson override ?? linked rate ?? hourlyRate × hours), and
+   * admin staff carry their fixed base salary.
+   */
+  async overview(fromISO: string, toISO: string): Promise<SalaryOverviewRow[]> {
+    const from = new Date(fromISO);
+    const to = new Date(toISO);
+    if (Number.isNaN(from.getTime()) || Number.isNaN(to.getTime()) || to < from) {
+      throw new BadRequestException('Invalid period');
+    }
+
+    const [teachers, employees] = await this.prisma.$transaction([
+      this.prisma.teacher.findMany({
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          hourlyRate: true,
+          branch: { select: { id: true, name: true } },
+          lessons: {
+            where: { isConducted: true, startsAt: { gte: from, lte: to } },
+            select: {
+              startsAt: true,
+              endsAt: true,
+              teacherPayRate: true,
+              lessonRate: { select: { amount: true } },
+            },
+          },
+        },
+        orderBy: [{ lastName: 'asc' }, { firstName: 'asc' }],
+      }),
+      this.prisma.employee.findMany({
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          baseSalary: true,
+          branch: { select: { id: true, name: true } },
+        },
+        orderBy: [{ lastName: 'asc' }, { firstName: 'asc' }],
+      }),
+    ]);
+
+    const rows: SalaryOverviewRow[] = teachers.map((t) => {
+      let hoursTotal = 0;
+      let amount = 0;
+      for (const l of t.lessons) {
+        // Lessons without an end time count as 1 hour.
+        const hours = l.endsAt
+          ? Math.max(0, (l.endsAt.getTime() - l.startsAt.getTime()) / 3_600_000)
+          : 1;
+        hoursTotal += hours;
+        if (l.teacherPayRate != null) {
+          amount += Number(l.teacherPayRate);
+        } else if (l.lessonRate?.amount != null) {
+          amount += Number(l.lessonRate.amount);
+        } else if (t.hourlyRate != null) {
+          amount += Number(t.hourlyRate) * hours;
+        }
+      }
+      return {
+        kind: 'teacher' as const,
+        id: t.id,
+        firstName: t.firstName,
+        lastName: t.lastName,
+        branch: t.branch,
+        hourlyRate: t.hourlyRate != null ? Number(t.hourlyRate) : null,
+        lessonsCount: t.lessons.length,
+        hoursTotal: round2(hoursTotal),
+        amount: round2(amount),
+      };
+    });
+
+    for (const e of employees) {
+      rows.push({
+        kind: 'employee',
+        id: e.id,
+        firstName: e.firstName,
+        lastName: e.lastName,
+        branch: e.branch,
+        hourlyRate: null,
+        lessonsCount: 0,
+        hoursTotal: 0,
+        amount: e.baseSalary != null ? Number(e.baseSalary) : 0,
+      });
+    }
+
+    return rows;
+  }
 
   async findAll(query: QuerySalaryDto): Promise<PaginatedResult<Salary>> {
     const { skip, take, page, pageSize } = toSkipTake(query);
@@ -86,7 +196,7 @@ export class SalariesService {
   ): Promise<SalaryComputation & { salary?: Salary }> {
     const teacher = await this.prisma.teacher.findUnique({
       where: { id: dto.teacherId },
-      select: { id: true },
+      select: { id: true, hourlyRate: true },
     });
     if (!teacher)
       throw new NotFoundException(`Teacher ${dto.teacherId} not found`);
@@ -103,6 +213,7 @@ export class SalariesService {
       select: {
         id: true,
         startsAt: true,
+        endsAt: true,
         teacherPayRate: true,
         lessonRate: { select: { amount: true } },
       },
@@ -110,13 +221,24 @@ export class SalariesService {
     });
 
     const lines: SalaryLessonLine[] = lessons.map((l) => {
-      // payRate = lesson override ?? linked rate ?? 0
-      const rate =
-        l.teacherPayRate ?? l.lessonRate?.amount ?? new Prisma.Decimal(0);
+      // payRate = lesson override ?? linked rate ?? hourlyRate × hours ?? 0
+      let rate: number;
+      if (l.teacherPayRate != null) {
+        rate = Number(l.teacherPayRate);
+      } else if (l.lessonRate?.amount != null) {
+        rate = Number(l.lessonRate.amount);
+      } else if (teacher.hourlyRate != null) {
+        const hours = l.endsAt
+          ? Math.max(0, (l.endsAt.getTime() - l.startsAt.getTime()) / 3_600_000)
+          : 1;
+        rate = round2(Number(teacher.hourlyRate) * hours);
+      } else {
+        rate = 0;
+      }
       return {
         lessonId: l.id,
         startsAt: l.startsAt,
-        payRate: Number(rate),
+        payRate: rate,
       };
     });
 

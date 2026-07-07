@@ -56,11 +56,13 @@ export function BranchesPage() {
       {
         id: 'name',
         header: t('branches.name'),
+        sortValue: (b) => b.name,
         cell: (b) => <span className="font-medium text-foreground">{b.name}</span>,
       },
       {
         id: 'address',
         header: t('branches.address'),
+        sortValue: (b) => b.address ?? null,
         cell: (b) =>
           b.address ? (
             <span className="inline-flex items-center gap-1.5 text-foreground-muted">
@@ -74,6 +76,7 @@ export function BranchesPage() {
       {
         id: 'phone',
         header: t('branches.phone'),
+        sortValue: (b) => b.phone ?? null,
         cell: (b) =>
           b.phone ? (
             <span className="inline-flex items-center gap-1.5 text-foreground-muted">

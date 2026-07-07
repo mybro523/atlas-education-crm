@@ -31,12 +31,18 @@ const paidPaymentsInclude = {
   payments: { where: { status: PaymentStatus.PAID }, select: { amount: true } },
 } satisfies Prisma.StudentInclude;
 
+// Cabinet account summary — shows the student's login on the detail card.
+const userSummaryInclude = {
+  user: { select: { id: true, email: true, isActive: true } },
+} satisfies Prisma.StudentInclude;
+
 // Detail include: parents, branch, course (+ price), paid payments, group links.
 const studentDetailInclude = {
   parents: { orderBy: { lastName: 'asc' } },
   branch: true,
   course: { select: { id: true, name: true, pricePerMonth: true } },
   ...paidPaymentsInclude,
+  ...userSummaryInclude,
   groupLinks: {
     include: {
       group: { select: { id: true, name: true, teacherId: true } },
@@ -51,6 +57,7 @@ const studentListInclude = {
   branch: true,
   course: { select: { id: true, name: true, pricePerMonth: true } },
   ...paidPaymentsInclude,
+  ...userSummaryInclude,
 } satisfies Prisma.StudentInclude;
 
 /**
@@ -159,13 +166,15 @@ export class StudentsService {
       and.push({ courseId: query.courseId });
     }
     if (query.search) {
-      // Search: student name OR any parent workplace OR any parent position
-      // (должность) — spec §4.4, e.g. 'доктор' finds students by a parent's job.
+      // Search: student name OR note OR any parent workplace OR any parent
+      // position (должность) — spec §4.4, e.g. 'доктор' finds students by a
+      // parent's job; a free-form note is searchable the same way.
       const term = query.search;
       and.push({
         OR: [
           { firstName: { contains: term, mode: 'insensitive' } },
           { lastName: { contains: term, mode: 'insensitive' } },
+          { note: { contains: term, mode: 'insensitive' } },
           {
             parents: {
               some: { workplace: { contains: term, mode: 'insensitive' } },
@@ -266,6 +275,17 @@ export class StudentsService {
 
     const parentCreates = this.buildParentCreates(dto);
 
+    // Cabinet access: create the linked STUDENT user up front so a duplicate
+    // email fails BEFORE the student row exists.
+    let credentialUserId: string | undefined;
+    if (dto.credentials) {
+      credentialUserId = await this.createCabinetUser(
+        dto.credentials.email,
+        dto.credentials.password,
+        dto.branchId,
+      );
+    }
+
     const data: Prisma.StudentCreateInput = {
       firstName: dto.firstName,
       lastName: dto.lastName,
@@ -275,13 +295,16 @@ export class StudentsService {
       level: dto.level,
       referralSource: dto.referralSource,
       courseFee: dto.courseFee,
+      note: dto.note,
       isActive: dto.isActive,
       enrollmentDate: dto.enrollmentDate
         ? new Date(dto.enrollmentDate)
         : undefined,
       branch: { connect: { id: dto.branchId } },
       ...(dto.courseId ? { course: { connect: { id: dto.courseId } } } : {}),
-      ...(dto.userId ? { user: { connect: { id: dto.userId } } } : {}),
+      ...(dto.userId || credentialUserId
+        ? { user: { connect: { id: credentialUserId ?? dto.userId } } }
+        : {}),
       ...(parentCreates.length > 0 ? { parents: { create: parentCreates } } : {}),
     };
 
@@ -291,6 +314,13 @@ export class StudentsService {
         include: studentDetailInclude,
       });
     } catch (error) {
+      // Roll the just-created cabinet user back so a failed student create
+      // does not leave an orphan login behind.
+      if (credentialUserId) {
+        await this.prisma.user
+          .delete({ where: { id: credentialUserId } })
+          .catch(() => undefined);
+      }
       throw this.mapWriteError(error, dto.userId);
     }
   }
@@ -319,6 +349,7 @@ export class StudentsService {
       level: dto.level,
       referralSource: dto.referralSource,
       courseFee: dto.courseFee,
+      note: dto.note,
       isActive: dto.isActive,
     };
     if (dto.birthDate !== undefined) {
@@ -355,9 +386,81 @@ export class StudentsService {
       await this.upsertParentFigure(id, dto.mother, ParentRelation.MOTHER);
     }
 
+    // Issue / refresh cabinet credentials.
+    if (dto.credentials) {
+      await this.applyCredentials(id, dto.credentials.email, dto.credentials.password);
+    }
+
     return this.prisma.student.findUnique({
       where: { id },
       include: studentDetailInclude,
+    });
+  }
+
+  /** Create a STUDENT-role user for cabinet access; 409 on duplicate email. */
+  private async createCabinetUser(
+    email: string,
+    password: string,
+    branchId: string | null,
+  ): Promise<string> {
+    const existing = await this.prisma.user.findUnique({
+      where: { email },
+      select: { id: true },
+    });
+    if (existing) {
+      throw new ConflictException(`User with email ${email} already exists`);
+    }
+    const bcrypt = await import('bcrypt');
+    const passwordHash = await bcrypt.hash(password, 12);
+    const user = await this.prisma.user.create({
+      data: { email, passwordHash, role: 'STUDENT', branchId },
+      select: { id: true },
+    });
+    return user.id;
+  }
+
+  /**
+   * Issue or refresh a student's cabinet login: creates the linked user when
+   * none exists, otherwise updates the email + password in place.
+   */
+  private async applyCredentials(
+    studentId: string,
+    email: string,
+    password: string,
+  ): Promise<void> {
+    const student = await this.prisma.student.findUnique({
+      where: { id: studentId },
+      select: { userId: true, branchId: true },
+    });
+    if (!student) throw new NotFoundException(`Student ${studentId} not found`);
+
+    const bcrypt = await import('bcrypt');
+    const passwordHash = await bcrypt.hash(password, 12);
+
+    if (student.userId) {
+      // Email may move to this same user; reject if it belongs to another one.
+      const clash = await this.prisma.user.findUnique({
+        where: { email },
+        select: { id: true },
+      });
+      if (clash && clash.id !== student.userId) {
+        throw new ConflictException(`User with email ${email} already exists`);
+      }
+      await this.prisma.user.update({
+        where: { id: student.userId },
+        data: { email, passwordHash },
+      });
+      return;
+    }
+
+    const userId = await this.createCabinetUser(
+      email,
+      password,
+      student.branchId,
+    );
+    await this.prisma.student.update({
+      where: { id: studentId },
+      data: { userId },
     });
   }
 

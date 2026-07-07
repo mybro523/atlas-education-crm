@@ -17,6 +17,8 @@ export interface MatrixTableProps {
   onToggleConducted: (lessonId: string, next: boolean) => void;
   /** Whether a conduct toggle is currently in flight (disables the buttons). */
   conductingId?: string | null;
+  /** When provided, student names become clickable (e.g. to open the profile). */
+  onStudentClick?: (studentId: string) => void;
 }
 
 function formatLessonHeader(startsAt: string): { date: string; weekday: string } {
@@ -42,6 +44,7 @@ export function MatrixTable({
   onCellClick,
   onToggleConducted,
   conductingId,
+  onStudentClick,
 }: MatrixTableProps) {
   const { t } = useTranslation();
 
@@ -128,9 +131,24 @@ export function MatrixTable({
                 scope="row"
                 className="sticky left-0 z-10 min-w-[9rem] max-w-[12rem] border-b border-r border-border bg-surface px-3 py-2 text-left font-medium text-foreground group-hover:bg-surface-muted"
               >
-                <span className="block truncate">
-                  {row.student.lastName} {row.student.firstName}
-                </span>
+                {onStudentClick ? (
+                  <button
+                    type="button"
+                    onClick={() => onStudentClick(row.student.id)}
+                    title={`${row.student.lastName} ${row.student.firstName}`}
+                    className={cn(
+                      'block w-full truncate rounded text-left font-medium text-foreground transition-colors',
+                      'hover:text-primary hover:underline',
+                      'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                    )}
+                  >
+                    {row.student.lastName} {row.student.firstName}
+                  </button>
+                ) : (
+                  <span className="block truncate">
+                    {row.student.lastName} {row.student.firstName}
+                  </span>
+                )}
               </th>
               {matrix.lessons.map((lesson) => {
                 const cell: JournalCell = row.cells[lesson.id] ?? {};

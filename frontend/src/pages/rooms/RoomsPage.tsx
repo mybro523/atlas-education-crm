@@ -93,14 +93,25 @@ export function RoomsPage() {
       {
         id: 'name',
         header: t('rooms.name'),
+        sortValue: (r) => r.name,
         cell: (r) => (
-          <span className="font-medium text-foreground">{r.name}</span>
+          <span className="inline-flex items-center gap-2 font-medium text-foreground">
+            {r.color ? (
+              <span
+                className="h-2.5 w-2.5 shrink-0 rounded-full"
+                style={{ backgroundColor: r.color }}
+                aria-hidden
+              />
+            ) : null}
+            {r.name}
+          </span>
         ),
       },
       {
         id: 'branch',
         header: t('rooms.branch'),
         mobileLabel: t('rooms.branch'),
+        sortValue: (r) => branchName(r),
         cell: (r) => {
           const name = branchName(r);
           return name ? (

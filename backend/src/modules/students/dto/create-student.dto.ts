@@ -14,6 +14,7 @@ import {
   ValidateNested,
 } from 'class-validator';
 import { ReferralSource, StudentLevel } from '@prisma/client';
+import { CredentialsDto } from '../../../common/dto/credentials.dto';
 import { CreateParentDto } from './create-parent.dto';
 import { ParentFigureDto } from './parent-figure.dto';
 
@@ -77,6 +78,11 @@ export class CreateStudentDto {
   @IsDateString()
   enrollmentDate?: string;
 
+  /** Free-form remark/note about the student — searchable. */
+  @IsOptional()
+  @IsString()
+  note?: string;
+
   @IsOptional()
   @IsBoolean()
   isActive?: boolean;
@@ -84,6 +90,13 @@ export class CreateStudentDto {
   @IsOptional()
   @IsString()
   userId?: string;
+
+  /** Cabinet login (email + password ≥ 4 chars) issued to the student. */
+  @IsOptional()
+  @IsObject()
+  @ValidateNested()
+  @Type(() => CredentialsDto)
+  credentials?: CredentialsDto;
 
   @IsOptional()
   @IsObject()

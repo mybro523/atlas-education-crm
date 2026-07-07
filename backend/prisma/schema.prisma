@@ -210,6 +210,8 @@ model Student {
   referralSource ReferralSource?
   // The amount the student must pay for the course.
   courseFee      Decimal?        @db.Decimal(10, 2)
+  // Free-form remark/note about the student — participates in search.
+  note           String?
   // Date the student joined — anchors the billing month (e.g. 15th to 15th).
   enrollmentDate DateTime        @default(now())
   isActive       Boolean         @default(true)
@@ -267,6 +269,9 @@ model Teacher {
   birthDate        DateTime?
   // Date the teacher started working at the academy.
   hireDate         DateTime?
+  // Hourly pay rate (TJS/hour) — basis for automatic salary computation:
+  // conducted lesson duration (hours) × hourlyRate.
+  hourlyRate       Decimal?  @db.Decimal(10, 2)
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
 
@@ -310,6 +315,8 @@ model Room {
   id        String   @id @default(cuid())
   name      String
   branchId  String?
+  // Individual display color (hex, e.g. #2563EB) — used to tint schedule cards.
+  color     String?
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -635,6 +642,19 @@ model Broadcast {
 
   @@index([status])
   @@map("broadcasts")
+}
+
+// ==========================================================================
+// System settings — flexible key-value configuration editable by the FOUNDER
+// (e.g. payment-due window, SMS absence threshold) without code changes.
+// ==========================================================================
+
+model SystemSetting {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt
+
+  @@map("system_settings")
 }
 
 model Notification {

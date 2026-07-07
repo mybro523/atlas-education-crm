@@ -152,11 +152,13 @@ export function CoursesPage() {
       {
         id: 'name',
         header: t('courses.name'),
+        sortValue: (c) => c.name,
         cell: (c) => <span className="font-medium text-foreground">{c.name}</span>,
       },
       {
         id: 'courseType',
         header: t('courses.courseType'),
+        sortValue: (c) => courseTypeName(c),
         cell: (c) => (
           <span className="text-foreground-muted">{courseTypeName(c)}</span>
         ),
@@ -164,6 +166,7 @@ export function CoursesPage() {
       {
         id: 'branch',
         header: t('courses.branch'),
+        sortValue: (c) => branchName(c),
         cell: (c) => (
           <span className="text-foreground-muted">{branchName(c)}</span>
         ),
@@ -173,6 +176,7 @@ export function CoursesPage() {
         header: t('courses.term'),
         mobileLabel: t('courses.term'),
         className: 'whitespace-nowrap',
+        sortValue: (c) => c.startDate ?? null,
         cell: (c) => {
           const start = formatDate(c.startDate);
           const end = formatDate(c.endDate);
@@ -190,6 +194,7 @@ export function CoursesPage() {
         id: 'price',
         header: t('courses.pricePerMonth'),
         className: 'whitespace-nowrap',
+        sortValue: (c) => Number(c.pricePerMonth),
         cell: (c) => (
           <span className="font-medium text-foreground">
             {priceFormatter.format(Number(c.pricePerMonth))} {CURRENCY}
@@ -199,6 +204,7 @@ export function CoursesPage() {
       {
         id: 'status',
         header: t('fields.status'),
+        sortValue: (c) => (c.isActive ? 1 : 0),
         cell: (c) => (
           <Badge variant={c.isActive ? 'success' : 'muted'} dot>
             {c.isActive ? t('status.active') : t('status.inactive')}

@@ -5,7 +5,7 @@ import { formatDate, formatMoney } from '@/shared/lib/format';
 import { useBranches } from '@/entities/branch';
 import { useCourses } from '@/entities/course';
 import type { Parent, Student } from '@/entities/student';
-import { levelLabelKey, referralLabelKey } from '../lib/studentEnums';
+import { levelLabelKey, referralLabelKey } from '@/entities/student';
 
 export interface StudentDetailModalProps {
   open: boolean;
@@ -73,7 +73,8 @@ function ParentCard({
 /**
  * Read-only student card. Opened by clicking a row in the students table and
  * shows every field the profile carries: identity, branch, course, level,
- * referral source, course fee and both parent slots (father / mother). All data
+ * referral source, course fee, free-form note, cabinet login and both parent
+ * slots (father / mother). All data
  * comes from the list payload (which already includes parents / branch / course),
  * with a name fallback via the cached branch / course lists for freshly-created
  * optimistic rows. Nothing here mutates — editing stays in the form modal.
@@ -157,6 +158,21 @@ export function StudentDetailModal({
               label={t('fields.courseFee')}
               value={
                 student.courseFee != null ? formatMoney(student.courseFee) : ''
+              }
+            />
+            {student.note ? (
+              <DetailRow label={t('fields.note')} value={student.note} />
+            ) : null}
+            <DetailRow
+              label={t('fields.login')}
+              value={
+                student.user?.email ? (
+                  student.user.email
+                ) : (
+                  <span className="text-foreground-muted">
+                    {t('teachers.noCabinet')}
+                  </span>
+                )
               }
             />
           </dl>

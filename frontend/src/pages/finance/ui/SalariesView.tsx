@@ -104,6 +104,7 @@ export function SalariesView() {
     {
       id: 'teacher',
       header: t('finance.salaries.teacher'),
+      sortValue: (s) => teacherName(s),
       cell: (s) => (
         <span className="font-medium text-foreground">{teacherName(s)}</span>
       ),
@@ -111,12 +112,14 @@ export function SalariesView() {
     {
       id: 'period',
       header: t('finance.salaries.period'),
+      sortValue: (s) => s.periodStart,
       cell: (s) => formatPeriod(s.periodStart, s.periodEnd),
     },
     {
       id: 'basis',
       header: t('finance.salaries.basis'),
       hideOnMobile: true,
+      sortValue: (s) => s.basis,
       cell: (s) => (
         <Badge variant="muted">
           {s.basis === 'PER_LESSON'
@@ -130,6 +133,7 @@ export function SalariesView() {
       header: t('finance.records.amount'),
       className: 'text-right',
       headerClassName: 'text-right',
+      sortValue: (s) => Number(s.amount),
       cell: (s) => (
         <span className="font-semibold tabular-nums">
           {formatMoney(s.amount)}
@@ -139,6 +143,7 @@ export function SalariesView() {
     {
       id: 'status',
       header: t('fields.status'),
+      sortValue: (s) => s.status,
       cell: (s) =>
         s.status === 'PAID' ? (
           <Badge variant="success" dot>

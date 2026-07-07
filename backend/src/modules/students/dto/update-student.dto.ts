@@ -13,6 +13,7 @@ import {
   ValidateNested,
 } from 'class-validator';
 import { ReferralSource, StudentLevel } from '@prisma/client';
+import { CredentialsDto } from '../../../common/dto/credentials.dto';
 import { ParentFigureDto } from './parent-figure.dto';
 
 /**
@@ -80,6 +81,11 @@ export class UpdateStudentDto {
   @IsDateString()
   enrollmentDate?: string;
 
+  /** Free-form remark/note — searchable. Null clears the stored note. */
+  @IsOptional()
+  @IsString()
+  note?: string | null;
+
   @IsOptional()
   @IsBoolean()
   isActive?: boolean;
@@ -87,6 +93,16 @@ export class UpdateStudentDto {
   @IsOptional()
   @IsString()
   userId?: string;
+
+  /**
+   * Issue (or re-issue) cabinet credentials: creates the linked User when the
+   * student has none, otherwise updates the login email + password.
+   */
+  @IsOptional()
+  @IsObject()
+  @ValidateNested()
+  @Type(() => CredentialsDto)
+  credentials?: CredentialsDto;
 
   @IsOptional()
   @IsObject()

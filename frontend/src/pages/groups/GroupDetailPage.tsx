@@ -16,16 +16,19 @@ import {
   useToast,
   type DataTableColumn,
 } from '@/shared/ui';
+import { isOptimisticId } from '@/shared/lib';
 import {
   useGroup,
   useGroupStudents,
   useRemoveGroupStudent,
   type GroupStudent,
 } from '@/entities/group';
+import { useStudent } from '@/entities/student';
 import {
   AddStudentModal,
   useCanManageGroup,
 } from '@/features/manage-group-students';
+import { StudentDetailModal } from '@/widgets/StudentDetail';
 
 export function GroupDetailPage() {
   const { t } = useTranslation();
@@ -40,6 +43,18 @@ export function GroupDetailPage() {
 
   const [addOpen, setAddOpen] = useState(false);
   const [removing, setRemoving] = useState<GroupStudent | null>(null);
+
+  // Clicking a member row opens the full student profile: fetch the complete
+  // Student (the member row only carries a light projection) once selected.
+  const [selectedStudentId, setSelectedStudentId] = useState<string | null>(
+    null,
+  );
+  const { data: selectedStudent } = useStudent(selectedStudentId ?? undefined);
+
+  const openMember = (m: GroupStudent) => {
+    if (isOptimisticId(m.studentId)) return;
+    setSelectedStudentId(m.studentId);
+  };
 
   const handleRemove = () => {
     if (!removing || !id) return;
@@ -83,7 +98,10 @@ export function GroupDetailPage() {
                   type="button"
                   variant="ghost"
                   size="sm"
-                  onClick={() => setRemoving(m)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setRemoving(m);
+                  }}
                 >
                   <Trash2 className="h-4 w-4 text-danger" />
                   <span className="hidden sm:inline">
@@ -218,9 +236,16 @@ export function GroupDetailPage() {
         data={members}
         rowKey={(m) => m.id}
         loading={membersLoading}
+        onRowClick={openMember}
         emptyTitle={t('groups.detail.emptyStudents')}
         emptyDescription={t('groups.detail.emptyStudentsHint')}
         emptyIcon={<Users className="h-6 w-6" aria-hidden />}
+      />
+
+      <StudentDetailModal
+        open={Boolean(selectedStudentId)}
+        onClose={() => setSelectedStudentId(null)}
+        student={selectedStudent ?? null}
       />
 
       {canManage && id && (

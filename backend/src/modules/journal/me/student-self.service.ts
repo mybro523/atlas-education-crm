@@ -40,13 +40,22 @@ export class StudentSelfService {
     return student.id;
   }
 
-  /** Own profile with parents and current group memberships. */
+  /**
+   * Own profile with parents, current group memberships and subscription
+   * (абонемент) figures: paidAmount / dueAmount / owedAmount, so the student
+   * cabinet can show how much was paid and what is still owed.
+   */
   async getProfile(userId: string) {
     const student = await this.prisma.student.findUnique({
       where: { userId },
       include: {
         branch: { select: { id: true, name: true } },
         parents: true,
+        course: { select: { id: true, name: true, pricePerMonth: true } },
+        payments: {
+          where: { status: 'PAID' },
+          select: { amount: true },
+        },
         groupLinks: {
           where: { leftAt: null },
           include: {
@@ -67,7 +76,23 @@ export class StudentSelfService {
     if (!student) {
       throw new NotFoundException('Student profile not found for current user');
     }
-    return student;
+    const paidAmount = student.payments.reduce(
+      (sum, p) => sum + Number(p.amount),
+      0,
+    );
+    const dueAmount =
+      student.courseFee != null
+        ? Number(student.courseFee)
+        : student.course?.pricePerMonth != null
+          ? Number(student.course.pricePerMonth)
+          : 0;
+    const { payments: _payments, ...rest } = student;
+    return {
+      ...rest,
+      paidAmount,
+      dueAmount,
+      owedAmount: Math.max(0, dueAmount - paidAmount),
+    };
   }
 
   /** Own grades, newest first, with optional course / date-range filters. */

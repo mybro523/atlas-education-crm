@@ -85,6 +85,7 @@ export function StudentPaymentsPage() {
     {
       id: 'student',
       header: t('studentPayments.columns.student'),
+      sortValue: (p) => studentName(p),
       cell: (p) => (
         <span className="font-medium text-foreground">{studentName(p)}</span>
       ),
@@ -92,6 +93,7 @@ export function StudentPaymentsPage() {
     {
       id: 'group',
       header: t('studentPayments.columns.group'),
+      sortValue: (p) => p.group?.name ?? null,
       cell: (p) => p.group?.name ?? '—',
     },
     {
@@ -99,6 +101,7 @@ export function StudentPaymentsPage() {
       header: t('studentPayments.columns.amount'),
       className: 'text-right',
       headerClassName: 'text-right',
+      sortValue: (p) => Number(p.amount),
       cell: (p) => (
         <span className="font-medium tabular-nums">{formatMoney(p.amount)}</span>
       ),
@@ -106,6 +109,7 @@ export function StudentPaymentsPage() {
     {
       id: 'method',
       header: t('studentPayments.columns.method'),
+      sortValue: (p) => p.method,
       cell: (p) => (
         <Badge variant={p.method === 'CASH' ? 'success' : 'primary'} dot>
           {methodLabel(p.method)}
@@ -115,12 +119,14 @@ export function StudentPaymentsPage() {
     {
       id: 'paidAt',
       header: t('studentPayments.columns.date'),
+      sortValue: (p) => p.paidAt,
       cell: (p) => formatDate(p.paidAt),
     },
     {
       id: 'branch',
       header: t('studentPayments.columns.branch'),
       hideOnMobile: true,
+      sortValue: (p) => p.branch?.name ?? null,
       cell: (p) => p.branch?.name ?? '—',
     },
   ];

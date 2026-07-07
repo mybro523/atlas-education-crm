@@ -1,10 +1,14 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Eye, EyeOff } from 'lucide-react';
 import { FormModal, Input, Select, useToast } from '@/shared/ui';
 import {
   isValidPersonName,
   isValidPhone,
   isValidTelegram,
+  isValidEmail,
+  isValidAmount,
+  parseAmount,
   todayInput,
   sanitizePersonName,
   sanitizePhone,
@@ -38,7 +42,28 @@ interface FieldErrors {
   birthDate?: string;
   hireDate?: string;
   branchId?: string;
+  hourlyRate?: string;
+  credEmail?: string;
+  credPassword?: string;
 }
+
+/**
+ * `UpdateTeacherDto` still types the optional text fields as
+ * `string | undefined`, but the backend clears a stored value ONLY on an
+ * explicit `null` — `undefined` leaves it untouched. Widen the payload type
+ * locally so blanking middle name / phone / specialty / education level on
+ * edit actually clears them. (`UpdateTeacherDto` is assignable to this type,
+ * so the narrowing assertion at the mutate call site is safe.)
+ */
+type TeacherUpdatePayload = Omit<
+  UpdateTeacherDto,
+  'middleName' | 'phone' | 'specialty' | 'educationLevel'
+> & {
+  middleName?: string | null;
+  phone?: string | null;
+  specialty?: string | null;
+  educationLevel?: string | null;
+};
 
 /** Trim an ISO datetime down to the `YYYY-MM-DD` a date input expects. */
 function toDateInput(value?: string | null): string {
@@ -78,7 +103,13 @@ export function TeacherFormModal({
   const [telegramUsername, setTelegramUsername] = useState('');
   const [birthDate, setBirthDate] = useState('');
   const [hireDate, setHireDate] = useState('');
+  const [hourlyRate, setHourlyRate] = useState('');
   const [branchId, setBranchId] = useState('');
+  // Cabinet credentials: required on create; on edit the password stays empty
+  // and the credentials are only (re)issued when the user types a new one.
+  const [credEmail, setCredEmail] = useState('');
+  const [credPassword, setCredPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState<FieldErrors>({});
 
   // Reset the form whenever it opens (or the target teacher changes).
@@ -93,7 +124,11 @@ export function TeacherFormModal({
     setTelegramUsername(teacher?.telegramUsername ?? '');
     setBirthDate(toDateInput(teacher?.birthDate));
     setHireDate(toDateInput(teacher?.hireDate));
+    setHourlyRate(teacher?.hourlyRate != null ? String(teacher.hourlyRate) : '');
     setBranchId(teacher?.branchId ?? '');
+    setCredEmail(teacher?.user?.email ?? '');
+    setCredPassword('');
+    setShowPassword(false);
     setErrors({});
   }, [open, teacher]);
 
@@ -120,6 +155,18 @@ export function TeacherFormModal({
     // Hiring cannot predate birth.
     if (birthDate && hireDate && hireDate < birthDate)
       next.hireDate = t('form.hireBeforeBirth');
+    // Hourly rate: optional, but when entered must be a valid non-negative amount.
+    if (hourlyRate.trim() && !isValidAmount(hourlyRate))
+      next.hourlyRate = t('form.invalidAmount');
+    // Cabinet credentials: required on create; on edit only validated when the
+    // user typed a new password (which is what triggers re-issuing the login).
+    if (!isEdit || credPassword) {
+      if (!credEmail.trim()) next.credEmail = t('form.requiredField');
+      else if (!isValidEmail(credEmail)) next.credEmail = t('form.invalidEmail');
+      if (!credPassword) next.credPassword = t('form.requiredField');
+      else if (credPassword.length < 4)
+        next.credPassword = t('form.passwordMin');
+    }
     setErrors(next);
     return Object.keys(next).length === 0;
   };
@@ -129,23 +176,33 @@ export function TeacherFormModal({
     if (!validate()) return;
 
     const trimmedTelegram = telegramUsername.trim();
+    const parsedRate = parseAmount(hourlyRate);
+    // Credentials are only sent when a password was typed: always on create
+    // (validated as required), and on edit when the login is being re-issued.
+    const credentials = credPassword
+      ? { email: credEmail.trim(), password: credPassword }
+      : undefined;
 
     if (isEdit && teacher) {
-      // On edit, blanked clearable fields are sent as null / '' to clear them.
-      const dto: UpdateTeacherDto = {
+      // On edit, blanked clearable fields are sent as an EXPLICIT null — the
+      // backend treats null as "clear this field" while undefined keeps the
+      // previously stored value.
+      const dto: TeacherUpdatePayload = {
         firstName: firstName.trim(),
         lastName: lastName.trim(),
-        middleName: middleName.trim() || undefined,
-        phone: phone.trim() || undefined,
-        specialty: specialty.trim() || undefined,
-        educationLevel: educationLevel.trim() || undefined,
+        middleName: middleName.trim() || null,
+        phone: phone.trim() || null,
+        specialty: specialty.trim() || null,
+        educationLevel: educationLevel.trim() || null,
         telegramUsername: trimmedTelegram || null,
         birthDate: birthDate || null,
         hireDate: hireDate || null,
+        hourlyRate: parsedRate,
         branchId,
+        credentials,
       };
       updateTeacher.mutate(
-        { id: teacher.id, dto },
+        { id: teacher.id, dto: dto as UpdateTeacherDto },
         {
           onSuccess: () => toast.success(t('teachers.updated')),
           onError: (err) =>
@@ -166,7 +223,9 @@ export function TeacherFormModal({
       telegramUsername: trimmedTelegram || undefined,
       birthDate: birthDate || undefined,
       hireDate: hireDate || undefined,
+      hourlyRate: parsedRate ?? undefined,
       branchId,
+      credentials,
     };
     createTeacher.mutate(dto, {
       onSuccess: () => toast.success(t('teachers.created')),
@@ -272,6 +331,16 @@ export function TeacherFormModal({
           error={errors.hireDate}
           min={birthDate || undefined}
         />
+        <Input
+          label={`${t('fields.hourlyRate')} (${t('form.optional')})`}
+          type="number"
+          inputMode="decimal"
+          min={0}
+          step="0.01"
+          value={hourlyRate}
+          onChange={(e) => setHourlyRate(e.target.value)}
+          error={errors.hourlyRate}
+        />
         <Select
           label={t('fields.branch')}
           value={branchId}
@@ -280,6 +349,69 @@ export function TeacherFormModal({
           error={errors.branchId}
           options={(branches ?? []).map((b) => ({ value: b.id, label: b.name }))}
         />
+      </div>
+
+      {/* Cabinet credentials — the login the teacher uses to enter the system.
+          Required on create; on edit the password field stays empty and the
+          login is only re-issued when a new password is typed. */}
+      <div className="space-y-3 border-t border-border pt-4">
+        <div>
+          <h3 className="text-sm font-semibold text-foreground">
+            {t('teachers.credentialsTitle')}
+          </h3>
+          <p className="mt-0.5 text-xs text-foreground-muted">
+            {t('teachers.credentialsHint')}
+          </p>
+        </div>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <Input
+            label={t('fields.login')}
+            type="email"
+            inputMode="email"
+            autoComplete="off"
+            value={credEmail}
+            onChange={(e) => setCredEmail(e.target.value)}
+            error={errors.credEmail}
+            maxLength={254}
+            autoCapitalize="none"
+            autoCorrect="off"
+            spellCheck={false}
+          />
+          <Input
+            label={
+              isEdit
+                ? `${t('fields.password')} (${t('form.optional')})`
+                : t('fields.password')
+            }
+            type={showPassword ? 'text' : 'password'}
+            autoComplete="new-password"
+            value={credPassword}
+            onChange={(e) => setCredPassword(e.target.value)}
+            error={errors.credPassword}
+            placeholder={isEdit ? t('form.changePassword') : undefined}
+            maxLength={72}
+            rightIcon={
+              <button
+                type="button"
+                tabIndex={-1}
+                onClick={() => setShowPassword((v) => !v)}
+                aria-label={
+                  showPassword ? t('auth.hidePassword') : t('auth.showPassword')
+                }
+                title={
+                  showPassword ? t('auth.hidePassword') : t('auth.showPassword')
+                }
+                className="flex h-8 w-8 items-center justify-center rounded-md text-foreground-muted transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                {showPassword ? (
+                  <EyeOff className="h-5 w-5" />
+                ) : (
+                  <Eye className="h-5 w-5" />
+                )}
+              </button>
+            }
+          />
+        </div>
       </div>
     </FormModal>
   );

@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { Payment, Prisma, PaymentStatus } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
+import { SettingsService } from '../settings/settings.service';
 import {
   buildPaginatedResult,
   PaginatedResult,
@@ -63,7 +64,10 @@ const PAYMENT_INCLUDE = {
  */
 @Injectable()
 export class StudentPaymentsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly settings: SettingsService,
+  ) {}
 
   /**
    * Record a PAID subscription payment for a student.
@@ -132,7 +136,8 @@ export class StudentPaymentsService {
    * until enrollmentDate + monthsCovered months. Sorted soonest-first.
    */
   async findUpcoming(query: QueryUpcomingDto): Promise<UpcomingPaymentRow[]> {
-    const days = query.days ?? 3;
+    const days =
+      query.days ?? (await this.settings.getNumber('paymentDueDays', 3));
 
     const students = await this.prisma.student.findMany({
       where: { isActive: true },

@@ -35,6 +35,7 @@ import { NotificationsModule } from './modules/notifications/notifications.modul
 import { TelegramModule } from './modules/telegram/telegram.module';
 import { SmsModule } from './modules/sms/sms.module';
 import { AutomationModule } from './modules/automation/automation.module';
+import { SettingsModule } from './modules/settings/settings.module';
 
 @Module({
   imports: [
@@ -87,6 +88,7 @@ import { AutomationModule } from './modules/automation/automation.module';
     TelegramModule,
     SmsModule,
     AutomationModule,
+    SettingsModule,
   ],
   providers: [
     // Global JWT auth (routes opt out with @Public()).

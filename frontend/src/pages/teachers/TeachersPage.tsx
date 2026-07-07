@@ -13,7 +13,7 @@ import {
   type DataTableColumn,
 } from '@/shared/ui';
 import { useDebouncedValue } from '@/shared/lib/hooks';
-import { isOptimisticId } from '@/shared/lib';
+import { isOptimisticId, formatMoney, toNumber } from '@/shared/lib';
 import { extractErrorMessage } from '@/shared/api';
 import { useBranches } from '@/entities/branch';
 import {
@@ -23,6 +23,7 @@ import {
   type TeacherListParams,
 } from '@/entities/teacher';
 import { TeacherFormModal } from './ui/TeacherFormModal';
+import { TeacherDetailModal } from './ui/TeacherDetailModal';
 
 const PAGE_SIZE = 20;
 
@@ -39,6 +40,7 @@ export function TeachersPage() {
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Teacher | null>(null);
   const [pendingDelete, setPendingDelete] = useState<Teacher | null>(null);
+  const [detailTeacher, setDetailTeacher] = useState<Teacher | null>(null);
 
   const params = useMemo<TeacherListParams>(
     () => ({
@@ -57,6 +59,14 @@ export function TeachersPage() {
   const teachers = data?.items ?? [];
   const pageCount = data?.meta.pageCount ?? 1;
   const total = data?.meta.total ?? 0;
+
+  // Keep the open detail card in sync with the latest list data (e.g. once an
+  // optimistically-created teacher is replaced by the server row), falling back
+  // to the clicked snapshot if it has paged out of the current results.
+  const detailTeacherLive = detailTeacher
+    ? (teachers.find((teacher) => teacher.id === detailTeacher.id) ??
+      detailTeacher)
+    : null;
 
   const branchName = (id: string) =>
     branches?.find((b) => b.id === id)?.name ?? '—';
@@ -111,6 +121,7 @@ export function TeachersPage() {
       id: 'name',
       header: `${t('fields.lastName')} / ${t('fields.firstName')}`,
       mobileLabel: t('fields.firstName'),
+      sortValue: (teacher) => `${teacher.lastName} ${teacher.firstName}`,
       cell: (teacher) => (
         <span className="font-medium text-foreground">{fullName(teacher)}</span>
       ),
@@ -118,12 +129,22 @@ export function TeachersPage() {
     {
       id: 'phone',
       header: t('fields.phone'),
+      sortValue: (teacher) => teacher.phone || null,
       cell: (teacher) => teacher.phone || '—',
     },
     {
       id: 'branch',
       header: t('fields.branch'),
+      sortValue: (teacher) => branchName(teacher.branchId),
       cell: (teacher) => branchName(teacher.branchId),
+    },
+    {
+      id: 'hourlyRate',
+      header: t('fields.hourlyRate'),
+      sortValue: (teacher) =>
+        teacher.hourlyRate != null ? toNumber(teacher.hourlyRate) : null,
+      cell: (teacher) =>
+        teacher.hourlyRate != null ? formatMoney(teacher.hourlyRate) : '—',
     },
     {
       id: 'actions',
@@ -139,7 +160,10 @@ export function TeachersPage() {
             size="icon"
             aria-label={t('actions.edit')}
             disabled={isOptimisticId(teacher.id)}
-            onClick={() => openEdit(teacher)}
+            onClick={(e) => {
+              e.stopPropagation();
+              openEdit(teacher);
+            }}
           >
             <Pencil className="h-4 w-4" />
           </Button>
@@ -149,7 +173,10 @@ export function TeachersPage() {
             size="icon"
             aria-label={t('actions.delete')}
             disabled={isOptimisticId(teacher.id)}
-            onClick={() => requestDelete(teacher)}
+            onClick={(e) => {
+              e.stopPropagation();
+              requestDelete(teacher);
+            }}
             className="text-danger hover:bg-danger/10"
           >
             <Trash2 className="h-4 w-4" />
@@ -215,6 +242,7 @@ export function TeachersPage() {
         data={teachers}
         rowKey={(teacher) => teacher.id}
         loading={isLoading}
+        onRowClick={setDetailTeacher}
         emptyTitle={isError ? t('crud.loadError') : t('teachers.empty')}
         emptyDescription={isError ? undefined : t('teachers.emptyHint')}
       />
@@ -232,6 +260,12 @@ export function TeachersPage() {
         open={formOpen}
         onClose={() => setFormOpen(false)}
         teacher={editing}
+      />
+
+      <TeacherDetailModal
+        open={Boolean(detailTeacher)}
+        onClose={() => setDetailTeacher(null)}
+        teacher={detailTeacherLive}
       />
 
       <ConfirmDialog

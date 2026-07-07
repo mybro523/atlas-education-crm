@@ -68,6 +68,8 @@ export interface Student {
   referralSource?: ReferralSource | null;
   /** Sum the student must pay for the course (TJS). */
   courseFee?: number | null;
+  /** Free-form remark/note — searchable. */
+  note?: string | null;
   /** Subscription (абонемент) figures computed server-side (TJS). */
   paidAmount?: number;
   dueAmount?: number;
@@ -80,6 +82,8 @@ export interface Student {
   updatedAt: string;
   parents?: Parent[];
   branch?: Branch;
+  /** Linked cabinet account (login) — present on list/detail responses. */
+  user?: { id: string; email: string | null; isActive: boolean } | null;
   /** Populated on detail/list GET (id + name). */
   course?: StudentCourseRef | null;
   groupLinks?: StudentGroupLink[];
@@ -140,8 +144,12 @@ export interface CreateStudentDto {
   courseFee?: number | null;
   /** Defaults to now server-side; billing anchor. */
   enrollmentDate?: string;
+  /** Free-form remark/note — searchable. */
+  note?: string;
   isActive?: boolean;
   userId?: string;
+  /** Cabinet login (email + password >= 4 chars) issued to the student. */
+  credentials?: { email: string; password: string };
   /** Explicit FATHER slot (upserted with the FATHER relation). */
   father?: ParentFigureDto;
   /** Explicit MOTHER slot (upserted with the MOTHER relation). */
@@ -154,4 +162,7 @@ export interface CreateStudentDto {
  * UpdateStudentDto excludes nested `parents[]` (OTHER parents are managed via
  * the parent sub-routes) but keeps the explicit `father` / `mother` slots.
  */
-export type UpdateStudentDto = Partial<Omit<CreateStudentDto, 'parents'>>;
+export type UpdateStudentDto = Partial<Omit<CreateStudentDto, 'parents' | 'note'>> & {
+  /** Null clears the stored note. */
+  note?: string | null;
+};

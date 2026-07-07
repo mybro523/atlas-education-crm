@@ -20,6 +20,7 @@ import { QueryTeachersDto } from './dto/query-teachers.dto';
 // through the groups they lead and each group's course.
 const teacherInclude = {
   branch: true,
+  user: { select: { id: true, email: true, isActive: true } },
   groups: {
     include: {
       course: { select: { id: true, name: true } },
@@ -90,9 +91,20 @@ export class TeachersService {
     return teacher;
   }
 
-  /** Create a teacher. */
+  /** Create a teacher, optionally issuing cabinet credentials. */
   async create(dto: CreateTeacherDto): Promise<TeacherWithRelations> {
     await this.assertBranchExists(dto.branchId);
+
+    // Cabinet access: create the TEACHER user first so a duplicate email
+    // fails before the teacher row exists.
+    let credentialUserId: string | undefined;
+    if (dto.credentials) {
+      credentialUserId = await this.createCabinetUser(
+        dto.credentials.email,
+        dto.credentials.password,
+        dto.branchId,
+      );
+    }
 
     try {
       return await this.prisma.teacher.create({
@@ -106,12 +118,20 @@ export class TeachersService {
           telegramUsername: dto.telegramUsername,
           birthDate: dto.birthDate ? new Date(dto.birthDate) : undefined,
           hireDate: dto.hireDate ? new Date(dto.hireDate) : undefined,
+          hourlyRate: dto.hourlyRate,
           branch: { connect: { id: dto.branchId } },
-          ...(dto.userId ? { user: { connect: { id: dto.userId } } } : {}),
+          ...(dto.userId || credentialUserId
+            ? { user: { connect: { id: credentialUserId ?? dto.userId } } }
+            : {}),
         },
         include: teacherInclude,
       });
     } catch (error) {
+      if (credentialUserId) {
+        await this.prisma.user
+          .delete({ where: { id: credentialUserId } })
+          .catch(() => undefined);
+      }
       throw this.mapWriteError(error, dto.userId);
     }
   }
@@ -135,6 +155,8 @@ export class TeachersService {
       specialty: dto.specialty,
       educationLevel: dto.educationLevel,
       telegramUsername: dto.telegramUsername,
+      // Nullable scalar: undefined = leave unchanged, null = clear.
+      hourlyRate: dto.hourlyRate,
     };
     if (dto.birthDate !== undefined) {
       data.birthDate = dto.birthDate ? new Date(dto.birthDate) : null;
@@ -153,14 +175,86 @@ export class TeachersService {
     }
 
     try {
-      return await this.prisma.teacher.update({
+      const updated = await this.prisma.teacher.update({
         where: { id },
         data,
         include: teacherInclude,
       });
+      if (dto.credentials) {
+        await this.applyCredentials(
+          id,
+          dto.credentials.email,
+          dto.credentials.password,
+        );
+        return this.findOne(id);
+      }
+      return updated;
     } catch (error) {
       throw this.mapWriteError(error, dto.userId);
     }
+  }
+
+  /** Create a TEACHER-role user for cabinet access; 409 on duplicate email. */
+  private async createCabinetUser(
+    email: string,
+    password: string,
+    branchId: string | null,
+  ): Promise<string> {
+    const existing = await this.prisma.user.findUnique({
+      where: { email },
+      select: { id: true },
+    });
+    if (existing) {
+      throw new ConflictException(`User with email ${email} already exists`);
+    }
+    const bcrypt = await import('bcrypt');
+    const passwordHash = await bcrypt.hash(password, 12);
+    const user = await this.prisma.user.create({
+      data: { email, passwordHash, role: 'TEACHER', branchId },
+      select: { id: true },
+    });
+    return user.id;
+  }
+
+  /** Issue or refresh a teacher's cabinet login (create-or-update the user). */
+  private async applyCredentials(
+    teacherId: string,
+    email: string,
+    password: string,
+  ): Promise<void> {
+    const teacher = await this.prisma.teacher.findUnique({
+      where: { id: teacherId },
+      select: { userId: true, branchId: true },
+    });
+    if (!teacher) throw new NotFoundException(`Teacher ${teacherId} not found`);
+
+    const bcrypt = await import('bcrypt');
+    const passwordHash = await bcrypt.hash(password, 12);
+
+    if (teacher.userId) {
+      const clash = await this.prisma.user.findUnique({
+        where: { email },
+        select: { id: true },
+      });
+      if (clash && clash.id !== teacher.userId) {
+        throw new ConflictException(`User with email ${email} already exists`);
+      }
+      await this.prisma.user.update({
+        where: { id: teacher.userId },
+        data: { email, passwordHash },
+      });
+      return;
+    }
+
+    const userId = await this.createCabinetUser(
+      email,
+      password,
+      teacher.branchId,
+    );
+    await this.prisma.teacher.update({
+      where: { id: teacherId },
+      data: { userId },
+    });
   }
 
   /** Delete a teacher (groups keep their rows; teacherId is set null per schema). */

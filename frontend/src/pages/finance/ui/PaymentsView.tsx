@@ -109,6 +109,7 @@ export function PaymentsView() {
     {
       id: 'student',
       header: t('finance.payments.student'),
+      sortValue: (p) => studentName(p),
       cell: (p) => (
         <span className="font-medium text-foreground">{studentName(p)}</span>
       ),
@@ -116,17 +117,20 @@ export function PaymentsView() {
     {
       id: 'group',
       header: t('finance.payments.group'),
+      sortValue: (p) => p.group?.name ?? null,
       cell: (p) => p.group?.name ?? '—',
     },
     {
       id: 'period',
       header: t('finance.payments.period'),
+      sortValue: (p) => p.billingMonthStart,
       cell: (p) => formatPeriod(p.billingMonthStart, p.billingMonthEnd),
     },
     {
       id: 'branch',
       header: t('fields.branch'),
       hideOnMobile: true,
+      sortValue: (p) => branchName(p.branchId),
       cell: (p) => branchName(p.branchId),
     },
     {
@@ -134,6 +138,7 @@ export function PaymentsView() {
       header: t('finance.records.amount'),
       className: 'text-right',
       headerClassName: 'text-right',
+      sortValue: (p) => Number(p.amount),
       cell: (p) => (
         <span className="font-medium tabular-nums">{formatMoney(p.amount)}</span>
       ),
@@ -141,6 +146,7 @@ export function PaymentsView() {
     {
       id: 'status',
       header: t('fields.status'),
+      sortValue: (p) => p.status,
       cell: (p) =>
         p.status === 'PAID' ? (
           <Badge variant="success" dot>

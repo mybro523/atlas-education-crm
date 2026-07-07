@@ -1,4 +1,10 @@
-import { IsBoolean, IsNotEmpty, IsOptional, IsString } from 'class-validator';
+import {
+  IsBoolean,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  Matches,
+} from 'class-validator';
 
 /**
  * Partial update body for a Room. Passing `branchId: null` detaches the room
@@ -18,4 +24,10 @@ export class UpdateRoomDto {
   @IsOptional()
   @IsBoolean()
   isActive?: boolean;
+
+  /** Display color (hex). Send null to clear it. */
+  @IsOptional()
+  @IsString()
+  @Matches(/^#[0-9a-fA-F]{6}$/, { message: 'color must be a #RRGGBB hex value' })
+  color?: string | null;
 }

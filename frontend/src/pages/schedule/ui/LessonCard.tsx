@@ -6,6 +6,7 @@ import { isOptimisticId } from '@/shared/lib';
 import { Badge } from '@/shared/ui';
 import type { Lesson } from '@/entities/lesson';
 import type { LessonView } from '@/features/schedule-editor';
+import { lessonRoomColor, roomAccentStyle } from './roomAccent';
 
 export interface LessonCardProps {
   lesson: Lesson;
@@ -34,15 +35,18 @@ export function LessonCard({
   // Row still carries a temp optimistic id — block id-carrying actions until
   // the real server row lands (prevents 404s + rollbacks).
   const isPending = isOptimisticId(lesson.id);
+  const roomColor = lessonRoomColor(lesson);
 
   return (
     <div
       className={cn(
         'rounded-xl border p-2.5 text-left',
+        roomColor && 'border-l-4',
         lesson.isConducted
           ? 'border-success/30 bg-success/5'
           : 'border-border bg-surface-muted/40',
       )}
+      style={roomAccentStyle(roomColor)}
     >
       <div className="flex items-start justify-between gap-2">
         <div className="flex items-center gap-1 text-xs font-medium text-foreground">

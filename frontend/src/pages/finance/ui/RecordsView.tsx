@@ -98,6 +98,7 @@ export function RecordsView() {
     {
       id: 'type',
       header: t('finance.records.type'),
+      sortValue: (r) => r.type,
       cell: (r) =>
         r.type === 'INCOME' ? (
           <Badge variant="success">{t('finance.records.income')}</Badge>
@@ -108,6 +109,7 @@ export function RecordsView() {
     {
       id: 'category',
       header: t('finance.records.category'),
+      sortValue: (r) => r.category || null,
       cell: (r) => (
         <div className="flex flex-col items-end gap-0.5 sm:items-start">
           <span className="font-medium text-foreground">
@@ -125,11 +127,13 @@ export function RecordsView() {
       id: 'branch',
       header: t('fields.branch'),
       hideOnMobile: true,
+      sortValue: (r) => branchName(r.branchId),
       cell: (r) => branchName(r.branchId),
     },
     {
       id: 'occurredAt',
       header: t('finance.records.occurredAt'),
+      sortValue: (r) => r.occurredAt,
       cell: (r) => formatDate(r.occurredAt),
     },
     {
@@ -137,6 +141,7 @@ export function RecordsView() {
       header: t('finance.records.amount'),
       className: 'text-right',
       headerClassName: 'text-right',
+      sortValue: (r) => Number(r.amount),
       cell: (r) => (
         <span
           className={

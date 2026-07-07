@@ -12,6 +12,8 @@ import { CellEditor, type CellEditorContext } from './CellEditor';
 export interface JournalMatrixProps {
   /** Group whose journal to render. When empty, a prompt is shown. */
   groupId: string | undefined;
+  /** When provided, student names become clickable (e.g. to open the profile). */
+  onStudentClick?: (studentId: string) => void;
 }
 
 function lessonLabel(startsAt: string): string {
@@ -35,7 +37,7 @@ function lessonLabel(startsAt: string): string {
  * RBAC: editing is allowed for ADMIN, FOUNDER and the owning TEACHER; other
  * viewers see a read-only grid.
  */
-export function JournalMatrix({ groupId }: JournalMatrixProps) {
+export function JournalMatrix({ groupId, onStudentClick }: JournalMatrixProps) {
   const { t } = useTranslation();
   const toast = useToast();
 
@@ -152,6 +154,7 @@ export function JournalMatrix({ groupId }: JournalMatrixProps) {
         onCellClick={handleCellClick}
         onToggleConducted={handleToggleConducted}
         conductingId={conductingId}
+        onStudentClick={onStudentClick}
       />
 
       {/* Mounted only with a real cell context so the remark query (keyed by

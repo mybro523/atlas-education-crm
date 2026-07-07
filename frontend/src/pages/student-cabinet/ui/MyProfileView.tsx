@@ -1,10 +1,11 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Boxes, Phone, UserCircle, Users } from 'lucide-react';
+import { Boxes, Phone, UserCircle, Users, Wallet } from 'lucide-react';
 
 import { Badge, Card, EmptyState, Spinner } from '@/shared/ui';
 import { useMyStudentProfile } from '@/entities/me';
 import { useBranches } from '@/entities/branch';
+import { formatMoney } from '@/shared/lib';
 import { formatDate } from '@/features/view-performance';
 
 /** One label/value row inside a definition-list card. */
@@ -56,6 +57,12 @@ export function MyProfileView() {
     .filter(Boolean)
     .join(' ');
 
+  // Subscription (абонемент): fall back to the course monthly price when the
+  // backend omits dueAmount, and derive the debt when owedAmount is missing.
+  const dueAmount = profile.dueAmount ?? profile.course?.pricePerMonth ?? 0;
+  const paidAmount = profile.paidAmount ?? 0;
+  const owedAmount = profile.owedAmount ?? Math.max(0, dueAmount - paidAmount);
+
   return (
     <div className="space-y-4">
       {/* Identity header */}
@@ -81,6 +88,39 @@ export function MyProfileView() {
             )}
           </div>
         </div>
+      </Card>
+
+      {/* Subscription (абонемент): paid / due for the current period + debt */}
+      <Card>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <Wallet className="h-4 w-4 text-primary" aria-hidden />
+            <h3 className="text-sm font-semibold text-foreground">
+              {t('students.subscription')}
+            </h3>
+          </div>
+          {profile.course && (
+            <span className="truncate text-xs text-foreground-muted">
+              {profile.course.name}
+            </span>
+          )}
+        </div>
+        <p className="mt-3 text-lg font-semibold text-foreground">
+          {formatMoney(paidAmount)}
+          <span className="font-normal text-foreground-muted">
+            {' / '}
+            {formatMoney(dueAmount)}
+          </span>
+        </p>
+        {owedAmount > 0 ? (
+          <p className="mt-1 text-sm font-medium text-danger">
+            {t('students.owedShort')}: {formatMoney(owedAmount)}
+          </p>
+        ) : (
+          <p className="mt-1 text-sm font-medium text-success">
+            {t('students.owedShort')}: 0
+          </p>
+        )}
       </Card>
 
       {/* Personal details */}

@@ -1,11 +1,18 @@
+import { Type } from 'class-transformer';
 import {
   IsDateString,
   IsNotEmpty,
+  IsNumber,
+  IsObject,
   IsOptional,
   IsString,
   Matches,
+  Max,
   MaxLength,
+  Min,
+  ValidateNested,
 } from 'class-validator';
+import { CredentialsDto } from '../../../common/dto/credentials.dto';
 
 /**
  * Update a teacher (API contract §5). All fields optional.
@@ -74,7 +81,24 @@ export class UpdateTeacherDto {
   @IsString()
   branchId?: string;
 
+  /** Hourly pay rate (TJS/hour). Send null to clear it. */
+  @IsOptional()
+  @IsNumber({ maxDecimalPlaces: 2 })
+  @Min(0)
+  @Max(99999999.99)
+  hourlyRate?: number | null;
+
   @IsOptional()
   @IsString()
   userId?: string;
+
+  /**
+   * Issue (or re-issue) cabinet credentials: creates the linked User when the
+   * teacher has none, otherwise updates the login email + password.
+   */
+  @IsOptional()
+  @IsObject()
+  @ValidateNested()
+  @Type(() => CredentialsDto)
+  credentials?: CredentialsDto;
 }

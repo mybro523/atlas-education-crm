@@ -11,6 +11,7 @@ import {
   type LessonView,
 } from '@/features/schedule-editor';
 import { LessonCard } from './LessonCard';
+import { lessonRoomColor, roomAccentStyle } from './roomAccent';
 
 export interface MonthGridProps {
   grid: MonthGridModel;
@@ -114,8 +115,11 @@ export function MonthGrid({
                 {shown.map((lesson) => {
                   const view = resolve(lesson);
                   const label = `${view.startTime} · ${view.courseName}`;
+                  const roomColor = lessonRoomColor(lesson);
+                  const chipStyle = roomAccentStyle(roomColor);
                   const chipClass = cn(
                     'w-full truncate rounded-md px-1.5 py-1 text-left text-[11px] font-medium leading-tight',
+                    roomColor && 'border-l-[3px]',
                     lesson.isConducted
                       ? 'bg-success/15 text-success'
                       : 'bg-brand-100 text-brand-700 dark:bg-brand-600/20 dark:text-brand-200',
@@ -127,6 +131,7 @@ export function MonthGrid({
                       disabled={isOptimisticId(lesson.id)}
                       onClick={() => onEditLesson(lesson)}
                       title={`${view.timeLabel} · ${view.courseName}`}
+                      style={chipStyle}
                       className={cn(
                         chipClass,
                         'transition-opacity hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
@@ -138,6 +143,7 @@ export function MonthGrid({
                     <span
                       key={lesson.id}
                       title={`${view.timeLabel} · ${view.courseName}`}
+                      style={chipStyle}
                       className={chipClass}
                     >
                       {label}

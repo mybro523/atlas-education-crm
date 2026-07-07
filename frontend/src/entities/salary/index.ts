@@ -1,5 +1,6 @@
 export { salaryApi } from './api';
 export type {
+  SalaryOverviewRow,
   Salary,
   SalaryBasis,
   SalaryStatus,
@@ -19,4 +20,5 @@ export {
   usePaySalary,
   useUpdateSalary,
   useDeleteSalary,
+  useSalaryOverview,
 } from './model/queries';

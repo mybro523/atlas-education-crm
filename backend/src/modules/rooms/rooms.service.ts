@@ -42,6 +42,7 @@ export class RoomsService {
     return this.prisma.room.create({
       data: {
         name: dto.name,
+        color: dto.color,
         isActive: dto.isActive,
         ...(dto.branchId ? { branch: { connect: { id: dto.branchId } } } : {}),
       },
@@ -54,6 +55,8 @@ export class RoomsService {
 
     const data: Prisma.RoomUpdateInput = {
       name: dto.name,
+      // Nullable scalar: undefined = leave unchanged, null = clear.
+      color: dto.color,
       isActive: dto.isActive,
     };
     if (dto.branchId !== undefined) {

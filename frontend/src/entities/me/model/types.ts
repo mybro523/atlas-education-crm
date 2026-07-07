@@ -18,6 +18,13 @@ export interface MyStudentProfile {
   branchId: string;
   enrollmentDate: string;
   isActive: boolean;
+  /** Subscription (абонемент): amount paid toward the current period. */
+  paidAmount?: number;
+  /** Amount due for the current period (usually the course monthly price). */
+  dueAmount?: number;
+  /** Outstanding debt; 0 when fully paid. */
+  owedAmount?: number;
+  course?: { id: string; name: string; pricePerMonth: number } | null;
   parents: Array<{
     id: string;
     firstName: string;

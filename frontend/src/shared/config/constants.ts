@@ -36,6 +36,8 @@ export const ROUTES = {
   journal: '/journal',
   finance: '/finance',
   studentPayments: '/student-payments',
+  employees: '/employees',
+  salaries: '/salaries',
   studentCabinet: '/my',
   teacherCabinet: '/my-teaching',
   chats: '/chats',

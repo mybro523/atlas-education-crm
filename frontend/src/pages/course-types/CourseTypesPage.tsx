@@ -74,6 +74,7 @@ export function CourseTypesPage() {
       {
         id: 'name',
         header: t('courseTypes.name'),
+        sortValue: (ct) => ct.name,
         cell: (ct) => (
           <span className="font-medium text-foreground">{ct.name}</span>
         ),
@@ -82,6 +83,7 @@ export function CourseTypesPage() {
         id: 'status',
         header: t('fields.status'),
         mobileLabel: t('fields.status'),
+        sortValue: (ct) => (ct.isActive ? 1 : 0),
         cell: (ct) => (
           <Badge variant={ct.isActive ? 'success' : 'muted'} dot>
             {ct.isActive ? t('status.active') : t('status.inactive')}

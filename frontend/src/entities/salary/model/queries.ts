@@ -147,3 +147,12 @@ export function useDeleteSalary() {
     },
   });
 }
+
+/** Automatic per-period salary overview for all staff (FOUNDER). */
+export function useSalaryOverview(from: string, to: string, enabled = true) {
+  return useQuery({
+    queryKey: [...salaryKeys.all, 'overview', from, to] as const,
+    queryFn: () => salaryApi.overview(from, to),
+    enabled: enabled && Boolean(from && to),
+  });
+}

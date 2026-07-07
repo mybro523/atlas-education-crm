@@ -1,4 +1,5 @@
-import { useMemo } from 'react';
+import { useMemo, type KeyboardEvent } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
   Users,
@@ -10,6 +11,7 @@ import {
 } from 'lucide-react';
 
 import { Card } from '@/shared/ui';
+import { ROUTES } from '@/shared/config';
 import { formatMoney, toNumber } from '@/shared/lib/format';
 import { useStudents } from '@/entities/student';
 import { useTeachers } from '@/entities/teacher';
@@ -34,6 +36,7 @@ const formatCount = (n?: number) => (n ?? 0).toLocaleString();
  */
 export function FounderOverview() {
   const { t } = useTranslation();
+  const navigate = useNavigate();
 
   // Date ranges: the current month (for income) and the trailing 6 months
   // (for the chart). Bucket keys are computed in UTC to match the API.
@@ -124,6 +127,14 @@ export function FounderOverview() {
     }));
   }, [incomeSeries.data, expenseSeries.data, ranges.months]);
 
+  const goToFinance = () => navigate(ROUTES.finance);
+  const handleChartKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      goToFinance();
+    }
+  };
+
   return (
     <section className="space-y-4">
       <h2 className="text-sm font-medium uppercase tracking-wide text-foreground-muted">
@@ -137,6 +148,7 @@ export function FounderOverview() {
           value={formatCount(students.data?.meta.total)}
           loading={students.isLoading}
           accent="bg-primary/10 text-primary"
+          onClick={() => navigate(ROUTES.students)}
         />
         <KpiCard
           icon={GraduationCap}
@@ -144,6 +156,7 @@ export function FounderOverview() {
           value={formatCount(teachers.data?.meta.total)}
           loading={teachers.isLoading}
           accent="bg-primary/10 text-primary"
+          onClick={() => navigate(ROUTES.teachers)}
         />
         <KpiCard
           icon={Boxes}
@@ -151,6 +164,7 @@ export function FounderOverview() {
           value={formatCount(groups.data?.meta.total)}
           loading={groups.isLoading}
           accent="bg-primary/10 text-primary"
+          onClick={() => navigate(ROUTES.groups)}
         />
         <KpiCard
           icon={Banknote}
@@ -159,6 +173,7 @@ export function FounderOverview() {
           sub={t('dashboard.founder.thisMonth')}
           loading={monthSummary.isLoading}
           accent="bg-primary/10 text-primary"
+          onClick={() => navigate(ROUTES.finance)}
         />
         <KpiCard
           icon={AlertTriangle}
@@ -167,6 +182,7 @@ export function FounderOverview() {
           sub={t('dashboard.founder.asOfToday')}
           loading={totalSummary.isLoading}
           accent="bg-primary/10 text-primary"
+          onClick={() => navigate(ROUTES.finance)}
         />
         <KpiCard
           icon={Wallet}
@@ -175,10 +191,20 @@ export function FounderOverview() {
           sub={t('dashboard.founder.pendingCount', { count: pendingCount })}
           loading={pendingSalaries.isLoading}
           accent="bg-primary/10 text-primary"
+          onClick={() => navigate(ROUTES.finance)}
         />
       </div>
 
-      <Card>
+      {/* Whole chart card navigates to finance; native bar tooltips keep working
+          because the handler sits on the container (no chart internals touched). */}
+      <Card
+        role="button"
+        tabIndex={0}
+        aria-label={t('dashboard.founder.chartTitle')}
+        onClick={goToFinance}
+        onKeyDown={handleChartKeyDown}
+        className="cursor-pointer transition-all duration-150 hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      >
         <div className="mb-4 flex flex-wrap items-baseline justify-between gap-2">
           <h3 className="text-sm font-medium text-foreground">
             {t('dashboard.founder.chartTitle')}

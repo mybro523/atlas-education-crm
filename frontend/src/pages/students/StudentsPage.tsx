@@ -27,7 +27,7 @@ import {
 import { StudentSearch } from '@/features/search-students';
 import { RecordPaymentModal } from '@/features/record-payment';
 import { StudentFormModal } from './ui/StudentFormModal';
-import { StudentDetailModal } from './ui/StudentDetailModal';
+import { StudentDetailModal } from '@/widgets/StudentDetail';
 
 const PAGE_SIZE = 20;
 
@@ -164,6 +164,7 @@ export function StudentsPage() {
       id: 'name',
       header: `${t('fields.lastName')} / ${t('fields.firstName')}`,
       mobileLabel: t('fields.firstName'),
+      sortValue: (student) => `${student.lastName} ${student.firstName}`,
       cell: (student) => (
         <div className="flex flex-col items-end gap-1 sm:items-start">
           <span className="font-medium text-foreground">
@@ -178,22 +179,34 @@ export function StudentsPage() {
     {
       id: 'phone',
       header: t('fields.phone'),
+      sortValue: (student) => student.phone || null,
       cell: (student) => student.phone || '—',
     },
     {
       id: 'branch',
       header: t('fields.branch'),
+      sortValue: (student) => branchName(student.branchId),
       cell: (student) => branchName(student.branchId),
     },
     {
       id: 'enrollmentDate',
       header: t('fields.enrollmentDate'),
+      sortValue: (student) => student.enrollmentDate ?? null,
       cell: (student) => formatDate(student.enrollmentDate),
     },
     {
       id: 'subscription',
       header: t('students.subscription'),
       mobileLabel: t('students.subscription'),
+      sortValue: (student) => {
+        const due =
+          student.dueAmount ??
+          student.courseFee ??
+          student.course?.pricePerMonth ??
+          0;
+        const paid = student.paidAmount ?? 0;
+        return student.owedAmount ?? Math.max(0, due - paid);
+      },
       cell: (student) => {
         const due =
           student.dueAmount ??

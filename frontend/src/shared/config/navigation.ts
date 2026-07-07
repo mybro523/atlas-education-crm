@@ -16,6 +16,8 @@ import {
   UserCircle,
   Presentation,
   Settings,
+  BadgeDollarSign,
+  UserCog,
   type LucideIcon,
 } from 'lucide-react';
 import { ROLES, type Role } from './roles';
@@ -128,6 +130,18 @@ export const NAV_ITEMS: NavItem[] = [
     labelKey: 'nav.studentPayments',
     icon: Receipt,
     roles: [ROLES.FOUNDER, ROLES.ADMIN],
+  },
+  {
+    to: ROUTES.employees,
+    labelKey: 'nav.employees',
+    icon: UserCog,
+    roles: [ROLES.FOUNDER],
+  },
+  {
+    to: ROUTES.salaries,
+    labelKey: 'nav.salaries',
+    icon: BadgeDollarSign,
+    roles: [ROLES.FOUNDER],
   },
   {
     to: ROUTES.chats,

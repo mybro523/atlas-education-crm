@@ -3,6 +3,7 @@ import type { Paginated } from '@/shared/lib/query';
 import type {
   Salary,
   SalaryListParams,
+  SalaryOverviewRow,
   ComputeSalaryDto,
   SalaryComputation,
   CreateSalaryDto,
@@ -22,6 +23,15 @@ export const salaryApi = {
 
   async getById(id: string): Promise<Salary> {
     const { data } = await axiosClient.get<Salary>(`/finance/salaries/${id}`);
+    return data;
+  },
+
+  /** GET /finance/salaries/overview — automatic per-period salary for ALL staff. */
+  async overview(from: string, to: string): Promise<SalaryOverviewRow[]> {
+    const { data } = await axiosClient.get<SalaryOverviewRow[]>(
+      '/finance/salaries/overview',
+      { params: { from, to } },
+    );
     return data;
   },
 

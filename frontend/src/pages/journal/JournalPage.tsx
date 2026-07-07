@@ -1,9 +1,11 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
 
 import { PageHeader, Select, Spinner } from '@/shared/ui';
+import { useStudent } from '@/entities/student';
 import { JournalMatrix } from '@/widgets/JournalMatrix';
+import { StudentDetailModal } from '@/widgets/StudentDetail';
 import { useJournalGroups } from './ui/useJournalGroups';
 
 /**
@@ -19,6 +21,10 @@ export function JournalPage() {
 
   const { groups, isLoading } = useJournalGroups();
   const groupId = searchParams.get('groupId') ?? '';
+
+  // Clicking a student name in the matrix opens the read-only profile card.
+  const [detailStudentId, setDetailStudentId] = useState<string | null>(null);
+  const { data: detailStudent } = useStudent(detailStudentId ?? undefined);
 
   const groupOptions = useMemo(
     () => [
@@ -60,7 +66,16 @@ export function JournalPage() {
         }
       />
 
-      <JournalMatrix groupId={groupId || undefined} />
+      <JournalMatrix
+        groupId={groupId || undefined}
+        onStudentClick={setDetailStudentId}
+      />
+
+      <StudentDetailModal
+        open={Boolean(detailStudentId)}
+        onClose={() => setDetailStudentId(null)}
+        student={detailStudent ?? null}
+      />
     </div>
   );
 }

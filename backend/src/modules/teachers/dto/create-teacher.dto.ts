@@ -1,11 +1,18 @@
+import { Type } from 'class-transformer';
 import {
   IsDateString,
   IsNotEmpty,
+  IsNumber,
+  IsObject,
   IsOptional,
   IsString,
   Matches,
+  Max,
   MaxLength,
+  Min,
+  ValidateNested,
 } from 'class-validator';
+import { CredentialsDto } from '../../../common/dto/credentials.dto';
 
 /**
  * Create a teacher (API contract §5).
@@ -67,7 +74,21 @@ export class CreateTeacherDto {
   @IsNotEmpty()
   branchId!: string;
 
+  /** Hourly pay rate (TJS/hour) — basis for automatic salary computation. */
+  @IsOptional()
+  @IsNumber({ maxDecimalPlaces: 2 })
+  @Min(0)
+  @Max(99999999.99)
+  hourlyRate?: number;
+
   @IsOptional()
   @IsString()
   userId?: string;
+
+  /** Cabinet login (email + password ≥ 4 chars) issued to the teacher. */
+  @IsOptional()
+  @IsObject()
+  @ValidateNested()
+  @Type(() => CredentialsDto)
+  credentials?: CredentialsDto;
 }

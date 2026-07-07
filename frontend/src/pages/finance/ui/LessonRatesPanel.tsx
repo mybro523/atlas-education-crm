@@ -60,6 +60,7 @@ export function LessonRatesPanel() {
     {
       id: 'name',
       header: t('finance.rates.name'),
+      sortValue: (r) => r.name || null,
       cell: (r) => (
         <span className="font-medium text-foreground">
           {r.name || t('finance.rates.unnamed')}
@@ -69,6 +70,8 @@ export function LessonRatesPanel() {
     {
       id: 'scope',
       header: t('finance.rates.scope'),
+      sortValue: (r) =>
+        r.groupId ? groupName(r.groupId) : t('finance.rates.global'),
       cell: (r) =>
         r.groupId ? (
           <Badge variant="primary">{groupName(r.groupId)}</Badge>
@@ -81,6 +84,7 @@ export function LessonRatesPanel() {
       header: t('finance.rates.amount'),
       className: 'text-right',
       headerClassName: 'text-right',
+      sortValue: (r) => Number(r.amount),
       cell: (r) => (
         <span className="font-semibold tabular-nums">
           {formatMoney(r.amount)}

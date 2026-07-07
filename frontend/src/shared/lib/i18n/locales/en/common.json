@@ -74,7 +74,9 @@
     "studentCabinet": "My cabinet",
     "teacherCabinet": "My cabinet",
     "settings": "Settings",
-    "studentPayments": "Payment history"
+    "studentPayments": "Payment history",
+    "employees": "Employees",
+    "salaries": "Salaries"
   },
   "header": {
     "openMenu": "Open menu",
@@ -124,7 +126,8 @@
   },
   "table": {
     "empty": "No data",
-    "emptyHint": "There is nothing here yet."
+    "emptyHint": "There is nothing here yet.",
+    "sortBy": "Sort"
   },
   "actions": {
     "add": "Add",
@@ -152,7 +155,9 @@
     "invalidTelegram": "Enter a valid Telegram username",
     "invalidName": "Letters only — no digits or symbols",
     "invalidEmail": "Enter a valid email address",
-    "notSelected": "Not selected"
+    "notSelected": "Not selected",
+    "passwordMin": "Password must be at least 4 characters",
+    "changePassword": "Change password (optional)"
   },
   "fields": {
     "firstName": "First name",
@@ -173,7 +178,12 @@
     "specialty": "Specialty",
     "educationLevel": "Education level",
     "hireDate": "Hire date",
-    "telegram": "Telegram"
+    "telegram": "Telegram",
+    "note": "Note",
+    "hourlyRate": "Hourly rate (TJS)",
+    "color": "Color",
+    "login": "Login",
+    "password": "Password"
   },
   "teachers": {
     "title": "Teachers",
@@ -200,13 +210,20 @@
       "NONE": "No formal education",
       "SECONDARY": "Secondary",
       "HIGHER": "Higher"
-    }
+    },
+    "credentialsTitle": "Cabinet access",
+    "credentialsHint": "Login and password for the teacher to sign in",
+    "detailTitle": "Teacher details",
+    "groupsTitle": "Teacher groups",
+    "noGroups": "No groups yet",
+    "cabinetAccess": "System access",
+    "noCabinet": "No access issued"
   },
   "students": {
     "title": "Students",
     "subtitle": "Manage students and their parents",
     "searchPlaceholder": "Search by name or parent's workplace",
-    "searchHint": "Search by student name, parents' workplace or position",
+    "searchHint": "Search by name, note, or parents workplace / position",
     "add": "Add student",
     "createTitle": "New student",
     "editTitle": "Edit student",
@@ -261,7 +278,10 @@
       "debtAll": "Any payment status",
       "debtOnly": "Debtors",
       "debtNone": "No debt"
-    }
+    },
+    "credentialsTitle": "Cabinet access",
+    "credentialsHint": "Login and password for the student to sign in",
+    "notePlaceholder": "Any note about the student…"
   },
   "pages": {
     "students": "Students",
@@ -357,7 +377,8 @@
     "emptyHint": "Add the first room",
     "addTitle": "New room",
     "editTitle": "Edit room",
-    "add": "Add room"
+    "add": "Add room",
+    "colorHint": "Room color in the schedule"
   },
   "courses": {
     "title": "Courses",
@@ -532,7 +553,9 @@
       "month": "Month",
       "week": "Week",
       "day": "Day"
-    }
+    },
+    "hourFormat": "24-hour day",
+    "allDay": "Day lessons"
   },
   "finance": {
     "title": "Finance",
@@ -996,5 +1019,64 @@
       "daysLeft_one": "{{count}} day left",
       "daysLeft_other": "{{count}} days left"
     }
+  },
+  "employees": {
+    "title": "Employees",
+    "subtitle": "Staff accounts: access, blocking, password reset",
+    "add": "Add employee",
+    "createTitle": "New employee",
+    "created": "Employee added",
+    "deleted": "Employee deleted",
+    "blocked": "Employee blocked",
+    "unblocked": "Employee unblocked",
+    "passwordReset": "Password reset",
+    "resetPassword": "Reset password",
+    "resetTitle": "New password",
+    "block": "Block",
+    "unblock": "Unblock",
+    "deleteTitle": "Delete employee",
+    "deleteConfirm": "Delete account {{name}}? The profile stays, but sign-in becomes impossible.",
+    "role": "Role",
+    "status": "Status",
+    "active": "Active",
+    "blockedBadge": "Blocked",
+    "empty": "No employees yet",
+    "emptyHint": "Add the first employee and issue access.",
+    "count_one": "{{count}} employee",
+    "count_other": "{{count}} employees",
+    "newPasswordFor": "New password for {{name}}",
+    "credentialsIssued": "Access created. Login: {{email}}, password: {{password}}",
+    "copyCreds": "Copy",
+    "credsCopied": "Copied"
+  },
+  "salaries": {
+    "title": "Salaries",
+    "subtitle": "Automatic salary computation from conducted lessons",
+    "period": "Period",
+    "teacherKind": "Teacher",
+    "employeeKind": "Employee",
+    "rate": "Rate/hour",
+    "lessons": "Lessons",
+    "hours": "Hours",
+    "amount": "Salary",
+    "total": "Total payable",
+    "empty": "No data for the period",
+    "emptyHint": "No conducted lessons in the selected period.",
+    "noRate": "No rate set",
+    "hint": "Teacher salary = hourly rate x conducted lesson hours (or the per-lesson rate when set)."
+  },
+  "settingsPage": {
+    "systemTitle": "System settings",
+    "systemHint": "Flexible parameters — changed without touching the code",
+    "paymentDueDays": "Payment-due window (days)",
+    "paymentDueDaysHint": "How many days ahead to warn about subscription end",
+    "absenceSmsThreshold": "SMS after consecutive absences",
+    "absenceSmsThresholdHint": "How many consecutive absences trigger the parent SMS",
+    "defaultLessonDurationMin": "Default lesson duration (min)",
+    "passwordMinLength": "Min password length",
+    "adminCanSeeFinance": "Admin can see finance",
+    "saved": "Settings saved",
+    "save": "Save settings",
+    "foundersOnly": "Only the founder can change settings"
   }
 }

@@ -9,6 +9,8 @@ export interface Room {
   id: string;
   name: string;
   branchId?: string | null;
+  /** Individual display color (hex #RRGGBB) used to tint schedule cards. */
+  color?: string | null;
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
@@ -26,6 +28,7 @@ export interface RoomListParams {
 export interface CreateRoomDto {
   name: string;
   branchId?: string;
+  color?: string;
   isActive?: boolean;
 }
 
@@ -33,5 +36,7 @@ export interface CreateRoomDto {
 export interface UpdateRoomDto {
   name?: string;
   branchId?: string | null;
+  /** Hex #RRGGBB; null clears the color. */
+  color?: string | null;
   isActive?: boolean;
 }

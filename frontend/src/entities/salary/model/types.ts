@@ -1,5 +1,20 @@
 import type { PaginationParams } from '@/shared/lib/query';
 
+/** One row of the automatic staff-salary overview (GET /finance/salaries/overview). */
+export interface SalaryOverviewRow {
+  kind: 'teacher' | 'employee';
+  id: string;
+  firstName: string;
+  lastName: string;
+  branch: { id: string; name: string } | null;
+  /** Teacher hourly rate (TJS/hour), when set. */
+  hourlyRate: number | null;
+  lessonsCount: number;
+  hoursTotal: number;
+  /** Auto-computed amount for the period. */
+  amount: number;
+}
+
 export type SalaryBasis = 'PER_LESSON' | 'FIXED';
 export type SalaryStatus = 'PENDING' | 'PAID';
 

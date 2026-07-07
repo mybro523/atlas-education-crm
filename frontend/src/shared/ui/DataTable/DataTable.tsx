@@ -1,5 +1,6 @@
-import { type ReactNode } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
+import { ArrowDown, ArrowUp, ArrowUpDown } from 'lucide-react';
 import { cn } from '@/shared/lib/cn';
 import { Skeleton } from '../Skeleton';
 import { EmptyState } from '../EmptyState';
@@ -11,6 +12,12 @@ export interface DataTableColumn<T> {
   header: ReactNode;
   /** Cell renderer. Receives the row and its index. */
   cell: (row: T, index: number) => ReactNode;
+  /**
+   * Sort accessor — providing it makes the header clickable. Return a string
+   * (alphabetical, locale-aware), a number, or an ISO date string / timestamp
+   * for chronological ordering. Null/undefined rows sort last.
+   */
+  sortValue?: (row: T) => string | number | null | undefined;
   /** Extra classes for both header + cell (e.g. text-right, hidden md:table-cell). */
   className?: string;
   /** Header-only classes. */
@@ -38,10 +45,43 @@ export interface DataTableProps<T> {
   className?: string;
 }
 
+type SortDir = 'asc' | 'desc';
+
+interface SortState {
+  colId: string;
+  dir: SortDir;
+}
+
+/** Locale-aware comparator over a column's sortValue; nullish values sort last. */
+function compareRows<T>(
+  a: T,
+  b: T,
+  accessor: (row: T) => string | number | null | undefined,
+  dir: SortDir,
+): number {
+  const va = accessor(a);
+  const vb = accessor(b);
+  if (va == null && vb == null) return 0;
+  if (va == null) return 1; // nulls always last regardless of direction
+  if (vb == null) return -1;
+  let cmp: number;
+  if (typeof va === 'number' && typeof vb === 'number') {
+    cmp = va - vb;
+  } else {
+    cmp = String(va).localeCompare(String(vb), undefined, {
+      numeric: true,
+      sensitivity: 'base',
+    });
+  }
+  return dir === 'asc' ? cmp : -cmp;
+}
+
 /**
  * Generic, responsive data table.
  * - Desktop (>=640px): real <table> with sticky-friendly header.
  * - Mobile (<640px): each row becomes a stacked card (label/value pairs).
+ * - Columns with `sortValue` get clickable headers (asc → desc → off),
+ *   sorting the CURRENT page client-side (alphabetical / numeric / by date).
  * - Built-in loading skeleton + empty state. Fully themed (light + dark).
  */
 export function DataTable<T>({
@@ -57,7 +97,46 @@ export function DataTable<T>({
   className,
 }: DataTableProps<T>) {
   const { t } = useTranslation();
+  const [sort, setSort] = useState<SortState | null>(null);
   const mobileColumns = columns.filter((c) => !c.hideOnMobile);
+
+  const sortedData = useMemo(() => {
+    if (!data || !sort) return data;
+    const col = columns.find((c) => c.id === sort.colId);
+    if (!col?.sortValue) return data;
+    const accessor = col.sortValue;
+    return [...data].sort((a, b) => compareRows(a, b, accessor, sort.dir));
+  }, [data, sort, columns]);
+
+  const toggleSort = (col: DataTableColumn<T>) => {
+    if (!col.sortValue) return;
+    setSort((prev) => {
+      if (!prev || prev.colId !== col.id) return { colId: col.id, dir: 'asc' };
+      if (prev.dir === 'asc') return { colId: col.id, dir: 'desc' };
+      return null; // third click resets to the server order
+    });
+  };
+
+  const headerContent = (col: DataTableColumn<T>) => {
+    if (!col.sortValue) return col.header;
+    const active = sort?.colId === col.id;
+    const Icon = !active ? ArrowUpDown : sort!.dir === 'asc' ? ArrowUp : ArrowDown;
+    return (
+      <button
+        type="button"
+        onClick={() => toggleSort(col)}
+        className={cn(
+          'inline-flex items-center gap-1 uppercase tracking-wide',
+          'hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded',
+          active ? 'text-foreground' : 'text-foreground-muted',
+        )}
+        aria-label={t('table.sortBy')}
+      >
+        {col.header}
+        <Icon className={cn('h-3.5 w-3.5', !active && 'opacity-50')} aria-hidden />
+      </button>
+    );
+  };
 
   /* ---------------- Loading ---------------- */
   if (loading) {
@@ -113,7 +192,7 @@ export function DataTable<T>({
   }
 
   /* ---------------- Empty ---------------- */
-  if (!data || data.length === 0) {
+  if (!sortedData || sortedData.length === 0) {
     return (
       <div
         className={cn(
@@ -144,19 +223,26 @@ export function DataTable<T>({
                 <th
                   key={col.id}
                   scope="col"
+                  aria-sort={
+                    sort?.colId === col.id
+                      ? sort.dir === 'asc'
+                        ? 'ascending'
+                        : 'descending'
+                      : undefined
+                  }
                   className={cn(
                     'whitespace-nowrap px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-foreground-muted',
                     col.headerClassName,
                     col.className,
                   )}
                 >
-                  {col.header}
+                  {headerContent(col)}
                 </th>
               ))}
             </tr>
           </thead>
           <tbody>
-            {data.map((row, index) => (
+            {sortedData.map((row, index) => (
               <tr
                 key={rowKey(row, index)}
                 onClick={interactive ? () => onRowClick(row) : undefined}
@@ -185,7 +271,7 @@ export function DataTable<T>({
 
       {/* Mobile stacked cards */}
       <div className="space-y-3 sm:hidden">
-        {data.map((row, index) => (
+        {sortedData.map((row, index) => (
           <div
             key={rowKey(row, index)}
             onClick={interactive ? () => onRowClick(row) : undefined}
