@@ -16,10 +16,23 @@ export const meApi = {
   // --- Student self (§10) ---
   student: {
     async profile(): Promise<MyStudentProfile> {
-      const { data } = await axiosClient.get<MyStudentProfile>(
-        '/me/student/profile',
-      );
-      return data;
+      const { data } = await axiosClient.get<
+        MyStudentProfile & {
+          /** Raw backend shape: memberships come as groupLinks[].group. */
+          groupLinks?: Array<{ group?: { id: string; name: string } | null }>;
+        }
+      >('/me/student/profile');
+      // Normalize: the backend sends groupLinks (join rows), the UI consumes a
+      // flat groups list. Guard both arrays so the profile view never crashes.
+      return {
+        ...data,
+        parents: data.parents ?? [],
+        groups:
+          data.groups ??
+          (data.groupLinks ?? [])
+            .map((link) => link.group)
+            .filter((g): g is { id: string; name: string } => Boolean(g)),
+      };
     },
     async grades(params?: MyGradesParams): Promise<MyGrade[]> {
       const { data } = await axiosClient.get<MyGrade[]>('/me/student/grades', {
