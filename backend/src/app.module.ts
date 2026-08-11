@@ -36,6 +36,7 @@ import { TelegramModule } from './modules/telegram/telegram.module';
 import { SmsModule } from './modules/sms/sms.module';
 import { AutomationModule } from './modules/automation/automation.module';
 import { SettingsModule } from './modules/settings/settings.module';
+import { RealtimeModule } from './modules/realtime/realtime.module';
 
 @Module({
   imports: [
@@ -67,6 +68,7 @@ import { SettingsModule } from './modules/settings/settings.module';
       ],
       inject: [ConfigService],
     }),
+    RealtimeModule,
     PrismaModule,
     AuthModule,
     UsersModule,

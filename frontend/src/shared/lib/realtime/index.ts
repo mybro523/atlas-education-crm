@@ -3,3 +3,4 @@ export {
   useRealtimeNamespace,
   type RealtimeHandlers,
 } from './useRealtimeNamespace';
+export { useRealtimeSync } from './useRealtimeSync';

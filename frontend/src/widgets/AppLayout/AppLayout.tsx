@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Outlet } from 'react-router-dom';
 import { Sidebar } from '@/widgets/Sidebar';
 import { Header } from '@/widgets/Header';
+import { useRealtimeSync } from '@/shared/lib/realtime';
 
 /**
  * Protected dashboard shell: role-based Sidebar + Header + routed content.
@@ -9,6 +10,8 @@ import { Header } from '@/widgets/Header';
  */
 export function AppLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  // Global realtime: any change made by anyone refreshes the open page live.
+  useRealtimeSync();
 
   return (
     <div className="flex h-screen overflow-hidden bg-background text-foreground">
