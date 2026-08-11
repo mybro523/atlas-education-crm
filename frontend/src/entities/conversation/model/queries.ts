@@ -7,6 +7,8 @@ import {
 
 import {
   createQueryKeys,
+  isOptimisticId,
+  makeOptimisticId,
   updateInListCache,
   useOptimisticMutation,
   type Paginated,
@@ -80,12 +82,14 @@ export function useSendMessage(conversationId: string) {
       conversationKeys.lists(),
     ],
     optimisticUpdate: (dto, qc) => {
-      const tempId = `temp-${Date.now()}`;
+      const tempId = makeOptimisticId();
       const optimistic: Message = {
         id: tempId,
         conversationId,
         direction: 'OUTBOUND',
-        channel: 'WHATSAPP',
+        // Mirror the real channel of this conversation so the bubble renders
+        // with the right badge; fall back to WHATSAPP only if not cached yet.
+        channel: findConversationChannel(qc, conversationId) ?? 'WHATSAPP',
         text: dto.text,
         createdAt: new Date().toISOString(),
         senderUserId: null,
@@ -119,6 +123,21 @@ export function useUpdateConversationStatus() {
 /* ------------------------------------------------------------------ *
  * Realtime cache helpers — used by the chats page socket subscription.
  * ------------------------------------------------------------------ */
+
+/** Look up a conversation's channel from any cached list page. */
+function findConversationChannel(
+  qc: QueryClient,
+  conversationId: string,
+): Message['channel'] | undefined {
+  const caches = qc.getQueriesData<Paginated<Conversation>>({
+    queryKey: conversationKeys.lists(),
+  });
+  for (const [, data] of caches) {
+    const found = data?.items.find((c) => c.id === conversationId);
+    if (found) return found.channel;
+  }
+  return undefined;
+}
 
 /** Prepend a message to page 1 of a thread's cache (newest-first storage). */
 function prependMessageToThread(
@@ -183,12 +202,18 @@ export function applyIncomingMessage(
     (old) => {
       if (!old || old.meta.page !== 1) return old;
       if (old.items.some((m) => m.id === message.id)) return old;
-      // Replace a matching optimistic OUTBOUND bubble (same text) if present.
+      // Replace ONE matching optimistic OUTBOUND bubble (same text) if present —
+      // drop only the first match so two identical messages don't collapse.
+      let dropped = false;
       const withoutTemp =
         message.direction === 'OUTBOUND'
-          ? old.items.filter(
-              (m) => !(m.id.startsWith('temp-') && m.text === message.text),
-            )
+          ? old.items.filter((m) => {
+              if (!dropped && isOptimisticId(m.id) && m.text === message.text) {
+                dropped = true;
+                return false;
+              }
+              return true;
+            })
           : old.items;
       return {
         ...old,
