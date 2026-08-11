@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { Suspense, useState } from 'react';
 import { Outlet } from 'react-router-dom';
 import { Sidebar } from '@/widgets/Sidebar';
 import { Header } from '@/widgets/Header';
 import { useRealtimeSync } from '@/shared/lib/realtime';
+import { Spinner } from '@/shared/ui';
 
 /**
  * Protected dashboard shell: role-based Sidebar + Header + routed content.
@@ -21,7 +22,17 @@ export function AppLayout() {
         <Header onOpenSidebar={() => setSidebarOpen(true)} />
         <main className="flex-1 overflow-y-auto p-4 sm:p-6">
           <div className="mx-auto w-full max-w-6xl">
-            <Outlet />
+            {/* Keep the shell (sidebar/header) painted while a lazy page chunk
+                loads; only the content area shows the fallback spinner. */}
+            <Suspense
+              fallback={
+                <div className="flex justify-center py-20">
+                  <Spinner />
+                </div>
+              }
+            >
+              <Outlet />
+            </Suspense>
           </div>
         </main>
       </div>

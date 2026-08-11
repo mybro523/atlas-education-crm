@@ -1,29 +1,43 @@
+import { lazy, useEffect, type ComponentType } from 'react';
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 
 import { ROLES, ROUTES } from '@/shared/config';
 import { AppLayout } from '@/widgets/AppLayout';
+import { prefetchPages } from './prefetchPages';
 
+// LoginPage stays eager: it is the entry paint for unauthenticated visitors, so
+// code-splitting it would only add a spinner flash before first render. Every
+// in-shell page below is lazy — each becomes its own chunk, loaded on first
+// navigation and cached thereafter (see AppLayout's <Suspense> boundary).
 import { LoginPage } from '@/pages/login';
-import { DashboardPage } from '@/pages/dashboard';
-import { StudentsPage } from '@/pages/students';
-import { TeachersPage } from '@/pages/teachers';
-import { GroupsPage, GroupDetailPage } from '@/pages/groups';
-import { CoursesPage } from '@/pages/courses';
-import { BranchesPage } from '@/pages/branches';
-import { RoomsPage } from '@/pages/rooms';
-import { CourseTypesPage } from '@/pages/course-types';
-import { SchedulePage } from '@/pages/schedule';
-import { JournalPage } from '@/pages/journal';
-import { FinancePage } from '@/pages/finance';
-import { StudentPaymentsPage } from '@/pages/student-payments';
-import { EmployeesPage } from '@/pages/employees';
-import { SalariesPage } from '@/pages/salaries';
-import { StudentCabinetPage } from '@/pages/student-cabinet';
-import { TeacherCabinetPage } from '@/pages/teacher-cabinet';
-import { ChatsPage } from '@/pages/chats';
-import { BroadcastPage } from '@/pages/broadcast';
-import { SettingsPage } from '@/pages/settings';
-import { NotFoundPage } from '@/pages/not-found';
+
+/** Wrap a named page export as a lazy default for React.lazy. */
+const lazyPage = (
+  loader: () => Promise<Record<string, unknown>>,
+  name: string,
+) => lazy(() => loader().then((m) => ({ default: m[name] as ComponentType })));
+
+const DashboardPage = lazyPage(() => import('@/pages/dashboard'), 'DashboardPage');
+const StudentsPage = lazyPage(() => import('@/pages/students'), 'StudentsPage');
+const TeachersPage = lazyPage(() => import('@/pages/teachers'), 'TeachersPage');
+const GroupsPage = lazyPage(() => import('@/pages/groups'), 'GroupsPage');
+const GroupDetailPage = lazyPage(() => import('@/pages/groups'), 'GroupDetailPage');
+const CoursesPage = lazyPage(() => import('@/pages/courses'), 'CoursesPage');
+const BranchesPage = lazyPage(() => import('@/pages/branches'), 'BranchesPage');
+const RoomsPage = lazyPage(() => import('@/pages/rooms'), 'RoomsPage');
+const CourseTypesPage = lazyPage(() => import('@/pages/course-types'), 'CourseTypesPage');
+const SchedulePage = lazyPage(() => import('@/pages/schedule'), 'SchedulePage');
+const JournalPage = lazyPage(() => import('@/pages/journal'), 'JournalPage');
+const FinancePage = lazyPage(() => import('@/pages/finance'), 'FinancePage');
+const StudentPaymentsPage = lazyPage(() => import('@/pages/student-payments'), 'StudentPaymentsPage');
+const EmployeesPage = lazyPage(() => import('@/pages/employees'), 'EmployeesPage');
+const SalariesPage = lazyPage(() => import('@/pages/salaries'), 'SalariesPage');
+const StudentCabinetPage = lazyPage(() => import('@/pages/student-cabinet'), 'StudentCabinetPage');
+const TeacherCabinetPage = lazyPage(() => import('@/pages/teacher-cabinet'), 'TeacherCabinetPage');
+const ChatsPage = lazyPage(() => import('@/pages/chats'), 'ChatsPage');
+const BroadcastPage = lazyPage(() => import('@/pages/broadcast'), 'BroadcastPage');
+const SettingsPage = lazyPage(() => import('@/pages/settings'), 'SettingsPage');
+const NotFoundPage = lazyPage(() => import('@/pages/not-found'), 'NotFoundPage');
 
 import { ProtectedRoute } from './ProtectedRoute';
 import { PublicOnlyRoute } from './PublicOnlyRoute';
@@ -38,6 +52,11 @@ import { RoleRoute } from './RoleRoute';
  *   broadcast = FOUNDER+ADMIN; etc.).
  */
 export function AppRouter() {
+  // Warm all page chunks during idle time so post-login navigation is instant.
+  useEffect(() => {
+    prefetchPages();
+  }, []);
+
   return (
     <BrowserRouter>
       <Routes>
