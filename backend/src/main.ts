@@ -7,11 +7,17 @@ import helmet from 'helmet';
 import { AppModule } from './app.module';
 
 async function bootstrap(): Promise<void> {
-  const app = await NestFactory.create(AppModule);
+  // rawBody: true preserves the unparsed request buffer so the Meta webhook can
+  // verify its X-Hub-Signature-256 HMAC against the exact bytes Meta signed.
+  const app = await NestFactory.create(AppModule, { rawBody: true });
   const config = app.get(ConfigService);
 
   app.use(helmet());
   app.use(cookieParser());
+
+  // Flush in-flight work (Prisma, BullMQ, Telegraf) on SIGTERM/SIGINT so a
+  // Railway redeploy shuts down cleanly instead of dropping connections.
+  app.enableShutdownHooks();
 
   app.setGlobalPrefix('api');
 

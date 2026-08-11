@@ -1,5 +1,4 @@
 import {
-  Body,
   Controller,
   ForbiddenException,
   Get,
@@ -7,7 +6,12 @@ import {
   HttpStatus,
   Post,
   Query,
+  Req,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { createHmac, timingSafeEqual } from 'crypto';
+import { RawBodyRequest } from '@nestjs/common';
+import { Request } from 'express';
 import { Public } from '../../common/decorators/public.decorator';
 import { ChatsService } from './chats.service';
 
@@ -24,13 +28,18 @@ import { ChatsService } from './chats.service';
  * - POST /chats/webhook  → receive WA/IG events; always answer 200 so Meta does
  *   not retry/back off, even on a malformed body.
  *
- * NOTE: signature verification (X-Hub-Signature-256 with META_APP_SECRET) is a
- * hardening step that requires the raw request body; ingestWebhook itself is
- * defensive and never throws, so a malformed/forged body is a harmless no-op.
+ * Inbound POSTs are authenticated by the X-Hub-Signature-256 HMAC (computed by
+ * Meta with META_APP_SECRET over the raw body). When META_APP_SECRET is set, a
+ * missing/invalid signature is rejected — this stops anyone from injecting
+ * forged conversations/messages into the sales inbox. When the secret is not
+ * configured (e.g. local dev without Meta), verification is skipped.
  */
 @Controller('chats/webhook')
 export class ChatsWebhookController {
-  constructor(private readonly chatsService: ChatsService) {}
+  constructor(
+    private readonly chatsService: ChatsService,
+    private readonly config: ConfigService,
+  ) {}
 
   /**
    * Meta verification: when the query's verify token matches, echo back the
@@ -57,8 +66,33 @@ export class ChatsWebhookController {
   @Public()
   @Post()
   @HttpCode(HttpStatus.OK)
-  async receive(@Body() payload: unknown): Promise<{ received: true }> {
-    await this.chatsService.ingestWebhook(payload);
+  async receive(@Req() req: RawBodyRequest<Request>): Promise<{ received: true }> {
+    const appSecret = this.config.get<string>('meta.appSecret');
+    const raw = req.rawBody;
+    if (appSecret) {
+      const signature = req.headers['x-hub-signature-256'];
+      if (!raw || !this.isValidSignature(raw, signature, appSecret)) {
+        throw new ForbiddenException('Invalid webhook signature');
+      }
+    }
+    // rawBody is preserved but Nest still parses JSON into req.body.
+    await this.chatsService.ingestWebhook((req as unknown as { body: unknown }).body);
     return { received: true };
+  }
+
+  /** Constant-time compare of the sha256=… HMAC header against the raw body. */
+  private isValidSignature(
+    raw: Buffer,
+    header: string | string[] | undefined,
+    appSecret: string,
+  ): boolean {
+    const provided = Array.isArray(header) ? header[0] : header;
+    if (!provided || !provided.startsWith('sha256=')) {
+      return false;
+    }
+    const expected = 'sha256=' + createHmac('sha256', appSecret).update(raw).digest('hex');
+    const a = Buffer.from(provided);
+    const b = Buffer.from(expected);
+    return a.length === b.length && timingSafeEqual(a, b);
   }
 }

@@ -6,6 +6,7 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
+import { createHash } from 'crypto';
 import { PrismaService } from '../../prisma/prisma.service';
 import { Role } from '../../common/enums/role.enum';
 import { RegisterDto } from './dto/register.dto';
@@ -57,9 +58,13 @@ export class AuthService {
         email: dto.email ?? null,
         phone: dto.phone ?? null,
         passwordHash,
-        role: (dto.role as Role) ?? Role.STUDENT,
+        // Public self-registration is ALWAYS a student. Privileged accounts
+        // (admin/manager/teacher/founder) are created only via POST /users by a
+        // founder. The client cannot choose its own role or branch here — doing
+        // so previously let any anonymous caller mint a FOUNDER account.
+        role: Role.STUDENT,
         language: dto.language ?? this.config.get<string>('defaultLanguage') ?? 'ru',
-        branchId: dto.branchId ?? null,
+        branchId: null,
       },
     });
 
@@ -99,24 +104,34 @@ export class AuthService {
 
   async refresh(userId: string, presentedToken: string): Promise<AuthTokens> {
     const now = new Date();
-    const tokens = await this.prisma.refreshToken.findMany({
-      where: { userId, revokedAt: null, expiresAt: { gt: now } },
+    // Refresh tokens are stored as a deterministic SHA-256 digest, so the exact
+    // presented token is found by direct index lookup. (bcrypt cannot be used
+    // here: it truncates inputs at 72 bytes, and every JWT for one user shares
+    // the same first 72 bytes — the `sub` prefix — so bcrypt.compare matched the
+    // wrong row and rotation/revocation silently targeted a different token.)
+    const tokenHash = this.hashToken(presentedToken);
+    const record = await this.prisma.refreshToken.findFirst({
+      where: { userId, tokenHash },
     });
 
-    let matched: (typeof tokens)[number] | undefined;
-    for (const t of tokens) {
-      if (await bcrypt.compare(presentedToken, t.tokenHash)) {
-        matched = t;
-        break;
-      }
+    if (!record) {
+      throw new UnauthorizedException('Refresh token is invalid or expired');
     }
-    if (!matched) {
+
+    // Reuse detection: presenting an already-rotated (revoked) or expired token
+    // signals a possibly stolen token. Revoke the whole family so neither the
+    // attacker nor the victim can keep refreshing.
+    if (record.revokedAt || record.expiresAt <= now) {
+      await this.prisma.refreshToken.updateMany({
+        where: { userId, revokedAt: null },
+        data: { revokedAt: now },
+      });
       throw new UnauthorizedException('Refresh token is invalid or expired');
     }
 
     // Rotate: revoke the used token before issuing a new pair.
     await this.prisma.refreshToken.update({
-      where: { id: matched.id },
+      where: { id: record.id },
       data: { revokedAt: now },
     });
 
@@ -194,8 +209,13 @@ export class AuthService {
     return { accessToken, refreshToken };
   }
 
+  /** Deterministic digest for refresh-token storage (see refresh() for why not bcrypt). */
+  private hashToken(token: string): string {
+    return createHash('sha256').update(token).digest('hex');
+  }
+
   private async persistRefreshToken(userId: string, refreshToken: string): Promise<void> {
-    const tokenHash = await bcrypt.hash(refreshToken, BCRYPT_ROUNDS);
+    const tokenHash = this.hashToken(refreshToken);
     const decoded = this.jwt.decode(refreshToken) as { exp?: number } | null;
     const expiresAt = decoded?.exp
       ? new Date(decoded.exp * 1000)

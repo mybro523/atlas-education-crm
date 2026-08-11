@@ -11,6 +11,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
+import { Throttle } from '@nestjs/throttler';
 import { Request, Response } from 'express';
 import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
@@ -23,6 +24,9 @@ import { REFRESH_COOKIE_NAME, clearRefreshCookie, setRefreshCookie } from './coo
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
+  // Strict per-IP limit on credential endpoints: 5 attempts/minute defeats
+  // password brute-forcing while the global 120/min guard covers everything else.
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
   @Public()
   @Post('register')
   async register(
@@ -34,6 +38,7 @@ export class AuthController {
     return { accessToken, user };
   }
 
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
   @Public()
   @HttpCode(HttpStatus.OK)
   @Post('login')
