@@ -15,33 +15,41 @@ interface EntityChangeEvent {
  * Prisma model name → TanStack Query key prefixes to invalidate.
  *
  * A change to one model often touches several views (a Payment moves the
- * payments list, the debts report and the finance analytics), so several
- * models fan out to multiple scopes. Unlisted models (RefreshToken, Message,
- * Conversation — the last two are handled by the dedicated '/chats' socket with
- * richer live updates) are intentionally ignored.
+ * payments list, the student-payments history, the debts report and the
+ * finance analytics), so several models fan out to multiple scopes. Rename
+ * ripples are covered too: e.g. a Course rename refreshes student rows that
+ * display the course name. Only genuinely unmappable models are ignored:
+ * RefreshToken (no UI) and Notification (no notification UI on the frontend).
+ * Conversation/Message ALSO invalidate here — the dedicated '/chats' socket
+ * gives the open inbox richer in-place updates, while this signal keeps any
+ * cached conversation lists fresh for a manager who is elsewhere in the app.
+ * Invalidation only refetches ACTIVE (mounted) queries, so the fan-out stays
+ * cheap.
  */
 const RESOURCE_QUERY_KEYS: Record<string, ReadonlyArray<ReadonlyArray<string>>> = {
   Branch: [['branches']],
   Room: [['rooms'], ['lessons']],
-  CourseType: [['course-types']],
-  Course: [['courses'], ['groups']],
-  Student: [['students'], ['groups'], ['me']],
+  CourseType: [['course-types'], ['courses']],
+  Course: [['courses'], ['groups'], ['students']],
+  Student: [['students'], ['groups'], ['payments'], ['student-payments'], ['me']],
   Parent: [['students']],
-  Teacher: [['teachers'], ['groups'], ['salaries'], ['staff'], ['me']],
+  Teacher: [['teachers'], ['groups'], ['lessons'], ['salaries'], ['staff'], ['me']],
   Employee: [['staff'], ['salaries']],
-  User: [['staff']],
-  Group: [['groups'], ['lessons'], ['students']],
-  GroupStudent: [['groups'], ['students']],
+  User: [['staff'], ['telegram'], ['me']],
+  Group: [['groups'], ['lessons'], ['lesson-rates'], ['students']],
+  GroupStudent: [['groups'], ['students'], ['payments'], ['me']],
   Lesson: [['lessons'], ['journal'], ['salaries'], ['analytics'], ['me']],
-  LessonRate: [['lesson-rates'], ['salaries']],
+  LessonRate: [['lesson-rates'], ['salaries'], ['lessons']],
   Grade: [['journal'], ['me']],
   Attendance: [['journal'], ['me']],
   Remark: [['remarks'], ['journal'], ['me']],
-  Payment: [['payments'], ['analytics'], ['students']],
+  Payment: [['payments'], ['student-payments'], ['analytics'], ['students']],
   FinanceRecord: [['finance-records'], ['analytics']],
   Salary: [['salaries']],
   Broadcast: [['broadcasts']],
   SystemSetting: [['system-settings']],
+  Conversation: [['conversations']],
+  Message: [['conversations']],
 };
 
 const FLUSH_DELAY_MS = 120;

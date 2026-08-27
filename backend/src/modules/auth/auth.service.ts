@@ -6,7 +6,7 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
-import { createHash } from 'crypto';
+import { createHash, randomUUID } from 'crypto';
 import { PrismaService } from '../../prisma/prisma.service';
 import { Role } from '../../common/enums/role.enum';
 import { RegisterDto } from './dto/register.dto';
@@ -110,22 +110,29 @@ export class AuthService {
     // the same first 72 bytes — the `sub` prefix — so bcrypt.compare matched the
     // wrong row and rotation/revocation silently targeted a different token.)
     const tokenHash = this.hashToken(presentedToken);
+    // Prefer a LIVE row for this exact token. Historically two tokens could be
+    // byte-identical (same sub + same iat second → same JWT → same hash), so a
+    // hash could match both a revoked row and a live one; picking the revoked
+    // row first made reuse-detection revoke the whole family and logged users
+    // out on their second page reload. New tokens carry a random jti so hashes
+    // are unique, but the live-first lookup also keeps old sessions working.
     const record = await this.prisma.refreshToken.findFirst({
-      where: { userId, tokenHash },
+      where: { userId, tokenHash, revokedAt: null, expiresAt: { gt: now } },
     });
 
     if (!record) {
-      throw new UnauthorizedException('Refresh token is invalid or expired');
-    }
-
-    // Reuse detection: presenting an already-rotated (revoked) or expired token
-    // signals a possibly stolen token. Revoke the whole family so neither the
-    // attacker nor the victim can keep refreshing.
-    if (record.revokedAt || record.expiresAt <= now) {
-      await this.prisma.refreshToken.updateMany({
-        where: { userId, revokedAt: null },
-        data: { revokedAt: now },
+      // No live row. If a revoked/expired row matches this token, this is a
+      // REUSE of a rotated token — possibly stolen. Revoke the whole family so
+      // neither the attacker nor the victim can keep refreshing.
+      const stale = await this.prisma.refreshToken.findFirst({
+        where: { userId, tokenHash },
       });
+      if (stale) {
+        await this.prisma.refreshToken.updateMany({
+          where: { userId, revokedAt: null },
+          data: { revokedAt: now },
+        });
+      }
       throw new UnauthorizedException('Refresh token is invalid or expired');
     }
 
@@ -200,10 +207,17 @@ export class AuthService {
       secret: this.config.get<string>('jwt.accessSecret'),
       expiresIn: this.config.get<string>('jwt.accessTtl'),
     });
-    const refreshToken = await this.jwt.signAsync(payload, {
-      secret: this.config.get<string>('jwt.refreshSecret'),
-      expiresIn: this.config.get<string>('jwt.refreshTtl'),
-    });
+    // jti makes every refresh token globally unique. Without it, two tokens
+    // minted for one user within the same second are byte-identical (same
+    // payload + iat), which collides their SHA-256 rows and breaks rotation
+    // bookkeeping (see refresh()).
+    const refreshToken = await this.jwt.signAsync(
+      { ...payload, jti: randomUUID() },
+      {
+        secret: this.config.get<string>('jwt.refreshSecret'),
+        expiresIn: this.config.get<string>('jwt.refreshTtl'),
+      },
+    );
 
     await this.persistRefreshToken(payload.sub, refreshToken);
     return { accessToken, refreshToken };
