@@ -2,7 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { ScheduleModule as NestScheduleModule } from '@nestjs/schedule';
-import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
+import { ThrottlerModule } from '@nestjs/throttler';
 import {
   AcceptLanguageResolver,
   HeaderResolver,
@@ -41,6 +41,7 @@ import { OwnerModule } from './modules/owner/owner.module';
 import { TenancyModule } from './common/tenancy/tenancy.module';
 import { TenancyInterceptor } from './common/tenancy/tenancy.interceptor';
 import { SubscriptionGuard } from './common/guards/subscription.guard';
+import { UserThrottlerGuard } from './common/guards/user-throttler.guard';
 
 @Module({
   imports: [
@@ -48,10 +49,13 @@ import { SubscriptionGuard } from './common/guards/subscription.guard';
       isGlobal: true,
       load: [configuration],
     }),
+    // Budget is per USER (see UserThrottlerGuard), so one academy's staff
+    // behind a shared office IP no longer throttle each other. 300/min covers
+    // heavy page loads (a dashboard fires ~10-15 requests) with headroom.
     ThrottlerModule.forRoot([
       {
         ttl: 60_000,
-        limit: 120,
+        limit: 300,
       },
     ]),
     // Enables @Cron scheduling (e.g. the daily absence-check automation).
@@ -102,7 +106,7 @@ import { SubscriptionGuard } from './common/guards/subscription.guard';
     // Global JWT auth (routes opt out with @Public()).
     { provide: APP_GUARD, useClass: JwtAuthGuard },
     // Global rate limiting.
-    { provide: APP_GUARD, useClass: ThrottlerGuard },
+    { provide: APP_GUARD, useClass: UserThrottlerGuard },
     // SaaS subscription gate (blocked/expired academies get 403). The guard
     // instance lives in the global TenancyModule; useExisting reuses that same
     // singleton so OwnerService cache invalidation reaches the active guard.
