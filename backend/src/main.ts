@@ -3,6 +3,7 @@ import { ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
 import { NestExpressApplication } from '@nestjs/platform-express';
+import compression from 'compression';
 import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
 import { AppModule } from './app.module';
@@ -24,6 +25,9 @@ async function bootstrap(): Promise<void> {
   app.set('trust proxy', 1);
 
   app.use(helmet());
+  // gzip/brotli response compression — large JSON lists shrink ~5-10×, which
+  // matters most on the mobile networks the academies actually use.
+  app.use(compression());
   app.use(cookieParser());
 
   // Flush in-flight work (Prisma, BullMQ, Telegraf) on SIGTERM/SIGINT so a

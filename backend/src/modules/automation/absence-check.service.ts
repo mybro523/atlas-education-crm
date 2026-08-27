@@ -81,8 +81,8 @@ export class AbsenceCheckService {
     };
 
     // Only students that have any attendance records are candidates. Pull the
-    // students together with their parents, user language, and recent
-    // attendance (ordered oldest→newest so we can inspect the tail).
+    // students together with their parents, user language, and active group
+    // memberships (the streak is evaluated per group).
     const students = await this.prisma.student.findMany({
       where: { isActive: true, attendances: { some: {} } },
       select: {
@@ -91,18 +91,59 @@ export class AbsenceCheckService {
         lastName: true,
         user: { select: { language: true } },
         parents: { select: { phone: true } },
-        // Active group memberships — the streak is evaluated per group.
         groupLinks: {
           where: { leftAt: null },
           select: { groupId: true },
         },
       },
     });
+    if (students.length === 0) return result;
+
+    const studentIds = students.map((s) => s.id);
+
+    // BATCH 1: every relevant attendance in ONE query (was one per student×
+    // group). Ordered newest-first; grouped into a (studentId|groupId) map in
+    // memory so each streak window is just the first STREAK_LENGTH entries.
+    const attendances = await this.prisma.attendance.findMany({
+      where: { studentId: { in: studentIds } },
+      select: {
+        studentId: true,
+        status: true,
+        lesson: { select: { groupId: true, startsAt: true } },
+      },
+      orderBy: { lesson: { startsAt: 'desc' } },
+    });
+    const byStudentGroup = new Map<
+      string,
+      Array<{ status: AttendanceStatus; startsAt: Date }>
+    >();
+    for (const a of attendances) {
+      if (!a.lesson?.groupId) continue;
+      const key = `${a.studentId}|${a.lesson.groupId}`;
+      const list = byStudentGroup.get(key) ?? [];
+      if (list.length < STREAK_LENGTH) {
+        list.push({ status: a.status, startsAt: a.lesson.startsAt });
+        byStudentGroup.set(key, list);
+      }
+    }
+
+    // BATCH 2: all prior alert anchors in ONE query (was 200-row scan + JSON
+    // parse per student×group). Deduped into a Set of "student|group|anchor".
+    const notifiedKeys = await this.loadNotifiedKeys();
 
     for (const student of students) {
       result.scannedStudents += 1;
       try {
-        await this.processStudent(student, result);
+        for (const link of student.groupLinks) {
+          this.processStreak(
+            student,
+            link.groupId,
+            byStudentGroup.get(`${student.id}|${link.groupId}`) ?? [],
+            notifiedKeys,
+            result,
+          );
+        }
+        await this.flushPending(result);
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
         this.logger.warn(
@@ -114,30 +155,39 @@ export class AbsenceCheckService {
     return result;
   }
 
-  private async processStudent(
-    student: {
-      id: string;
-      firstName: string;
-      lastName: string;
-      user: { language: string } | null;
-      parents: Array<{ phone: string }>;
-      groupLinks: Array<{ groupId: string }>;
-    },
-    result: AbsenceScanResult,
-  ): Promise<void> {
-    // Evaluate the streak independently for each ACTIVE group membership so an
-    // absence in one group doesn't leak into another group's schedule window.
-    for (const link of student.groupLinks) {
-      await this.processStudentGroup(student, link.groupId, result);
+  /** Queued SMS dispatches accumulated during the in-memory streak scan. */
+  private pending: Array<{
+    phone: string;
+    text: string;
+    studentId: string;
+    groupId: string;
+    anchorKey: string;
+  }> = [];
+
+  private async flushPending(result: AbsenceScanResult): Promise<void> {
+    const batch = this.pending;
+    this.pending = [];
+    for (const p of batch) {
+      await this.notifications.dispatch({
+        recipient: p.phone,
+        channel: NotificationChannel.SMS,
+        template: ABSENCE_TEMPLATE,
+        text: p.text,
+        payload: {
+          studentId: p.studentId,
+          groupId: p.groupId,
+          streakAnchor: p.anchorKey,
+        },
+      });
+      result.notificationsSent += 1;
     }
   }
 
   /**
-   * Evaluate the last {@link STREAK_LENGTH} attendance records for this student
-   * SCOPED to a single group's lessons, in schedule order. If all are ABSENT and
-   * not yet notified, dispatch the parent SMS for that (student, group) streak.
+   * Evaluate a single (student, group) streak from the pre-fetched attendance
+   * window. Pure in-memory — no DB access. Queues SMS into `pending`.
    */
-  private async processStudentGroup(
+  private processStreak(
     student: {
       id: string;
       firstName: string;
@@ -146,30 +196,18 @@ export class AbsenceCheckService {
       parents: Array<{ phone: string }>;
     },
     groupId: string,
+    recent: Array<{ status: AttendanceStatus; startsAt: Date }>,
+    notifiedKeys: Set<string>,
     result: AbsenceScanResult,
-  ): Promise<void> {
-    // Last N attendance records for THIS group's lessons, by schedule order
-    // (newest first).
-    const recent = await this.prisma.attendance.findMany({
-      where: { studentId: student.id, lesson: { groupId } },
-      select: { status: true, lesson: { select: { startsAt: true } } },
-      orderBy: { lesson: { startsAt: 'desc' } },
-      take: STREAK_LENGTH,
-    });
-
+  ): void {
     // Need at least a full streak of records, all ABSENT.
-    if (recent.length < STREAK_LENGTH) {
-      return;
-    }
-    if (!recent.every((a) => a.status === AttendanceStatus.ABSENT)) {
-      return;
-    }
+    if (recent.length < STREAK_LENGTH) return;
+    if (!recent.every((a) => a.status === AttendanceStatus.ABSENT)) return;
 
     // Anchor the streak at its FIRST (oldest) absent lesson in the window.
-    const anchor = recent[recent.length - 1].lesson.startsAt;
-    const anchorKey = anchor.toISOString();
+    const anchorKey = recent[recent.length - 1].startsAt.toISOString();
 
-    if (await this.alreadyNotified(student.id, groupId, anchorKey)) {
+    if (notifiedKeys.has(`${student.id}|${groupId}|${anchorKey}`)) {
       result.skippedAlreadyNotified += 1;
       return;
     }
@@ -194,61 +232,45 @@ export class AbsenceCheckService {
       return;
     }
 
+    // Mark this anchor so a same-run second group can't double-queue it.
+    notifiedKeys.add(`${student.id}|${groupId}|${anchorKey}`);
     for (const phone of phones) {
-      await this.notifications.dispatch({
-        recipient: phone,
-        channel: NotificationChannel.SMS,
-        template: ABSENCE_TEMPLATE,
+      this.pending.push({
+        phone,
         text,
-        payload: {
-          studentId: student.id,
-          groupId,
-          streakAnchor: anchorKey,
-        },
+        studentId: student.id,
+        groupId,
+        anchorKey,
       });
-      result.notificationsSent += 1;
     }
   }
 
   /**
-   * Has this student already been alerted for the (group) streak anchored at
-   * `anchorKey`? We look at recent `absence_3_lessons` notifications and match
-   * the studentId + groupId + streakAnchor we stored in the payload.
+   * Load every prior `absence_3_lessons` anchor into a lookup Set in ONE query
+   * (was a 200-row scan + JSON parse for each student×group pair). Key format:
+   * "studentId|groupId|streakAnchor".
    */
-  private async alreadyNotified(
-    studentId: string,
-    groupId: string,
-    anchorKey: string,
-  ): Promise<boolean> {
+  private async loadNotifiedKeys(): Promise<Set<string>> {
     const prior = await this.prisma.notification.findMany({
       where: { template: ABSENCE_TEMPLATE },
       select: { payload: true },
-      orderBy: { createdAt: 'desc' },
-      take: 200,
     });
-
+    const keys = new Set<string>();
     for (const n of prior) {
-      if (!n.payload) {
-        continue;
-      }
+      if (!n.payload) continue;
       try {
         const parsed: unknown = JSON.parse(n.payload);
         const data =
           parsed && typeof parsed === 'object'
             ? (parsed as { data?: Record<string, unknown> }).data
             : undefined;
-        if (
-          data &&
-          data.studentId === studentId &&
-          data.groupId === groupId &&
-          data.streakAnchor === anchorKey
-        ) {
-          return true;
+        if (data?.studentId && data?.groupId && data?.streakAnchor) {
+          keys.add(`${data.studentId}|${data.groupId}|${data.streakAnchor}`);
         }
       } catch {
         // Ignore unparseable payloads.
       }
     }
-    return false;
+    return keys;
   }
 }

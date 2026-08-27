@@ -38,41 +38,51 @@ export class OwnerService {
     private readonly subscriptionGuard: SubscriptionGuard,
   ) {}
 
-  /** All academies with usage stats, newest first. */
+  /**
+   * All academies with usage stats, newest first. Batched: one groupBy per
+   * stat instead of 5 queries per academy — the panel stays at 6 queries
+   * total no matter how many clients exist (was ~7×N).
+   */
   async list() {
-    const academies = await this.prisma.academy.findMany({
-      orderBy: { createdAt: 'desc' },
-      include: { _count: { select: { salesPayments: true } } },
-    });
-    return Promise.all(
-      academies.map(async (a) => {
-        const [students, teachers, users, revenue, lastToken] =
-          await Promise.all([
-            this.prisma.student.count({ where: { academyId: a.id } }),
-            this.prisma.teacher.count({ where: { academyId: a.id } }),
-            this.prisma.user.count({ where: { academyId: a.id } }),
-            this.prisma.academyPayment.aggregate({
-              where: { academyId: a.id },
-              _sum: { amount: true },
-            }),
-            this.prisma.refreshToken.findFirst({
-              where: { user: { academyId: a.id } },
-              orderBy: { createdAt: 'desc' },
-              select: { createdAt: true },
-            }),
-          ]);
-        return {
-          ...a,
-          stats: {
-            students,
-            teachers,
-            users,
-            revenue: revenue._sum.amount ?? 0,
-            lastLoginAt: lastToken?.createdAt ?? null,
-          },
-        };
-      }),
-    );
+    const [academies, students, teachers, users, revenue, lastLogins] =
+      await Promise.all([
+        this.prisma.academy.findMany({ orderBy: { createdAt: 'desc' } }),
+        this.prisma.student.groupBy({ by: ['academyId'], _count: { _all: true } }),
+        this.prisma.teacher.groupBy({ by: ['academyId'], _count: { _all: true } }),
+        this.prisma.user.groupBy({ by: ['academyId'], _count: { _all: true } }),
+        this.prisma.academyPayment.groupBy({
+          by: ['academyId'],
+          _sum: { amount: true },
+        }),
+        // Latest session per academy in one pass (raw: groupBy cannot reach
+        // through the user relation). OWNER-only path, no tenant scoping.
+        this.prisma.$queryRaw<Array<{ academyId: string; last: Date }>>`
+          SELECT u."academyId" as "academyId", MAX(rt."createdAt") as "last"
+          FROM "refresh_tokens" rt
+          JOIN "users" u ON u."id" = rt."userId"
+          WHERE u."academyId" IS NOT NULL
+          GROUP BY u."academyId"
+        `,
+      ]);
+
+    const by = <T extends { academyId: string | null }>(rows: T[]) =>
+      new Map(rows.map((r) => [r.academyId, r]));
+    const sMap = by(students);
+    const tMap = by(teachers);
+    const uMap = by(users);
+    const rMap = by(revenue);
+    const lMap = new Map(lastLogins.map((r) => [r.academyId, r.last]));
+
+    return academies.map((a) => ({
+      ...a,
+      stats: {
+        students: sMap.get(a.id)?._count._all ?? 0,
+        teachers: tMap.get(a.id)?._count._all ?? 0,
+        users: uMap.get(a.id)?._count._all ?? 0,
+        revenue: rMap.get(a.id)?._sum.amount ?? 0,
+        lastLoginAt: lMap.get(a.id) ?? null,
+      },
+    }));
   }
 
   /** Create a client academy together with its founder account (one sale). */
