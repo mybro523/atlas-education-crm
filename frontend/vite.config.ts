@@ -20,12 +20,14 @@ export default defineConfig({
   build: {
     rollupOptions: {
       output: {
-        // Split heavy, rarely-changing vendors into their own long-cached
-        // chunks so the app shell stays small and a redeploy doesn't bust them.
+        // Split the vendors that genuinely load at boot into long-cached
+        // chunks. recharts and socket.io are deliberately NOT listed: naming
+        // them here promoted their chunks into index.html's modulepreload
+        // list, so the login screen downloaded 120 KB of charting/websocket
+        // code it never uses. Left unnamed, Vite keeps them inside the lazy
+        // page chunks that actually import them.
         manualChunks: {
           'react-vendor': ['react', 'react-dom', 'react-router-dom'],
-          'chart-vendor': ['recharts'],
-          'realtime-vendor': ['socket.io-client'],
           'i18n-vendor': ['i18next', 'react-i18next', 'i18next-browser-languagedetector'],
         },
       },

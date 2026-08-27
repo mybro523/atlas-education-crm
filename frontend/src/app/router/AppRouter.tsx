@@ -2,7 +2,6 @@ import { lazy, useEffect, type ComponentType } from 'react';
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 
 import { ROLES, ROUTES } from '@/shared/config';
-import { AppLayout } from '@/widgets/AppLayout';
 import { useSessionStore, selectIsAuthenticated } from '@/entities/session';
 import { prefetchPages } from './prefetchPages';
 
@@ -39,6 +38,9 @@ const ChatsPage = lazyPage(() => import('@/pages/chats'), 'ChatsPage');
 const BroadcastPage = lazyPage(() => import('@/pages/broadcast'), 'BroadcastPage');
 const SettingsPage = lazyPage(() => import('@/pages/settings'), 'SettingsPage');
 const OwnerPage = lazyPage(() => import('@/pages/owner'), 'OwnerPage');
+// The authenticated shell is lazy too: it pulls the realtime socket client,
+// which an anonymous visitor on the login screen must not have to download.
+const AppLayout = lazyPage(() => import('@/widgets/AppLayout'), 'AppLayout');
 const NotFoundPage = lazyPage(() => import('@/pages/not-found'), 'NotFoundPage');
 
 import { ProtectedRoute } from './ProtectedRoute';
