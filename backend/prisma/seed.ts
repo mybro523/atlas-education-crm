@@ -116,7 +116,7 @@ async function main() {
   const courseTypes = ['Стандарт', 'ВИП', 'Интенсив', 'Детский', 'Для рабочих'];
   for (const name of courseTypes) {
     await prisma.courseType.upsert({
-      where: { name },
+      where: { academyId_name: { academyId: ACADEMY_ID, name } },
       update: {},
       create: { name, academyId: ACADEMY_ID },
     });
