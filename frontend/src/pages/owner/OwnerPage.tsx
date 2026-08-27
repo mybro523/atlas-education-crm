@@ -1,5 +1,6 @@
 import { useMemo, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
+import { AxiosError } from 'axios';
 import {
   Building2,
   CalendarPlus,
@@ -26,6 +27,7 @@ import {
   type DataTableColumn,
 } from '@/shared/ui';
 import { formatMoney, toNumber } from '@/shared/lib/format';
+import { isValidEmail } from '@/shared/lib';
 import {
   useAcademies,
   useAcademyPayments,
@@ -65,6 +67,8 @@ export function OwnerPage() {
   const deleteAcademy = useDeleteAcademy();
 
   const [createOpen, setCreateOpen] = useState(false);
+  /** Server-side rejection for the create form, shown on the offending field. */
+  const [createEmailError, setCreateEmailError] = useState<string | null>(null);
   const [extending, setExtending] = useState<Academy | null>(null);
   const [editing, setEditing] = useState<Academy | null>(null);
   const [blocking, setBlocking] = useState<Academy | null>(null);
@@ -292,17 +296,36 @@ export function OwnerPage() {
 
       <CreateAcademyModal
         open={createOpen}
-        onClose={() => setCreateOpen(false)}
+        onClose={() => {
+          setCreateOpen(false);
+          setCreateEmailError(null);
+        }}
         submitting={createAcademy.isPending}
-        onSubmit={(dto) =>
+        emailError={createEmailError}
+        onEmailEdited={() => setCreateEmailError(null)}
+        onSubmit={(dto) => {
+          setCreateEmailError(null);
           createAcademy.mutate(dto, {
             onSuccess: () => {
               toast.success(t('owner.toasts.created'));
               setCreateOpen(false);
             },
-            onError: () => toast.error(t('crud.createError')),
-          })
-        }
+            onError: (error) => {
+              // 409 = that login already belongs to someone (a director of
+              // another academy, or a staff/student cabinet account). Point at
+              // the field instead of a useless "could not create" toast, and
+              // keep the dialog open so nothing typed is lost.
+              const status =
+                error instanceof AxiosError ? error.response?.status : undefined;
+              if (status === 409) {
+                setCreateEmailError(t('owner.errors.emailTaken'));
+                toast.error(t('owner.errors.emailTaken'));
+              } else {
+                toast.error(t('crud.createError'));
+              }
+            },
+          });
+        }}
       />
 
       <ExtendModal
@@ -407,11 +430,16 @@ function CreateAcademyModal({
   open,
   onClose,
   submitting,
+  emailError,
+  onEmailEdited,
   onSubmit,
 }: {
   open: boolean;
   onClose: () => void;
   submitting: boolean;
+  /** Server rejection (e.g. 409 duplicate) to show on the login field. */
+  emailError?: string | null;
+  onEmailEdited: () => void;
   onSubmit: (dto: {
     name: string;
     contactName?: string;
@@ -431,14 +459,41 @@ function CreateAcademyModal({
   const [founderPassword, setFounderPassword] = useState('');
   const [months, setMonths] = useState('12');
   const [amount, setAmount] = useState('');
+  const [touched, setTouched] = useState(false);
+
+  // Live validation: the director's login MUST be an email (that is literally
+  // what they type on the sign-in screen) and the password at least 8 chars —
+  // the same rules the API enforces, surfaced before the round-trip.
+  const emailTrimmed = founderEmail.trim();
+  const localEmailError = emailTrimmed
+    ? isValidEmail(emailTrimmed)
+      ? undefined
+      : t('owner.errors.invalidEmail')
+    : touched
+      ? t('crud.required')
+      : undefined;
+  const passwordError = founderPassword
+    ? founderPassword.length < 8
+      ? t('owner.errors.shortPassword')
+      : undefined
+    : touched
+      ? t('crud.required')
+      : undefined;
+  const nameError = touched && !name.trim() ? t('crud.required') : undefined;
+  const valid =
+    Boolean(name.trim()) &&
+    isValidEmail(emailTrimmed) &&
+    founderPassword.length >= 8;
 
   const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    setTouched(true);
+    if (!valid) return;
     onSubmit({
       name: name.trim(),
       contactName: contactName.trim() || undefined,
       contactPhone: contactPhone.trim() || undefined,
-      founderEmail: founderEmail.trim(),
+      founderEmail: emailTrimmed,
       founderPassword,
       months: Math.max(1, Number(months) || 12),
       amount: amount ? Number(amount) : undefined,
@@ -452,15 +507,14 @@ function CreateAcademyModal({
       title={t('owner.createTitle')}
       onSubmit={handleSubmit}
       submitting={submitting}
-      submitDisabled={
-        !name.trim() || !founderEmail.trim() || founderPassword.length < 8
-      }
+      submitDisabled={!valid}
     >
       <div className="space-y-3">
         <Input
           label={t('owner.fields.name')}
           value={name}
           onChange={(e) => setName(e.target.value)}
+          error={nameError}
           required
         />
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -484,7 +538,13 @@ function CreateAcademyModal({
               label={t('owner.fields.founderEmail')}
               type="email"
               value={founderEmail}
-              onChange={(e) => setFounderEmail(e.target.value)}
+              onChange={(e) => {
+                setFounderEmail(e.target.value);
+                // Typing a new address clears the server's duplicate verdict.
+                if (emailError) onEmailEdited();
+              }}
+              placeholder="director@school.tj"
+              error={localEmailError ?? emailError ?? undefined}
               required
             />
             <Input
@@ -493,6 +553,7 @@ function CreateAcademyModal({
               value={founderPassword}
               onChange={(e) => setFounderPassword(e.target.value)}
               placeholder={t('owner.fields.passwordHint')}
+              error={passwordError}
               required
             />
           </div>

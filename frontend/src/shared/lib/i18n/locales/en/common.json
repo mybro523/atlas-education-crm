@@ -1149,6 +1149,11 @@
     "toasts": {
       "created": "Academy created, director access ready",
       "extended": "Subscription extended"
+    },
+    "errors": {
+      "invalidEmail": "The login must be an email — the director signs in with it (e.g. director@school.tj)",
+      "emailTaken": "This email already belongs to another account — use a different one",
+      "shortPassword": "Password must be at least 8 characters"
     }
   }
 }

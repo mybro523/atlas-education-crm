@@ -1181,6 +1181,11 @@
     "toasts": {
       "created": "Академия эҷод шуд",
       "extended": "Обуна дароз карда шуд"
+    },
+    "errors": {
+      "invalidEmail": "Логин бояд email бошад (масалан, director@school.tj)",
+      "emailTaken": "Ин email аллакай банд аст — дигареро нависед",
+      "shortPassword": "Парол на камтар аз 8 аломат"
     }
   }
 }
