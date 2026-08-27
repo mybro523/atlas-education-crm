@@ -3,6 +3,7 @@ import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 
 import { ROLES, ROUTES } from '@/shared/config';
 import { AppLayout } from '@/widgets/AppLayout';
+import { useSessionStore, selectIsAuthenticated } from '@/entities/session';
 import { prefetchPages } from './prefetchPages';
 
 // LoginPage stays eager: it is the entry paint for unauthenticated visitors, so
@@ -53,10 +54,15 @@ import { RoleRoute } from './RoleRoute';
  *   broadcast = FOUNDER+ADMIN; etc.).
  */
 export function AppRouter() {
-  // Warm all page chunks during idle time so post-login navigation is instant.
+  const isAuthenticated = useSessionStore(selectIsAuthenticated);
+
+  // Warm all page chunks during idle time so post-login navigation is instant —
+  // but ONLY for a signed-in user. On the login screen these chunks are dead
+  // weight that delayed first paint (measured: FCP 1.6s → the app's own chunks
+  // were competing with the login form for bandwidth).
   useEffect(() => {
-    prefetchPages();
-  }, []);
+    if (isAuthenticated) prefetchPages();
+  }, [isAuthenticated]);
 
   return (
     <BrowserRouter>
