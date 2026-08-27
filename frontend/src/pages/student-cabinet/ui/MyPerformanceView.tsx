@@ -8,12 +8,17 @@ import { formatAverage, gradeVariant } from '@/features/view-performance';
 
 type CourseRow = MyPerformance['byCourse'][number];
 
-/** Tailwind bar-fill class for a 2..5 grade value (mirrors gradeVariant). */
+/** Tailwind bar-fill classes for a 2..5 grade value (mirrors gradeVariant).
+ * Pseudo-3D: horizontal light→saturated gradient + a matching soft glow. */
 function gradeBarClass(value: number): string {
-  if (value >= 5) return 'bg-success';
-  if (value >= 4) return 'bg-primary';
-  if (value >= 3) return 'bg-amber-500';
-  if (value >= 2) return 'bg-danger';
+  if (value >= 5)
+    return 'bg-gradient-to-r from-emerald-400 to-emerald-600 shadow-[0_1px_6px_rgba(16,185,129,0.5)]';
+  if (value >= 4)
+    return 'bg-gradient-to-r from-blue-400 to-blue-600 shadow-[0_1px_6px_rgba(37,99,235,0.5)]';
+  if (value >= 3)
+    return 'bg-gradient-to-r from-amber-300 to-amber-500 shadow-[0_1px_6px_rgba(245,158,11,0.5)]';
+  if (value >= 2)
+    return 'bg-gradient-to-r from-rose-400 to-rose-600 shadow-[0_1px_6px_rgba(244,63,94,0.5)]';
   return 'bg-surface-muted';
 }
 
@@ -119,7 +124,9 @@ export function MyPerformanceView() {
         </Card>
         <Card className="col-span-2 flex flex-col gap-1 sm:col-span-1">
           <span className="text-xs uppercase tracking-wide text-foreground-muted">
-            {t('studentCabinet.performance.coursesCount')}
+            {/* NOT `coursesCount` — that key only exists in plural forms and
+                without a `count` i18next rendered the raw key on this card. */}
+            {t('studentCabinet.performance.coursesLabel')}
           </span>
           <span className="text-2xl font-semibold text-foreground">
             {rows.length}

@@ -7,7 +7,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 
-import { Card, Skeleton } from '@/shared/ui';
+import { AnimatedNumber, Card, Skeleton } from '@/shared/ui';
 import { cn } from '@/shared/lib/cn';
 import { formatMoney } from '@/shared/lib';
 import { CHART_COLORS } from '../lib/chartColors';
@@ -77,10 +77,13 @@ export function SummaryCards({ totals, loading }: SummaryCardsProps) {
         const value = totals?.[card.key] ?? 0;
         const isNegativeNet = card.key === 'net' && value < 0;
         return (
-          <Card key={card.key} className="flex items-center gap-3">
+          <Card
+            key={card.key}
+            className="group flex animate-fade-up items-center gap-3 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-elevated"
+          >
             <div
               className={cn(
-                'flex h-10 w-10 shrink-0 items-center justify-center rounded-lg',
+                'flex h-10 w-10 shrink-0 items-center justify-center rounded-lg transition-transform duration-200 group-hover:scale-110',
                 card.tint,
               )}
             >
@@ -100,7 +103,7 @@ export function SummaryCards({ totals, loading }: SummaryCardsProps) {
                   )}
                   title={formatMoney(value)}
                 >
-                  {formatMoney(value)}
+                  <AnimatedNumber value={value} format={(n) => formatMoney(n)} />
                 </p>
               )}
             </div>

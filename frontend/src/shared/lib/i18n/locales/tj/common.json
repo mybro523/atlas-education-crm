@@ -591,7 +591,8 @@
         "day": "Аз рӯи рӯзҳо",
         "week": "Аз рӯи ҳафтаҳо",
         "month": "Аз рӯи моҳҳо"
-      }
+      },
+      "total": "Ҳамагӣ"
     },
     "payments": {
       "student": "Донишҷӯ",
@@ -805,7 +806,8 @@
       "coursesCount_few": "{{count}} курс",
       "coursesCount_many": "{{count}} курс",
       "coursesCount_other": "{{count}} курс",
-      "chartTitleByCourse": "Баҳои миёна аз рӯи курсҳо"
+      "chartTitleByCourse": "Баҳои миёна аз рӯи курсҳо",
+      "coursesLabel": "Курсҳо"
     },
     "profile": {
       "personalData": "Маълумоти шахсӣ",

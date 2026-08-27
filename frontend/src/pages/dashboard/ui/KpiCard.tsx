@@ -51,14 +51,15 @@ export function KpiCard({
       onClick={onClick}
       onKeyDown={interactive ? handleKeyDown : undefined}
       className={cn(
-        'flex items-start gap-3',
+        'group flex items-start gap-3 animate-fade-up',
         interactive &&
-          'cursor-pointer transition-all duration-150 hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+          'cursor-pointer transition-all duration-200 hover:-translate-y-1 hover:border-primary/40 hover:shadow-[0_10px_28px_-10px_rgba(37,99,235,0.45)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
       )}
     >
+      {/* Icon chip: pops and breathes a soft glow while the tile is hovered. */}
       <span
         className={cn(
-          'flex h-10 w-10 shrink-0 items-center justify-center rounded-lg',
+          'flex h-10 w-10 shrink-0 items-center justify-center rounded-lg transition-transform duration-200 group-hover:scale-110 group-hover:animate-pulse-glow',
           accent,
         )}
         aria-hidden

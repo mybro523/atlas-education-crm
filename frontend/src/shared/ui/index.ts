@@ -9,6 +9,7 @@ export {
 } from './Card';
 export { Modal, type ModalProps } from './Modal';
 export { Spinner, FullPageSpinner, type SpinnerProps } from './Spinner';
+export { AnimatedNumber, type AnimatedNumberProps } from './AnimatedNumber';
 export { ThemeToggle, type ThemeToggleProps } from './ThemeToggle';
 export {
   LanguageSwitcher,

@@ -581,7 +581,8 @@
         "day": "By day",
         "week": "By week",
         "month": "By month"
-      }
+      },
+      "total": "Total"
     },
     "payments": {
       "student": "Student",
@@ -783,7 +784,8 @@
       "course": "Course",
       "coursesCount_one": "{{count}} course",
       "coursesCount_other": "{{count}} courses",
-      "chartTitleByCourse": "Average grade by course"
+      "chartTitleByCourse": "Average grade by course",
+      "coursesLabel": "Courses"
     },
     "profile": {
       "personalData": "Personal data",

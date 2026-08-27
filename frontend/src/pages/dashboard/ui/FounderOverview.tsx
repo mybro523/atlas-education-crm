@@ -10,7 +10,7 @@ import {
   Wallet,
 } from 'lucide-react';
 
-import { Card } from '@/shared/ui';
+import { AnimatedNumber, Card } from '@/shared/ui';
 import { ROUTES } from '@/shared/config';
 import { formatMoney, toNumber } from '@/shared/lib/format';
 import { useStudents } from '@/entities/student';
@@ -26,7 +26,14 @@ import {
 } from './RevenueExpenseChart';
 
 const pad2 = (n: number) => String(n).padStart(2, '0');
-const formatCount = (n?: number) => (n ?? 0).toLocaleString();
+/** Rolling counter for integer KPIs (students, teachers, groups). */
+const countUp = (n?: number) => (
+  <AnimatedNumber value={n ?? 0} format={(v) => Math.round(v).toLocaleString()} />
+);
+/** Rolling counter for TJS money KPIs. */
+const moneyUp = (n: number) => (
+  <AnimatedNumber value={n} format={(v) => formatMoney(v)} />
+);
 
 /**
  * FOUNDER-only landing overview: six KPI tiles (students / teachers / groups /
@@ -145,7 +152,7 @@ export function FounderOverview() {
         <KpiCard
           icon={Users}
           label={t('dashboard.founder.totalStudents')}
-          value={formatCount(students.data?.meta.total)}
+          value={countUp(students.data?.meta.total)}
           loading={students.isLoading}
           accent="bg-primary/10 text-primary"
           onClick={() => navigate(ROUTES.students)}
@@ -153,7 +160,7 @@ export function FounderOverview() {
         <KpiCard
           icon={GraduationCap}
           label={t('dashboard.founder.totalTeachers')}
-          value={formatCount(teachers.data?.meta.total)}
+          value={countUp(teachers.data?.meta.total)}
           loading={teachers.isLoading}
           accent="bg-primary/10 text-primary"
           onClick={() => navigate(ROUTES.teachers)}
@@ -161,7 +168,7 @@ export function FounderOverview() {
         <KpiCard
           icon={Boxes}
           label={t('dashboard.founder.totalGroups')}
-          value={formatCount(groups.data?.meta.total)}
+          value={countUp(groups.data?.meta.total)}
           loading={groups.isLoading}
           accent="bg-primary/10 text-primary"
           onClick={() => navigate(ROUTES.groups)}
@@ -169,7 +176,7 @@ export function FounderOverview() {
         <KpiCard
           icon={Banknote}
           label={t('dashboard.founder.monthIncome')}
-          value={formatMoney(monthSummary.data?.combined.income ?? 0)}
+          value={moneyUp(monthSummary.data?.combined.income ?? 0)}
           sub={t('dashboard.founder.thisMonth')}
           loading={monthSummary.isLoading}
           accent="bg-primary/10 text-primary"
@@ -178,7 +185,7 @@ export function FounderOverview() {
         <KpiCard
           icon={AlertTriangle}
           label={t('dashboard.founder.outstandingDebt')}
-          value={formatMoney(totalSummary.data?.combined.debt ?? 0)}
+          value={moneyUp(totalSummary.data?.combined.debt ?? 0)}
           sub={t('dashboard.founder.asOfToday')}
           loading={totalSummary.isLoading}
           accent="bg-primary/10 text-primary"
@@ -187,7 +194,7 @@ export function FounderOverview() {
         <KpiCard
           icon={Wallet}
           label={t('dashboard.founder.salariesPayable')}
-          value={formatMoney(salariesPayable)}
+          value={moneyUp(salariesPayable)}
           sub={t('dashboard.founder.pendingCount', { count: pendingCount })}
           loading={pendingSalaries.isLoading}
           accent="bg-primary/10 text-primary"

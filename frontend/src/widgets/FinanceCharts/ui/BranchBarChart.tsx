@@ -12,9 +12,10 @@ import {
 
 import type { BranchTotals } from '@/entities/analytics';
 import { formatMoneyShort } from '@/shared/lib';
-import { CHART_COLORS } from '../lib/chartColors';
+import { CHART_SHADOW_ID, metricGradientId } from '../lib/chartColors';
 import { MoneyTooltip } from './ChartTooltip';
 import { ChartFrame } from './ChartFrame';
+import { renderChartDefs } from './ChartDefs';
 
 export interface BranchBarChartProps {
   data: BranchTotals[];
@@ -49,12 +50,14 @@ export function BranchBarChart({ data, loading }: BranchBarChartProps) {
         <BarChart
           data={chartData}
           margin={{ top: 8, right: 8, left: 0, bottom: 0 }}
-          barGap={2}
+          barGap={4}
         >
+          {renderChartDefs()}
           <CartesianGrid
             strokeDasharray="3 3"
             stroke="currentColor"
             className="text-border"
+            vertical={false}
           />
           <XAxis
             dataKey="name"
@@ -71,26 +74,40 @@ export function BranchBarChart({ data, loading }: BranchBarChartProps) {
           />
           <Tooltip
             content={<MoneyTooltip />}
-            cursor={{ fill: 'rgba(37, 99, 235, 0.06)' }}
+            cursor={{ fill: 'rgba(37, 99, 235, 0.06)', radius: 8 }}
           />
-          <Legend wrapperStyle={{ fontSize: 12 }} />
+          <Legend wrapperStyle={{ fontSize: 12 }} iconType="circle" iconSize={9} />
           <Bar
             dataKey="income"
             name={t('finance.overview.income')}
-            fill={CHART_COLORS.income}
-            radius={[4, 4, 0, 0]}
+            fill={`url(#${metricGradientId('income')})`}
+            radius={[7, 7, 0, 0]}
+            filter={`url(#${CHART_SHADOW_ID})`}
+            animationDuration={900}
+            animationEasing="ease-out"
+            activeBar={{ filter: `url(#${CHART_SHADOW_ID})`, opacity: 0.85 }}
           />
           <Bar
             dataKey="expense"
             name={t('finance.overview.expense')}
-            fill={CHART_COLORS.expense}
-            radius={[4, 4, 0, 0]}
+            fill={`url(#${metricGradientId('expense')})`}
+            radius={[7, 7, 0, 0]}
+            filter={`url(#${CHART_SHADOW_ID})`}
+            animationDuration={900}
+            animationBegin={120}
+            animationEasing="ease-out"
+            activeBar={{ filter: `url(#${CHART_SHADOW_ID})`, opacity: 0.85 }}
           />
           <Bar
             dataKey="debt"
             name={t('finance.overview.debt')}
-            fill={CHART_COLORS.debt}
-            radius={[4, 4, 0, 0]}
+            fill={`url(#${metricGradientId('debt')})`}
+            radius={[7, 7, 0, 0]}
+            filter={`url(#${CHART_SHADOW_ID})`}
+            animationDuration={900}
+            animationBegin={240}
+            animationEasing="ease-out"
+            activeBar={{ filter: `url(#${CHART_SHADOW_ID})`, opacity: 0.85 }}
           />
         </BarChart>
       </ResponsiveContainer>

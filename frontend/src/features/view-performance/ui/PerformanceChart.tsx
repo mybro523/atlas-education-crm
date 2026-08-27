@@ -31,6 +31,9 @@ interface ChartDatum {
 /** Brand blue scale (fixed, matches tailwind.config brand.*). */
 const BAR_LIGHT = '#2563eb'; // brand-600
 const BAR_DARK = '#60a5fa'; // brand-400 (vivid on dark)
+/** Top gradient stops (lighter step of the same hue) for the 3D look. */
+const BAR_LIGHT_TOP = '#93c5fd'; // brand-300
+const BAR_DARK_TOP = '#bfdbfe'; // brand-200
 
 function truncate(value: string, max = 12): string {
   return value.length > max ? `${value.slice(0, max - 1)}…` : value;
@@ -105,9 +108,33 @@ export function PerformanceChart({ byCourse }: PerformanceChartProps) {
               payload?.[0]?.payload?.fullLabel ?? _label
             }
           />
-          <Bar dataKey="average" radius={[6, 6, 0, 0]} maxBarSize={56}>
+          <defs>
+            <linearGradient id="perf-bar-grad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor={isDark ? BAR_DARK_TOP : BAR_LIGHT_TOP} />
+              <stop offset="60%" stopColor={barColor} />
+              <stop offset="100%" stopColor={barColor} />
+            </linearGradient>
+            <filter id="perf-bar-shadow" x="-30%" y="-30%" width="160%" height="160%">
+              <feDropShadow
+                dx="0"
+                dy="3"
+                stdDeviation="4"
+                floodColor={barColor}
+                floodOpacity="0.4"
+              />
+            </filter>
+          </defs>
+          <Bar
+            dataKey="average"
+            radius={[7, 7, 0, 0]}
+            maxBarSize={56}
+            filter="url(#perf-bar-shadow)"
+            animationDuration={900}
+            animationEasing="ease-out"
+            activeBar={{ opacity: 0.85 }}
+          >
             {data.map((d) => (
-              <Cell key={d.courseId} fill={barColor} />
+              <Cell key={d.courseId} fill="url(#perf-bar-grad)" />
             ))}
           </Bar>
         </BarChart>

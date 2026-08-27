@@ -591,7 +591,8 @@
         "day": "По дням",
         "week": "По неделям",
         "month": "По месяцам"
-      }
+      },
+      "total": "Итого"
     },
     "payments": {
       "student": "Студент",
@@ -805,7 +806,8 @@
       "coursesCount_few": "{{count}} курса",
       "coursesCount_many": "{{count}} курсов",
       "coursesCount_other": "{{count}} курсов",
-      "chartTitleByCourse": "Средний балл по курсам"
+      "chartTitleByCourse": "Средний балл по курсам",
+      "coursesLabel": "Курсов"
     },
     "profile": {
       "personalData": "Личные данные",

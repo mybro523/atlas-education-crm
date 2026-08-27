@@ -30,7 +30,7 @@ export function ChartFrame({
   minWidth = 360,
 }: ChartFrameProps) {
   return (
-    <Card>
+    <Card className="animate-fade-up">
       <div className="mb-2">
         <CardTitle>{title}</CardTitle>
       </div>

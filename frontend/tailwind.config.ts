@@ -81,10 +81,36 @@ const config: Config = {
           from: { transform: 'translateX(-100%)' },
           to: { transform: 'translateX(0)' },
         },
+        // Chart bars "grow" from the baseline (pair with origin-bottom).
+        'bar-grow': {
+          from: { transform: 'scaleY(0)' },
+          to: { transform: 'scaleY(1)' },
+        },
+        // Tooltip / floating panel pop-in.
+        'tooltip-pop': {
+          from: { opacity: '0', transform: 'translateY(4px) scale(0.97)' },
+          to: { opacity: '1', transform: 'translateY(0) scale(1)' },
+        },
+        // Soft breathing glow for accent chips (very subtle).
+        'pulse-glow': {
+          '0%, 100%': { boxShadow: '0 0 0 0 rgb(37 99 235 / 0.25)' },
+          '50%': { boxShadow: '0 0 14px 2px rgb(37 99 235 / 0.15)' },
+        },
+        // Content fade + rise for chart cards on mount.
+        'fade-up': {
+          from: { opacity: '0', transform: 'translateY(8px)' },
+          to: { opacity: '1', transform: 'translateY(0)' },
+        },
       },
       animation: {
         'fade-in': 'fade-in 0.15s ease-out',
         'slide-in': 'slide-in 0.2s ease-out',
+        // `backwards` (not `both`): once finished the keyframe transform must
+        // release so hover transforms (translate/scale) can take over.
+        'bar-grow': 'bar-grow 0.8s cubic-bezier(0.22, 1, 0.36, 1) backwards',
+        'tooltip-pop': 'tooltip-pop 0.15s ease-out both',
+        'pulse-glow': 'pulse-glow 2.4s ease-in-out infinite',
+        'fade-up': 'fade-up 0.4s ease-out both',
       },
     },
   },
