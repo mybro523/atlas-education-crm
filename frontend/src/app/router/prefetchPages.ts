@@ -27,6 +27,7 @@ const PAGE_LOADERS: Array<() => Promise<unknown>> = [
   () => import('@/pages/chats'),
   () => import('@/pages/broadcast'),
   () => import('@/pages/settings'),
+  () => import('@/pages/owner'),
 ];
 
 let started = false;

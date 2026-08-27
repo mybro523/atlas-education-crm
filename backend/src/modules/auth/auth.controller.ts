@@ -14,7 +14,6 @@ import { AuthGuard } from '@nestjs/passport';
 import { Throttle } from '@nestjs/throttler';
 import { Request, Response } from 'express';
 import { AuthService } from './auth.service';
-import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { Public } from '../../common/decorators/public.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
@@ -24,20 +23,12 @@ import { REFRESH_COOKIE_NAME, clearRefreshCookie, setRefreshCookie } from './coo
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
+  // NOTE: public self-registration was removed with the SaaS conversion —
+  // every account now belongs to a client academy, and accounts are created
+  // by the platform owner (academies+founders) or by academy staff.
+
   // Strict per-IP limit on credential endpoints: 5 attempts/minute defeats
   // password brute-forcing while the global 120/min guard covers everything else.
-  @Throttle({ default: { limit: 5, ttl: 60_000 } })
-  @Public()
-  @Post('register')
-  async register(
-    @Body() dto: RegisterDto,
-    @Res({ passthrough: true }) res: Response,
-  ) {
-    const { accessToken, refreshToken, user } = await this.authService.register(dto);
-    setRefreshCookie(res, refreshToken);
-    return { accessToken, user };
-  }
-
   @Throttle({ default: { limit: 5, ttl: 60_000 } })
   @Public()
   @HttpCode(HttpStatus.OK)

@@ -37,6 +37,7 @@ const TeacherCabinetPage = lazyPage(() => import('@/pages/teacher-cabinet'), 'Te
 const ChatsPage = lazyPage(() => import('@/pages/chats'), 'ChatsPage');
 const BroadcastPage = lazyPage(() => import('@/pages/broadcast'), 'BroadcastPage');
 const SettingsPage = lazyPage(() => import('@/pages/settings'), 'SettingsPage');
+const OwnerPage = lazyPage(() => import('@/pages/owner'), 'OwnerPage');
 const NotFoundPage = lazyPage(() => import('@/pages/not-found'), 'NotFoundPage');
 
 import { ProtectedRoute } from './ProtectedRoute';
@@ -164,6 +165,11 @@ export function AppRouter() {
                 path={ROUTES.studentPayments}
                 element={<StudentPaymentsPage />}
               />
+            </Route>
+
+            {/* SaaS owner panel: platform OWNER only */}
+            <Route element={<RoleRoute allow={[ROLES.OWNER]} />}>
+              <Route path={ROUTES.owner} element={<OwnerPage />} />
             </Route>
 
             {/* Settings: any authenticated user (hosts Telegram linking) */}

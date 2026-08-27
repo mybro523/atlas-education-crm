@@ -1,5 +1,5 @@
 import {
-  ConflictException,
+  ForbiddenException,
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
@@ -9,7 +9,6 @@ import * as bcrypt from 'bcrypt';
 import { createHash, randomUUID } from 'crypto';
 import { PrismaService } from '../../prisma/prisma.service';
 import { Role } from '../../common/enums/role.enum';
-import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { JwtPayload } from './strategies/jwt.strategy';
 
@@ -20,7 +19,7 @@ export interface AuthTokens {
   refreshToken: string;
 }
 
-/** User shape returned to the client (login / register / me). */
+/** User shape returned to the client (login / me). */
 export interface SafeUser {
   id: string;
   email: string | null;
@@ -29,9 +28,16 @@ export interface SafeUser {
   role: Role;
   language: string;
   branchId: string | null;
+  academyId: string | null;
   telegramChatId: string | null;
   isActive: boolean;
   createdAt: Date;
+  /** Academy card for the subscription banner (null for the platform OWNER). */
+  academy: {
+    name: string;
+    status: string;
+    subscriptionEnd: Date;
+  } | null;
 }
 
 export interface AuthResult extends AuthTokens {
@@ -46,42 +52,32 @@ export class AuthService {
     private readonly config: ConfigService,
   ) {}
 
-  async register(dto: RegisterDto): Promise<AuthResult> {
-    const existing = await this.findByIdentifier(dto.email, dto.phone);
-    if (existing) {
-      throw new ConflictException('User with this email or phone already exists');
-    }
-
-    const passwordHash = await bcrypt.hash(dto.password, BCRYPT_ROUNDS);
-    const user = await this.prisma.user.create({
-      data: {
-        email: dto.email ?? null,
-        phone: dto.phone ?? null,
-        passwordHash,
-        // Public self-registration is ALWAYS a student. Privileged accounts
-        // (admin/manager/teacher/founder) are created only via POST /users by a
-        // founder. The client cannot choose its own role or branch here — doing
-        // so previously let any anonymous caller mint a FOUNDER account.
-        role: Role.STUDENT,
-        language: dto.language ?? this.config.get<string>('defaultLanguage') ?? 'ru',
-        branchId: null,
-      },
-    });
-
-    const tokens = await this.issueTokens({
-      sub: user.id,
-      role: user.role,
-      branchId: user.branchId,
-    });
-    return { ...tokens, user: await this.buildUserPayload(user.id) };
-  }
+  // NOTE: public self-registration was removed with the SaaS conversion.
+  // Accounts are created by the platform owner or by academy staff.
 
   async login(dto: LoginDto): Promise<AuthResult> {
     const user = await this.validateUser(dto.email, dto.phone, dto.password);
+
+    // SaaS gate at the door: a blocked or expired academy cannot log in at
+    // all — the frontend turns these codes into the "subscription" screen.
+    if (user.academyId && user.role !== 'OWNER') {
+      const academy = await this.prisma.academy.findUnique({
+        where: { id: user.academyId },
+        select: { status: true, subscriptionEnd: true },
+      });
+      if (!academy || academy.status === 'BLOCKED') {
+        throw new ForbiddenException('SUBSCRIPTION_BLOCKED');
+      }
+      if (academy.subscriptionEnd.getTime() < Date.now()) {
+        throw new ForbiddenException('SUBSCRIPTION_EXPIRED');
+      }
+    }
+
     const tokens = await this.issueTokens({
       sub: user.id,
       role: user.role,
       branchId: user.branchId,
+      academyId: user.academyId,
     });
     return { ...tokens, user: await this.buildUserPayload(user.id) };
   }
@@ -146,7 +142,12 @@ export class AuthService {
     if (!user || !user.isActive) {
       throw new UnauthorizedException();
     }
-    return this.issueTokens({ sub: user.id, role: user.role, branchId: user.branchId });
+    return this.issueTokens({
+      sub: user.id,
+      role: user.role,
+      branchId: user.branchId,
+      academyId: user.academyId,
+    });
   }
 
   async me(userId: string): Promise<SafeUser> {
@@ -175,9 +176,13 @@ export class AuthService {
         role: true,
         language: true,
         branchId: true,
+        academyId: true,
         telegramChatId: true,
         isActive: true,
         createdAt: true,
+        academy: {
+          select: { name: true, status: true, subscriptionEnd: true },
+        },
         studentProfile: { select: { firstName: true, middleName: true, lastName: true } },
         teacherProfile: { select: { firstName: true, middleName: true, lastName: true } },
         employee: { select: { firstName: true, lastName: true } },
@@ -187,8 +192,9 @@ export class AuthService {
       throw new UnauthorizedException();
     }
 
-    const { studentProfile, teacherProfile, employee, ...base } = user;
+    const { studentProfile, teacherProfile, employee, academy, ...base } = user;
     const profile = studentProfile ?? teacherProfile ?? employee ?? null;
+    void academy; // returned as part of the payload below
     const fullName = profile
       ? [
           profile.firstName,
@@ -199,7 +205,19 @@ export class AuthService {
           .join(' ')
       : base.email ?? base.phone ?? 'User';
 
-    return { ...base, role: base.role as unknown as Role, fullName };
+    return {
+      ...base,
+      role: base.role as unknown as Role,
+      fullName,
+      // Academy card for the subscription banner (null for the OWNER).
+      academy: academy
+        ? {
+            name: academy.name,
+            status: academy.status,
+            subscriptionEnd: academy.subscriptionEnd,
+          }
+        : null,
+    };
   }
 
   private async issueTokens(payload: JwtPayload): Promise<AuthTokens> {

@@ -9,6 +9,7 @@ import {
   type Message,
 } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
+import { PLATFORM_ACADEMY_ID } from '../../common/tenancy/tenancy.context';
 import {
   buildPaginatedResult,
   PaginatedResult,
@@ -258,14 +259,19 @@ export class ChatsService {
   private async persistInbound(inbound: ParsedInboundMessage): Promise<void> {
     const now = new Date();
 
+    // The Meta webhook runs outside any request context (tenancy bypass), and
+    // its credentials are global env vars — so inbound chat traffic belongs to
+    // the platform academy explicitly until per-academy integrations exist.
     const conversation = await this.prisma.conversation.upsert({
       where: {
-        channel_externalId: {
+        academyId_channel_externalId: {
+          academyId: PLATFORM_ACADEMY_ID,
           channel: inbound.channel,
           externalId: inbound.externalId,
         },
       },
       create: {
+        academyId: PLATFORM_ACADEMY_ID,
         channel: inbound.channel,
         externalId: inbound.externalId,
         contactName: inbound.contactName ?? null,
@@ -283,6 +289,7 @@ export class ChatsService {
 
     const message = await this.prisma.message.create({
       data: {
+        academyId: PLATFORM_ACADEMY_ID,
         conversationId: conversation.id,
         direction: MessageDirection.INBOUND,
         channel: inbound.channel,

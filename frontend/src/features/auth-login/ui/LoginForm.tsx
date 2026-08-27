@@ -10,6 +10,7 @@ import { useLogin } from '../model/useLogin';
 /** Shared demo password for every seeded role account. */
 const DEMO_PASSWORD = 'Atlas12345!';
 const DEMO_ROLES = [
+  { key: 'owner', email: 'owner@atlas.local' },
   { key: 'founder', email: 'founder@atlas.local' },
   { key: 'admin', email: 'admin@atlas.local' },
   { key: 'manager', email: 'manager@atlas.local' },
@@ -43,6 +44,18 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
         if (error instanceof AxiosError && error.response?.status === 401) {
           setFormError(t('auth.invalidCredentials'));
           return;
+        }
+        // SaaS gate: the academy's subscription is over or it was blocked.
+        if (error instanceof AxiosError && error.response?.status === 403) {
+          const code = (error.response.data as { message?: string })?.message;
+          if (code === 'SUBSCRIPTION_EXPIRED') {
+            setFormError(t('subscription.expiredLogin'));
+            return;
+          }
+          if (code === 'SUBSCRIPTION_BLOCKED') {
+            setFormError(t('subscription.blockedLogin'));
+            return;
+          }
         }
         setFormError(extractErrorMessage(error) ?? t('auth.genericError'));
       },

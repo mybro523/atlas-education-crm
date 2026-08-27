@@ -42,6 +42,12 @@ export interface NavItem {
  */
 export const NAV_ITEMS: NavItem[] = [
   {
+    to: ROUTES.owner,
+    labelKey: 'nav.owner',
+    icon: Building2,
+    roles: [ROLES.OWNER],
+  },
+  {
     to: ROUTES.dashboard,
     labelKey: 'nav.dashboard',
     icon: LayoutDashboard,

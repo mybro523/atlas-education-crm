@@ -17,11 +17,19 @@ datasource db {
 // ==========================================================================
 
 enum Role {
+  /// Platform owner (SaaS super-admin): manages client academies, never
+  /// belongs to one. All tenant scoping is bypassed for this role.
+  OWNER
   FOUNDER
   ADMIN
   SALES_MANAGER
   TEACHER
   STUDENT
+}
+
+enum AcademyStatus {
+  ACTIVE
+  BLOCKED
 }
 
 enum AttendanceStatus {
@@ -121,7 +129,73 @@ enum ReferralSource {
 // Core / org
 // ==========================================================================
 
+// ==========================================================================
+// SaaS tenancy: client academies and the owner's sales ledger
+// ==========================================================================
+
+model Academy {
+  id                String        @id @default(cuid())
+  name              String
+  contactName       String?
+  contactPhone      String?
+  contactEmail      String?
+  status            AcademyStatus @default(ACTIVE)
+  /// Paid-through date: access is blocked once now() passes it.
+  subscriptionStart DateTime      @default(now())
+  subscriptionEnd   DateTime
+  note              String?
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+
+  salesPayments  AcademyPayment[]
+  branches       Branch[]
+  users          User[]
+  students       Student[]
+  parents        Parent[]
+  teachers       Teacher[]
+  employees      Employee[]
+  rooms          Room[]
+  courseTypes    CourseType[]
+  courses        Course[]
+  groups         Group[]
+  lessons        Lesson[]
+  lessonRates    LessonRate[]
+  grades         Grade[]
+  attendances    Attendance[]
+  remarks        Remark[]
+  payments       Payment[]
+  financeRecords FinanceRecord[]
+  salaries       Salary[]
+  conversations  Conversation[]
+  messages       Message[]
+  broadcasts     Broadcast[]
+  notifications  Notification[]
+  systemSettings SystemSetting[]
+
+  @@map("academies")
+}
+
+/// One sale/renewal the owner recorded for a client academy.
+model AcademyPayment {
+  id          String   @id @default(cuid())
+  academyId   String   @default("")
+  amount      Decimal  @db.Decimal(10, 2)
+  paidAt      DateTime @default(now())
+  periodStart DateTime
+  periodEnd   DateTime
+  note        String?
+  createdAt   DateTime @default(now())
+
+  academy Academy @relation(fields: [academyId], references: [id], onDelete: Cascade)
+
+  @@index([academyId])
+  @@map("academy_payments")
+}
+
 model Branch {
+  // SaaS tenancy: every row belongs to exactly one client academy.
+  academyId String   @default("")
+  academy   Academy  @relation(fields: [academyId], references: [id], onDelete: Cascade)
   id        String   @id @default(cuid())
   name      String
   address   String?
@@ -139,10 +213,15 @@ model Branch {
   financeRecords FinanceRecord[]
   rooms          Room[]
 
+  @@index([academyId])
   @@map("branches")
 }
 
 model User {
+  // SaaS tenancy: every user belongs to one client academy — except the
+  // platform OWNER, who belongs to none (academyId null).
+  academyId      String?
+  academy        Academy? @relation(fields: [academyId], references: [id], onDelete: Cascade)
   id             String   @id @default(cuid())
   email          String?  @unique
   phone          String?  @unique
@@ -172,6 +251,7 @@ model User {
 
   @@index([role])
   @@index([branchId])
+  @@index([academyId])
   @@map("users")
 }
 
@@ -197,6 +277,9 @@ model RefreshToken {
 // ==========================================================================
 
 model Student {
+  // SaaS tenancy: every row belongs to exactly one client academy.
+  academyId      String          @default("")
+  academy        Academy         @relation(fields: [academyId], references: [id], onDelete: Cascade)
   id             String          @id @default(cuid())
   userId         String?         @unique
   branchId       String
@@ -231,10 +314,14 @@ model Student {
 
   @@index([branchId])
   @@index([lastName, firstName])
+  @@index([academyId])
   @@map("students")
 }
 
 model Parent {
+  // SaaS tenancy: every row belongs to exactly one client academy.
+  academyId String         @default("")
+  academy   Academy        @relation(fields: [academyId], references: [id], onDelete: Cascade)
   id        String         @id @default(cuid())
   studentId String
   firstName String
@@ -252,10 +339,14 @@ model Parent {
 
   @@index([studentId])
   @@index([workplace])
+  @@index([academyId])
   @@map("parents")
 }
 
 model Teacher {
+  // SaaS tenancy: every row belongs to exactly one client academy.
+  academyId        String    @default("")
+  academy          Academy   @relation(fields: [academyId], references: [id], onDelete: Cascade)
   id               String    @id @default(cuid())
   userId           String?   @unique
   branchId         String
@@ -283,10 +374,14 @@ model Teacher {
 
   @@index([branchId])
   @@index([lastName, firstName])
+  @@index([academyId])
   @@map("teachers")
 }
 
 model Employee {
+  // SaaS tenancy: every row belongs to exactly one client academy.
+  academyId  String   @default("")
+  academy    Academy  @relation(fields: [academyId], references: [id], onDelete: Cascade)
   id         String   @id @default(cuid())
   userId     String?  @unique
   branchId   String
@@ -303,6 +398,7 @@ model Employee {
   salaries Salary[]
 
   @@index([branchId])
+  @@index([academyId])
   @@map("employees")
 }
 
@@ -312,6 +408,9 @@ model Employee {
 
 // Flexible rooms/kabinets dictionary, managed by FOUNDER + ADMIN.
 model Room {
+  // SaaS tenancy: every row belongs to exactly one client academy.
+  academyId String   @default("")
+  academy   Academy  @relation(fields: [academyId], references: [id], onDelete: Cascade)
   id        String   @id @default(cuid())
   name      String
   branchId  String?
@@ -325,11 +424,15 @@ model Room {
   lessons Lesson[]
 
   @@index([branchId])
+  @@index([academyId])
   @@map("rooms")
 }
 
 // Flexible configurable dictionary (Standard, VIP, Intensive, Kids, For workers, ...)
 model CourseType {
+  // SaaS tenancy: every row belongs to exactly one client academy.
+  academyId String   @default("")
+  academy   Academy  @relation(fields: [academyId], references: [id], onDelete: Cascade)
   id        String   @id @default(cuid())
   name      String   @unique
   isActive  Boolean  @default(true)
@@ -338,10 +441,14 @@ model CourseType {
 
   courses Course[]
 
+  @@index([academyId])
   @@map("course_types")
 }
 
 model Course {
+  // SaaS tenancy: every row belongs to exactly one client academy.
+  academyId     String    @default("")
+  academy       Academy   @relation(fields: [academyId], references: [id], onDelete: Cascade)
   id            String    @id @default(cuid())
   name          String
   courseTypeId  String
@@ -361,10 +468,14 @@ model Course {
 
   @@index([branchId])
   @@index([courseTypeId])
+  @@index([academyId])
   @@map("courses")
 }
 
 model Group {
+  // SaaS tenancy: every row belongs to exactly one client academy.
+  academyId String   @default("")
+  academy   Academy  @relation(fields: [academyId], references: [id], onDelete: Cascade)
   id        String   @id @default(cuid())
   name      String
   courseId  String
@@ -387,6 +498,7 @@ model Group {
   @@index([branchId])
   @@index([courseId])
   @@index([teacherId])
+  @@index([academyId])
   @@map("groups")
 }
 
@@ -409,6 +521,9 @@ model GroupStudent {
 // ==========================================================================
 
 model Lesson {
+  // SaaS tenancy: every row belongs to exactly one client academy.
+  academyId      String    @default("")
+  academy        Academy   @relation(fields: [academyId], references: [id], onDelete: Cascade)
   id             String    @id @default(cuid())
   groupId        String
   teacherId      String?
@@ -435,11 +550,15 @@ model Lesson {
   @@index([teacherId])
   @@index([roomId])
   @@index([startsAt])
+  @@index([academyId])
   @@map("lessons")
 }
 
 // Flexible per-lesson/per-group pay rate (e.g. 35 / 40 TJS). Basis for salary.
 model LessonRate {
+  // SaaS tenancy: every row belongs to exactly one client academy.
+  academyId String   @default("")
+  academy   Academy  @relation(fields: [academyId], references: [id], onDelete: Cascade)
   id        String   @id @default(cuid())
   groupId   String?
   name      String?
@@ -451,10 +570,14 @@ model LessonRate {
   lessons Lesson[]
 
   @@index([groupId])
+  @@index([academyId])
   @@map("lesson_rates")
 }
 
 model Grade {
+  // SaaS tenancy: every row belongs to exactly one client academy.
+  academyId String   @default("")
+  academy   Academy  @relation(fields: [academyId], references: [id], onDelete: Cascade)
   id        String   @id @default(cuid())
   studentId String
   lessonId  String
@@ -472,10 +595,14 @@ model Grade {
   @@unique([studentId, lessonId])
   @@index([studentId])
   @@index([lessonId])
+  @@index([academyId])
   @@map("grades")
 }
 
 model Attendance {
+  // SaaS tenancy: every row belongs to exactly one client academy.
+  academyId String           @default("")
+  academy   Academy          @relation(fields: [academyId], references: [id], onDelete: Cascade)
   id        String           @id @default(cuid())
   studentId String
   lessonId  String
@@ -489,10 +616,14 @@ model Attendance {
   @@unique([studentId, lessonId])
   @@index([studentId])
   @@index([lessonId])
+  @@index([academyId])
   @@map("attendances")
 }
 
 model Remark {
+  // SaaS tenancy: every row belongs to exactly one client academy.
+  academyId String   @default("")
+  academy   Academy  @relation(fields: [academyId], references: [id], onDelete: Cascade)
   id        String   @id @default(cuid())
   studentId String
   lessonId  String?
@@ -507,6 +638,7 @@ model Remark {
 
   @@index([studentId])
   @@index([lessonId])
+  @@index([academyId])
   @@map("remarks")
 }
 
@@ -515,6 +647,9 @@ model Remark {
 // ==========================================================================
 
 model Payment {
+  // SaaS tenancy: every row belongs to exactly one client academy.
+  academyId         String         @default("")
+  academy           Academy        @relation(fields: [academyId], references: [id], onDelete: Cascade)
   id                String         @id @default(cuid())
   studentId         String
   groupId           String?
@@ -538,10 +673,14 @@ model Payment {
   @@index([studentId])
   @@index([branchId])
   @@index([status])
+  @@index([academyId])
   @@map("payments")
 }
 
 model FinanceRecord {
+  // SaaS tenancy: every row belongs to exactly one client academy.
+  academyId   String      @default("")
+  academy     Academy     @relation(fields: [academyId], references: [id], onDelete: Cascade)
   id          String      @id @default(cuid())
   branchId    String
   type        FinanceType
@@ -557,10 +696,14 @@ model FinanceRecord {
   @@index([branchId])
   @@index([type])
   @@index([occurredAt])
+  @@index([academyId])
   @@map("finance_records")
 }
 
 model Salary {
+  // SaaS tenancy: every row belongs to exactly one client academy.
+  academyId   String       @default("")
+  academy     Academy      @relation(fields: [academyId], references: [id], onDelete: Cascade)
   id          String       @id @default(cuid())
   teacherId   String?
   employeeId  String?
@@ -579,6 +722,7 @@ model Salary {
   @@index([teacherId])
   @@index([employeeId])
   @@index([periodStart, periodEnd])
+  @@index([academyId])
   @@map("salaries")
 }
 
@@ -587,6 +731,9 @@ model Salary {
 // ==========================================================================
 
 model Conversation {
+  // SaaS tenancy: every row belongs to exactly one client academy.
+  academyId     String             @default("")
+  academy       Academy            @relation(fields: [academyId], references: [id], onDelete: Cascade)
   id            String             @id @default(cuid())
   channel       MessageChannel
   // External participant id (phone / IG account id)
@@ -599,12 +746,16 @@ model Conversation {
 
   messages Message[]
 
-  @@unique([channel, externalId])
+  @@unique([academyId, channel, externalId])
   @@index([status])
+  @@index([academyId])
   @@map("conversations")
 }
 
 model Message {
+  // SaaS tenancy: every row belongs to exactly one client academy.
+  academyId      String           @default("")
+  academy        Academy          @relation(fields: [academyId], references: [id], onDelete: Cascade)
   id             String           @id @default(cuid())
   conversationId String
   senderUserId   String?
@@ -618,6 +769,7 @@ model Message {
   sender       User?        @relation("MessageSender", fields: [senderUserId], references: [id], onDelete: SetNull)
 
   @@index([conversationId])
+  @@index([academyId])
   @@map("messages")
 }
 
@@ -626,6 +778,9 @@ model Message {
 // ==========================================================================
 
 model Broadcast {
+  // SaaS tenancy: every row belongs to exactly one client academy.
+  academyId String            @default("")
+  academy   Academy           @relation(fields: [academyId], references: [id], onDelete: Cascade)
   id        String            @id @default(cuid())
   title     String?
   text      String
@@ -641,6 +796,7 @@ model Broadcast {
   group  Group? @relation(fields: [groupId], references: [id], onDelete: SetNull)
 
   @@index([status])
+  @@index([academyId])
   @@map("broadcasts")
 }
 
@@ -650,14 +806,21 @@ model Broadcast {
 // ==========================================================================
 
 model SystemSetting {
-  key       String   @id
+  academyId String   @default("")
+  key       String
   value     String
   updatedAt DateTime @updatedAt
 
+  academy Academy @relation(fields: [academyId], references: [id], onDelete: Cascade)
+
+  @@id([academyId, key])
   @@map("system_settings")
 }
 
 model Notification {
+  // SaaS tenancy: every row belongs to exactly one client academy.
+  academyId String              @default("")
+  academy   Academy             @relation(fields: [academyId], references: [id], onDelete: Cascade)
   id        String              @id @default(cuid())
   userId    String?
   channel   NotificationChannel
@@ -676,5 +839,6 @@ model Notification {
   @@index([userId])
   @@index([channel])
   @@index([status])
+  @@index([academyId])
   @@map("notifications")
 }

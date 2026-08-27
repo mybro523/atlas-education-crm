@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+import { Link, Navigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { ArrowRight } from 'lucide-react';
 import { Card, CardDescription, CardTitle } from '@/shared/ui';
@@ -10,6 +10,11 @@ export function DashboardPage() {
   const { t } = useTranslation();
   const user = useSessionStore(selectUser);
   const isFounder = user?.role === ROLES.FOUNDER;
+
+  // The platform owner's home is the owner panel, not an academy dashboard.
+  if (user?.role === ROLES.OWNER) {
+    return <Navigate to={ROUTES.owner} replace />;
+  }
 
   // Quick links = the role's nav items minus the dashboard itself.
   const quickLinks = navItemsForRole(user?.role).filter(

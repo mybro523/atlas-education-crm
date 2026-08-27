@@ -62,9 +62,20 @@ export class RealtimeGateway
         (header?.startsWith('Bearer ') ? header.slice(7) : undefined);
       if (!token) return this.reject(client, 'missing token');
 
-      await this.jwt.verifyAsync(token, {
+      const payload = await this.jwt.verifyAsync<{
+        role?: string;
+        academyId?: string | null;
+      }>(token, {
         secret: this.config.get<string>('jwt.accessSecret'),
       });
+      // SaaS rooms: tenant sockets only ever receive their own academy's
+      // change signals; the platform owner joins a dedicated room and sees
+      // every academy's signals (still id-only — data stays behind REST RBAC).
+      if (payload.role === 'OWNER') {
+        await client.join('owners');
+      } else if (payload.academyId) {
+        await client.join(`academy:${payload.academyId}`);
+      }
     } catch {
       this.reject(client, 'invalid token');
     }
@@ -79,11 +90,16 @@ export class RealtimeGateway
     /* no per-socket state to clean up */
   }
 
-  /** Broadcast an entity change to every connected client. Never throws. */
+  /**
+   * Broadcast an entity change. With an academyId the signal goes only to
+   * that academy's sockets (plus the owners room); without one (internal
+   * cron/webhook flows) it goes platform-wide. Never throws.
+   */
   emitEntityChange(
     resource: string,
     action: EntityChangeEvent['action'],
     id?: string,
+    academyId?: string,
   ): void {
     const payload: EntityChangeEvent = {
       resource,
@@ -93,7 +109,14 @@ export class RealtimeGateway
     };
     try {
       if (!this.server) return;
-      this.server.emit(ENTITY_CHANGED_EVENT, payload);
+      if (academyId) {
+        this.server
+          .to(`academy:${academyId}`)
+          .to('owners')
+          .emit(ENTITY_CHANGED_EVENT, payload);
+      } else {
+        this.server.emit(ENTITY_CHANGED_EVENT, payload);
+      }
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       this.logger.error(`Failed to emit entity change: ${message}`);

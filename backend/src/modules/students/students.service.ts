@@ -487,7 +487,11 @@ export class StudentsService {
   async addParent(studentId: string, dto: CreateParentDto): Promise<Parent> {
     await this.ensureExists(studentId);
     return this.prisma.parent.create({
-      data: { studentId, ...this.parentData(dto) },
+      // academyId is injected by the tenancy middleware at runtime.
+      data: {
+        studentId,
+        ...this.parentData(dto),
+      } as Prisma.ParentUncheckedCreateInput,
     });
   }
 

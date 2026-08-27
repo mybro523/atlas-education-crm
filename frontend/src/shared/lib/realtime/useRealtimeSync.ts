@@ -50,6 +50,8 @@ const RESOURCE_QUERY_KEYS: Record<string, ReadonlyArray<ReadonlyArray<string>>> 
   SystemSetting: [['system-settings']],
   Conversation: [['conversations']],
   Message: [['conversations']],
+  Academy: [['owner-academies'], ['owner-payments']],
+  AcademyPayment: [['owner-payments'], ['owner-academies']],
 };
 
 const FLUSH_DELAY_MS = 120;

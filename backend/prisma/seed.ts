@@ -4,6 +4,33 @@ import * as bcrypt from 'bcrypt';
 const prisma = new PrismaClient();
 
 async function main() {
+  // --- SaaS: the platform academy + the platform owner ---------------------
+  // Seed runs outside any request context (tenancy bypass), so every create
+  // below carries academyId explicitly.
+  const ACADEMY_ID = 'academy-atlas';
+  await prisma.academy.upsert({
+    where: { id: ACADEMY_ID },
+    update: {},
+    create: {
+      id: ACADEMY_ID,
+      name: 'Atlas Education',
+      status: 'ACTIVE',
+      subscriptionEnd: new Date('2099-12-31'),
+    },
+  });
+  const ownerHash = await bcrypt.hash('Atlas12345!', 12);
+  await prisma.user.upsert({
+    where: { email: 'owner@atlas.local' },
+    update: {},
+    create: {
+      email: 'owner@atlas.local',
+      passwordHash: ownerHash,
+      role: Role.OWNER,
+      language: 'ru',
+      academyId: null,
+    },
+  });
+
   // --- Branches (network of 3) --------------------------------------------
   const branchData = [
     { name: 'Atlas — Центральный', address: 'г. Душанбе, пр. Рудаки, 1' },
@@ -16,7 +43,7 @@ async function main() {
     const branch = await prisma.branch.upsert({
       where: { id: `seed-branch-${b.name}` },
       update: {},
-      create: { id: `seed-branch-${b.name}`, name: b.name, address: b.address },
+      create: { id: `seed-branch-${b.name}`, name: b.name, address: b.address, academyId: ACADEMY_ID },
     });
     branches.push(branch);
   }
@@ -33,6 +60,7 @@ async function main() {
       role: Role.FOUNDER,
       language: 'ru',
       branchId: branches[0].id,
+      academyId: ACADEMY_ID,
     },
   });
 
@@ -54,6 +82,7 @@ async function main() {
         role: u.role,
         language: 'ru',
         branchId: branches[0].id,
+        academyId: ACADEMY_ID,
       },
     });
     userIdByEmail[u.email] = user.id;
@@ -68,6 +97,7 @@ async function main() {
       branchId: branches[0].id,
       firstName: 'Демо',
       lastName: 'Учитель',
+      academyId: ACADEMY_ID,
     },
   });
   await prisma.student.upsert({
@@ -78,6 +108,7 @@ async function main() {
       branchId: branches[0].id,
       firstName: 'Демо',
       lastName: 'Студент',
+      academyId: ACADEMY_ID,
     },
   });
 
@@ -87,7 +118,7 @@ async function main() {
     await prisma.courseType.upsert({
       where: { name },
       update: {},
-      create: { name },
+      create: { name, academyId: ACADEMY_ID },
     });
   }
 
@@ -98,7 +129,7 @@ async function main() {
     await prisma.room.upsert({
       where: { id },
       update: {},
-      create: { id, name, branchId: branches[0].id },
+      create: { id, name, branchId: branches[0].id, academyId: ACADEMY_ID },
     });
   }
 

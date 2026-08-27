@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { APP_GUARD } from '@nestjs/core';
+import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { ScheduleModule as NestScheduleModule } from '@nestjs/schedule';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import {
@@ -37,6 +37,10 @@ import { SmsModule } from './modules/sms/sms.module';
 import { AutomationModule } from './modules/automation/automation.module';
 import { SettingsModule } from './modules/settings/settings.module';
 import { RealtimeModule } from './modules/realtime/realtime.module';
+import { OwnerModule } from './modules/owner/owner.module';
+import { TenancyModule } from './common/tenancy/tenancy.module';
+import { TenancyInterceptor } from './common/tenancy/tenancy.interceptor';
+import { SubscriptionGuard } from './common/guards/subscription.guard';
 
 @Module({
   imports: [
@@ -91,12 +95,21 @@ import { RealtimeModule } from './modules/realtime/realtime.module';
     SmsModule,
     AutomationModule,
     SettingsModule,
+    TenancyModule,
+    OwnerModule,
   ],
   providers: [
     // Global JWT auth (routes opt out with @Public()).
     { provide: APP_GUARD, useClass: JwtAuthGuard },
     // Global rate limiting.
     { provide: APP_GUARD, useClass: ThrottlerGuard },
+    // SaaS subscription gate (blocked/expired academies get 403). The guard
+    // instance lives in the global TenancyModule; useExisting reuses that same
+    // singleton so OwnerService cache invalidation reaches the active guard.
+    { provide: APP_GUARD, useExisting: SubscriptionGuard },
+    // Binds the caller's academy to the async context so the Prisma tenancy
+    // middleware scopes every query automatically.
+    { provide: APP_INTERCEPTOR, useClass: TenancyInterceptor },
   ],
 })
 export class AppModule {}

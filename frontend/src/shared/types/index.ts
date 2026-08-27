@@ -8,6 +8,13 @@ export interface User {
   role: Role;
   language: string;
   branchId: string | null;
+  academyId?: string | null;
+  /** SaaS: the user's academy card (null for the platform OWNER). */
+  academy?: {
+    name: string;
+    status: string;
+    subscriptionEnd: string;
+  } | null;
   avatarUrl?: string | null;
 }
 

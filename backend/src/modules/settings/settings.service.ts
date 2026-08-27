@@ -1,9 +1,13 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
+import { activeAcademyId } from '../../common/tenancy/tenancy.context';
 
 /**
  * Editable system settings with safe defaults. The value store is a simple
- * key-value table so the founder can tune behavior without code changes.
+ * key-value table, scoped per academy since the SaaS conversion (each client
+ * tunes its own thresholds). Reads go through findFirst/findMany so the
+ * tenancy middleware scopes them automatically; the composite-key upsert
+ * needs the academy id explicitly.
  */
 export const SETTING_DEFAULTS: Record<string, string> = {
   /** Look-ahead window (days) for the "payment due soon" panel. */
@@ -36,7 +40,7 @@ export class SettingsService {
 
   /** One setting value (string), falling back to its default. */
   async get(key: string): Promise<string | undefined> {
-    const row = await this.prisma.systemSetting.findUnique({ where: { key } });
+    const row = await this.prisma.systemSetting.findFirst({ where: { key } });
     return row?.value ?? SETTING_DEFAULTS[key];
   }
 
@@ -47,8 +51,12 @@ export class SettingsService {
     return Number.isFinite(n) ? n : fallback;
   }
 
-  /** Upsert a batch of settings. Only known keys are accepted. */
+  /** Upsert a batch of settings for the calling academy. */
   async updateMany(entries: Record<string, string>) {
+    const academyId = activeAcademyId();
+    if (!academyId) {
+      throw new BadRequestException('Settings are configured per academy');
+    }
     const keys = Object.keys(entries ?? {});
     if (keys.length === 0) {
       throw new BadRequestException('No settings provided');
@@ -66,8 +74,8 @@ export class SettingsService {
     await this.prisma.$transaction(
       keys.map((key) =>
         this.prisma.systemSetting.upsert({
-          where: { key },
-          create: { key, value: String(entries[key]) },
+          where: { academyId_key: { academyId, key } },
+          create: { academyId, key, value: String(entries[key]) },
           update: { value: String(entries[key]) },
         }),
       ),

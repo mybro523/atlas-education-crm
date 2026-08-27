@@ -43,4 +43,6 @@ export const ROUTES = {
   chats: '/chats',
   broadcast: '/broadcast',
   settings: '/settings',
+  /** SaaS platform-owner panel (client academies). */
+  owner: '/owner',
 } as const;

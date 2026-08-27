@@ -1,8 +1,9 @@
 /**
  * RBAC roles — MUST stay identical to the backend Role enum.
- * Exactly these 5 values.
+ * OWNER is the SaaS platform owner (manages client academies).
  */
 export const ROLES = {
+  OWNER: 'OWNER',
   FOUNDER: 'FOUNDER',
   ADMIN: 'ADMIN',
   SALES_MANAGER: 'SALES_MANAGER',
@@ -13,6 +14,7 @@ export const ROLES = {
 export type Role = (typeof ROLES)[keyof typeof ROLES];
 
 export const ALL_ROLES: Role[] = [
+  ROLES.OWNER,
   ROLES.FOUNDER,
   ROLES.ADMIN,
   ROLES.SALES_MANAGER,

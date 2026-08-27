@@ -29,7 +29,8 @@
     "ADMIN": "Administrator",
     "SALES_MANAGER": "Sales Manager",
     "TEACHER": "Teacher",
-    "STUDENT": "Student"
+    "STUDENT": "Student",
+    "OWNER": "Platform owner"
   },
   "auth": {
     "loginTitle": "Sign in",
@@ -54,7 +55,8 @@
       "admin": "Administrator",
       "manager": "Sales manager",
       "teacher": "Teacher",
-      "student": "Student"
+      "student": "Student",
+      "owner": "Platform owner"
     }
   },
   "nav": {
@@ -76,7 +78,8 @@
     "settings": "Settings",
     "studentPayments": "Payment history",
     "employees": "Employees",
-    "salaries": "Salaries"
+    "salaries": "Salaries",
+    "owner": "My clients"
   },
   "header": {
     "openMenu": "Open menu",
@@ -1080,5 +1083,72 @@
     "saved": "Settings saved",
     "save": "Save settings",
     "foundersOnly": "Only the founder can change settings"
+  },
+  "subscription": {
+    "expiresSoon_one": "Academy subscription expires in {{count}} day — contact your provider",
+    "expiresSoon_other": "Academy subscription expires in {{count}} days — contact your provider",
+    "expiredLogin": "Your academy subscription has expired. Contact the system provider to renew.",
+    "blockedLogin": "Your academy access is suspended. Contact the system provider."
+  },
+  "owner": {
+    "title": "My clients",
+    "subtitle": "Academies that bought the system: terms, statuses, revenue",
+    "empty": "No clients yet",
+    "emptyHint": "Create the first academy and hand its director the access",
+    "createTitle": "New academy",
+    "editTitle": "Edit academy",
+    "extendTitle": "Extend: {{name}}",
+    "extendCurrent": "Paid through: {{date}}",
+    "founderAccess": "Academy director access",
+    "kpi": {
+      "clients": "Clients",
+      "active": "Active",
+      "revenue": "Total revenue"
+    },
+    "fields": {
+      "name": "Academy name",
+      "contactName": "Contact person",
+      "contactPhone": "Phone",
+      "founderEmail": "Director login (email)",
+      "founderPassword": "Director password",
+      "passwordHint": "At least 8 characters",
+      "months": "Term (months)",
+      "amount": "Sale amount (TJS)",
+      "note": "Note",
+      "term": "Subscription term",
+      "status": "Status",
+      "usage": "Usage",
+      "revenue": "Revenue",
+      "lastLogin": "Last login"
+    },
+    "term": {
+      "expired": "Expired",
+      "daysLeft_one": "{{count}} day left",
+      "daysLeft_other": "{{count}} days left"
+    },
+    "status": {
+      "ACTIVE": "Active",
+      "BLOCKED": "Blocked",
+      "EXPIRED": "Expired"
+    },
+    "usage": {
+      "line": "{{students}} stud. / {{teachers}} teach. / {{users}} users"
+    },
+    "actions": {
+      "create": "New academy",
+      "extend": "Extend",
+      "block": "Block",
+      "unblock": "Unblock"
+    },
+    "confirm": {
+      "blockTitle": "Block this academy?",
+      "unblockTitle": "Unblock this academy?",
+      "deleteTitle": "Delete this academy?",
+      "deleteHint": "\"{{name}}\" and ALL of its data will be permanently removed."
+    },
+    "toasts": {
+      "created": "Academy created, director access ready",
+      "extended": "Subscription extended"
+    }
   }
 }
