@@ -396,7 +396,7 @@
     "selectCourseType": "Select a course type",
     "selectSubject": "Select a subject",
     "selectBranch": "Select a branch",
-    "priceMin": "Price cannot be negative",
+    "priceMin": "Enter a price greater than 0",
     "term": "Term",
     "startDate": "Start date",
     "endDate": "End date",
