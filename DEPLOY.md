@@ -15,11 +15,18 @@ Backend + PostgreSQL → **Railway**, Frontend → **Vercel**.
 1. В проекте: **+ New → GitHub Repo** → выбери `mybro523/atlas-education-crm`.
 2. Открой сервис → **Settings**:
    - **Root Directory**: `backend`
-   - Build/Start берутся из `backend/railway.json` (Nixpacks; старт = `prisma migrate deploy && node dist/main`).
+   - **Builder**: Railpack (по умолчанию; сам выполнит `npm install` и `npm run build`).
+   - **Custom Start Command**: `npx prisma migrate deploy && node dist/main`
+   - **Restart Policy**: On Failure, 10 попыток.
+   - **Watch Paths**: `/backend/**` (коммиты только во фронт не передеплоивают бэкенд).
+
+   > `railway.json` в репозитории нет: Config as Code в Railway устарел, а сборщик Nixpacks,
+   > который он включал, на новых сервисах падает. Все настройки задаются в самом сервисе.
 3. **Variables** (Settings → Variables) — задай:
    | Переменная | Значение |
    |---|---|
    | `DATABASE_URL` | ссылка на Postgres: `${{Postgres.DATABASE_URL}}` (Reference) |
+   | `NODE_ENV` | `production` (тогда без JWT-секретов бэкенд откажется стартовать, а не возьмёт небезопасные дефолты) |
    | `JWT_ACCESS_SECRET` | случайная строка (48+ символов) |
    | `JWT_REFRESH_SECRET` | другая случайная строка |
    | `JWT_ACCESS_TTL` | `15m` |
@@ -37,9 +44,14 @@ Backend + PostgreSQL → **Railway**, Frontend → **Vercel**.
 
 ### 1.3. Миграции и seed
 - Миграции применяются автоматически при старте (`prisma migrate deploy`).
-- Seed (3 филиала + аккаунт основателя) — разово: локально с Railway URL
-  `DATABASE_URL="<railway public url>" npm --prefix backend run seed`
-  или через Railway one-off command.
+- Seed (3 филиала + owner/founder/демо-аккаунты, пароль `Atlas12345!`) — разово. У Postgres на
+  Railway по умолчанию нет публичного адреса, поэтому:
+  1. временно открыть доступ: `railway tcp-proxy create --port 5432 --service Postgres`;
+  2. собрать URL из `PGUSER` / `PGPASSWORD` / `PGDATABASE` и адреса прокси, затем
+     `DATABASE_URL="postgresql://<user>:<password>@<proxy-host>:<proxy-port>/<db>" npm --prefix backend run seed`;
+  3. закрыть доступ: `railway tcp-proxy delete <proxy-id> --service Postgres --yes`.
+- Seed идемпотентный (upsert), повторный запуск ничего не ломает.
+- После seed смени пароль `owner@atlas.local` и `founder@atlas.local`.
 
 ---
 
